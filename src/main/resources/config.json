@@ -46,6 +46,12 @@
     "sleepPercentage": 50
   },
   
+  "deathMessages": {
+    "enabled": true,
+    "showKiller": true,
+    "showCause": true
+  },
+  
   "messages": {
     "prefix": "[EliteEssentials] ",
     "noPermission": "You don't have permission to use this command.",

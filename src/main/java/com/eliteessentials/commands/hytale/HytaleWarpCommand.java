@@ -3,10 +3,10 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
-import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.model.Warp;
 import com.eliteessentials.services.BackService;
-import com.eliteessentials.services.HomeService;
+import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -26,26 +26,29 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
- * Command: /home [name]
- * Teleports the player to their saved home location.
- * Supports warmup (stand still) from config.
+ * Command: /warp [name]
+ * Teleports the player to a server warp location.
+ * Without arguments, lists available warps.
  */
-public class HytaleHomeCommand extends AbstractPlayerCommand {
+public class HytaleWarpCommand extends AbstractPlayerCommand {
 
-    private final HomeService homeService;
+    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    
+    private final WarpService warpService;
     private final BackService backService;
 
-    public HytaleHomeCommand(HomeService homeService, BackService backService) {
-        super("home", "Teleport to your home location");
-        this.homeService = homeService;
+    public HytaleWarpCommand(WarpService warpService, BackService backService) {
+        super("warp", "Teleport to a warp location");
+        this.warpService = warpService;
         this.backService = backService;
         
-        addUsageVariant(new HomeWithNameCommand(homeService, backService));
+        addUsageVariant(new WarpWithNameCommand(warpService, backService));
     }
 
     @Override
@@ -54,26 +57,51 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
+    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                           PlayerRef player, World world) {
-        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
-            return;
-        }
-        goHome(ctx, store, ref, player, world, "home", homeService, backService);
-    }
-
-    static void goHome(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                       PlayerRef player, World world, String homeName,
-                       HomeService homeService, BackService backService) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.homes.enabled)) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
             return;
         }
         
+        // /warp with no args - list available warps
+        boolean isOp = ctx.sender() != null && ctx.sender().hasPermission(ADMIN_PERMISSION);
+        List<Warp> accessibleWarps = warpService.getAccessibleWarps(isOp);
+        
+        if (accessibleWarps.isEmpty()) {
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpNoWarps")).color("#FF5555"));
+            return;
+        }
+        
+        String warpList = accessibleWarps.stream()
+                .map(w -> {
+                    String name = w.getName();
+                    if (isOp && w.isOpOnly()) {
+                        return name + " (OP)";
+                    }
+                    return name;
+                })
+                .collect(Collectors.joining(", "));
+        
+        ctx.sendMessage(Message.join(
+            Message.raw(configManager.getMessage("warpListHeader")).color("#55FF55"),
+            Message.raw(warpList).color("#FFFFFF")
+        ));
+    }
+
+    static void goToWarp(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                         PlayerRef player, World world, String warpName,
+                         WarpService warpService, BackService backService) {
+        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+            return;
+        }
+        
         UUID playerId = player.getUuid();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+        boolean isOp = ctx.sender() != null && ctx.sender().hasPermission(ADMIN_PERMISSION);
         
         // Check if already warming up
         if (warmupService.hasActiveWarmup(playerId)) {
@@ -81,25 +109,29 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             return;
         }
         
-        Optional<Home> homeOpt = homeService.getHome(playerId, homeName);
+        Optional<Warp> warpOpt = warpService.getWarp(warpName);
         
-        if (homeOpt.isEmpty()) {
-            Set<String> homes = homeService.getHomeNames(playerId);
-            if (homes.isEmpty()) {
-                ctx.sendMessage(Message.raw(configManager.getMessage("homeNoHomeSet")).color("#FF5555"));
-                return;
+        if (warpOpt.isEmpty()) {
+            List<Warp> available = warpService.getAccessibleWarps(isOp);
+            if (available.isEmpty()) {
+                ctx.sendMessage(Message.raw(configManager.getMessage("warpNoWarps")).color("#FF5555"));
+            } else {
+                String warpList = available.stream().map(Warp::getName).collect(Collectors.joining(", "));
+                ctx.sendMessage(Message.raw(configManager.getMessage("warpNotFound", "name", warpName, "list", warpList)).color("#FF5555"));
             }
-            ctx.sendMessage(Message.join(
-                Message.raw(configManager.getMessage("homeNotFound", "name", homeName)).color("#FF5555"),
-                Message.raw(" Your homes: ").color("#FF5555"),
-                Message.raw(String.join(", ", homes)).color("#FFFFFF")
-            ));
             return;
         }
-
-        Home home = homeOpt.get();
-        Location loc = home.getLocation();
-
+        
+        Warp warp = warpOpt.get();
+        
+        // Check permission
+        if (!warpService.canUseWarp(warp, isOp)) {
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpNoPermission")).color("#FF5555"));
+            return;
+        }
+        
+        Location loc = warp.getLocation();
+        
         // Get current position for warmup and /back
         TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
@@ -116,15 +148,15 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             currentPos.getX(), currentPos.getY(), currentPos.getZ(),
             rotation.getYaw(), rotation.getPitch()
         );
-
+        
         // Get target world
         World targetWorld = Universe.get().getWorld(loc.getWorld());
         if (targetWorld == null) {
             targetWorld = world;
         }
         final World finalWorld = targetWorld;
-        final String finalHomeName = homeName;
-
+        final String finalWarpName = warp.getName();
+        
         // Define the teleport action
         Runnable doTeleport = () -> {
             backService.pushLocation(playerId, currentLoc);
@@ -136,31 +168,31 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
                 Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
                 store.addComponent(ref, Teleport.getComponentType(), teleport);
                 
-                ctx.sendMessage(Message.raw(configManager.getMessage("homeTeleported", "name", finalHomeName)).color("#55FF55"));
+                ctx.sendMessage(Message.raw(configManager.getMessage("warpTeleported", "name", finalWarpName)).color("#55FF55"));
             });
         };
-
+        
         // Start warmup or teleport immediately
-        int warmupSeconds = config.homes.warmupSeconds;
+        int warmupSeconds = config.warps.warmupSeconds;
         if (warmupSeconds > 0) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("homeWarmup", "name", finalHomeName, "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpWarmup", "name", finalWarpName, "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }
-        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "home", world, store, ref);
+        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "warp", world, store, ref);
     }
     
     /**
-     * Variant: /home <name>
+     * Variant: /warp <name>
      */
-    private static class HomeWithNameCommand extends AbstractPlayerCommand {
-        private final HomeService homeService;
+    private static class WarpWithNameCommand extends AbstractPlayerCommand {
+        private final WarpService warpService;
         private final BackService backService;
         private final RequiredArg<String> nameArg;
         
-        HomeWithNameCommand(HomeService homeService, BackService backService) {
-            super("home");
-            this.homeService = homeService;
+        WarpWithNameCommand(WarpService warpService, BackService backService) {
+            super("warp");
+            this.warpService = warpService;
             this.backService = backService;
-            this.nameArg = withRequiredArg("name", "Home name", ArgTypes.STRING);
+            this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
         }
         
         @Override
@@ -171,8 +203,8 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef player, World world) {
-            String homeName = ctx.get(nameArg);
-            HytaleHomeCommand.goHome(ctx, store, ref, player, world, homeName, homeService, backService);
+            String warpName = ctx.get(nameArg);
+            HytaleWarpCommand.goToWarp(ctx, store, ref, player, world, warpName, warpService, backService);
         }
     }
 }

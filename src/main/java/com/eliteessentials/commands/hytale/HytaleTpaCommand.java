@@ -1,6 +1,9 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.services.TpaService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -35,10 +38,17 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().tpa.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PlayerRef target = ctx.get(targetArg);
         
         if (target == null) {
-            ctx.sendMessage(Message.raw("Player not found.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("playerNotFound")).color("#FF5555"));
             return;
         }
         
@@ -52,27 +62,15 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
         
         switch (result) {
             case REQUEST_SENT -> {
-                ctx.sendMessage(Message.join(
-                    Message.raw("Teleport request sent to ").color("#55FF55"),
-                    Message.raw(target.getUsername()).color("#FFFFFF"),
-                    Message.raw(".").color("#55FF55")
-                ));
+                ctx.sendMessage(Message.raw(configManager.getMessage("tpaRequestSent", "player", target.getUsername())).color("#55FF55"));
                 
                 // Send notification to target player with instructions
-                target.sendMessage(Message.join(
-                    Message.raw(player.getUsername()).color("#FFFF55"),
-                    Message.raw(" wants to teleport to you.").color("#AAAAAA")
-                ));
-                target.sendMessage(Message.join(
-                    Message.raw("Type ").color("#AAAAAA"),
-                    Message.raw("/tpaccept").color("#55FF55"),
-                    Message.raw(" or ").color("#AAAAAA"),
-                    Message.raw("/tpdeny").color("#FF5555")
-                ));
+                target.sendMessage(Message.raw(configManager.getMessage("tpaRequestReceived", "player", player.getUsername())).color("#FFFF55"));
+                target.sendMessage(Message.raw(configManager.getMessage("tpaRequestInstructions")).color("#AAAAAA"));
             }
-            case SELF_REQUEST -> ctx.sendMessage(Message.raw("You cannot teleport to yourself.").color("#FF5555"));
-            case ALREADY_PENDING -> ctx.sendMessage(Message.raw("You already have a pending request to this player.").color("#FF5555"));
-            default -> ctx.sendMessage(Message.raw("Could not send teleport request.").color("#FF5555"));
+            case SELF_REQUEST -> ctx.sendMessage(Message.raw(configManager.getMessage("tpaSelfRequest")).color("#FF5555"));
+            case ALREADY_PENDING -> ctx.sendMessage(Message.raw(configManager.getMessage("tpaAlreadyPending")).color("#FF5555"));
+            default -> ctx.sendMessage(Message.raw(configManager.getMessage("tpaRequestFailed")).color("#FF5555"));
         }
     }
 }

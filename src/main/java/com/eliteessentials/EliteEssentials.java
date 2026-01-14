@@ -4,14 +4,18 @@ import com.eliteessentials.commands.hytale.*;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
+import com.eliteessentials.services.DamageTrackingService;
 import com.eliteessentials.services.DeathTrackingService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.SleepService;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
+import com.eliteessentials.services.WarpService;
 import com.eliteessentials.storage.BackStorage;
 import com.eliteessentials.storage.HomeStorage;
+import com.eliteessentials.storage.WarpStorage;
+import com.eliteessentials.systems.DamageTrackingSystem;
 import com.eliteessentials.systems.PlayerDeathSystem;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -36,6 +40,7 @@ public class EliteEssentials extends JavaPlugin {
     private ConfigManager configManager;
     private HomeStorage homeStorage;
     private BackStorage backStorage;
+    private WarpStorage warpStorage;
     private HomeService homeService;
     private BackService backService;
     private TpaService tpaService;
@@ -43,8 +48,11 @@ public class EliteEssentials extends JavaPlugin {
     private SleepService sleepService;
     private WarmupService warmupService;
     private CooldownService cooldownService;
+    private WarpService warpService;
+    private DamageTrackingService damageTrackingService;
     private DeathTrackingService deathTrackingService;
     private PlayerDeathSystem playerDeathSystem;
+    private DamageTrackingSystem damageTrackingSystem;
 
     public EliteEssentials(JavaPluginInit init) {
         super(init);
@@ -83,11 +91,16 @@ public class EliteEssentials extends JavaPlugin {
         backStorage = new BackStorage(dataFolder);
         backStorage.load();
         
+        warpStorage = new WarpStorage(dataFolder);
+        warpStorage.load();
+        
         // Initialize services
         cooldownService = new CooldownService();
         warmupService = new WarmupService();
         homeService = new HomeService(homeStorage, configManager);
         backService = new BackService(configManager, backStorage);
+        warpService = new WarpService(warpStorage, configManager);
+        damageTrackingService = new DamageTrackingService();
         deathTrackingService = new DeathTrackingService(backService, configManager);
         tpaService = new TpaService(configManager);
         rtpService = new RtpService(configManager);
@@ -104,15 +117,21 @@ public class EliteEssentials extends JavaPlugin {
         registerCommands();
         
         // Register the death tracking ECS system (hooks into Hytale's death events)
-        if (configManager.isBackOnDeathEnabled()) {
+        if (configManager.isBackOnDeathEnabled() || configManager.getConfig().deathMessages.enabled) {
             try {
-                playerDeathSystem = new PlayerDeathSystem(backService);
+                // Register damage tracking system first (to track who damaged who)
+                damageTrackingSystem = new DamageTrackingSystem(damageTrackingService);
+                EntityStore.REGISTRY.registerSystem(damageTrackingSystem);
+                getLogger().at(Level.INFO).log("DamageTrackingSystem registered - tracking damage sources!");
+                
+                // Register death system (uses damage tracking for death messages)
+                playerDeathSystem = new PlayerDeathSystem(backService, configManager, damageTrackingService);
                 EntityStore.REGISTRY.registerSystem(playerDeathSystem);
-                getLogger().at(Level.INFO).log("PlayerDeathSystem registered - /back on death enabled!");
+                getLogger().at(Level.INFO).log("PlayerDeathSystem registered - death tracking enabled!");
             } catch (Exception e) {
-                getLogger().at(Level.WARNING).log("Could not register PlayerDeathSystem: " + e.getMessage());
+                getLogger().at(Level.WARNING).log("Could not register death systems: " + e.getMessage());
                 // Fall back to polling-based death tracking
-                if (deathTrackingService != null) {
+                if (deathTrackingService != null && configManager.isBackOnDeathEnabled()) {
                     deathTrackingService.start();
                     getLogger().at(Level.INFO).log("Falling back to polling-based death tracking.");
                 }
@@ -126,7 +145,14 @@ public class EliteEssentials extends JavaPlugin {
     protected void shutdown() {
         getLogger().at(Level.INFO).log("EliteEssentials is shutting down...");
         
-        // Unregister the death system
+        // Unregister the death systems
+        if (damageTrackingSystem != null) {
+            try {
+                EntityStore.REGISTRY.unregisterSystem(DamageTrackingSystem.class);
+            } catch (Exception e) {
+                // Ignore unregister errors
+            }
+        }
         if (playerDeathSystem != null) {
             try {
                 EntityStore.REGISTRY.unregisterSystem(PlayerDeathSystem.class);
@@ -144,6 +170,11 @@ public class EliteEssentials extends JavaPlugin {
         if (backService != null) {
             backService.save();
             getLogger().at(Level.INFO).log("Back locations saved.");
+        }
+        
+        if (warpService != null) {
+            warpService.save();
+            getLogger().at(Level.INFO).log("Warps saved.");
         }
         
         // Cleanup services
@@ -184,10 +215,47 @@ public class EliteEssentials extends JavaPlugin {
         // Spawn command
         getCommandRegistry().registerCommand(new HytaleSpawnCommand(backService));
         
+        // Warp commands
+        try {
+            getCommandRegistry().registerCommand(new HytaleWarpCommand(warpService, backService));
+            getLogger().at(Level.INFO).log("Registered /warp command");
+        } catch (Exception e) {
+            getLogger().at(Level.SEVERE).log("Failed to register /warp: " + e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            getCommandRegistry().registerCommand(new HytaleSetWarpCommand(warpService));
+            getLogger().at(Level.INFO).log("Registered /setwarp command");
+        } catch (Exception e) {
+            getLogger().at(Level.SEVERE).log("Failed to register /setwarp: " + e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            getCommandRegistry().registerCommand(new HytaleDelWarpCommand(warpService));
+            getLogger().at(Level.INFO).log("Registered /delwarp command");
+        } catch (Exception e) {
+            getLogger().at(Level.SEVERE).log("Failed to register /delwarp: " + e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            getCommandRegistry().registerCommand(new HytaleWarpsCommand(warpService));
+            getLogger().at(Level.INFO).log("Registered /warps command");
+        } catch (Exception e) {
+            getLogger().at(Level.SEVERE).log("Failed to register /warps: " + e.getMessage());
+            e.printStackTrace();
+        }
+        try {
+            getCommandRegistry().registerCommand(new HytaleWarpAdminCommand(warpService));
+            getLogger().at(Level.INFO).log("Registered /warpadmin command");
+        } catch (Exception e) {
+            getLogger().at(Level.SEVERE).log("Failed to register /warpadmin: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
         // Admin commands (OP only)
         getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /sleeppercent");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent");
     }
 
     public static EliteEssentials getInstance() {
@@ -220,6 +288,10 @@ public class EliteEssentials extends JavaPlugin {
     
     public CooldownService getCooldownService() {
         return cooldownService;
+    }
+    
+    public WarpService getWarpService() {
+        return warpService;
     }
     
     public DeathTrackingService getDeathTrackingService() {

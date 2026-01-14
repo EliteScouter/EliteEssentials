@@ -1,6 +1,9 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.services.HomeService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -34,11 +37,18 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         Set<String> homes = homeService.getHomeNames(playerId);
         
         if (homes.isEmpty()) {
-            ctx.sendMessage(Message.raw("You have no homes set. Use /sethome to create one.").color("#FFAA00"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("homeNoHomes")).color("#FFAA00"));
             return;
         }
 
@@ -46,9 +56,8 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
         int max = homeService.getMaxHomes(playerId);
         
         ctx.sendMessage(Message.join(
-            Message.raw("Your homes (").color("#55FF55"),
-            Message.raw(count + "/" + max).color("#FFFFFF"),
-            Message.raw("): ").color("#55FF55"),
+            Message.raw(configManager.getMessage("homeListHeader", "count", String.valueOf(count), "max", String.valueOf(max))).color("#55FF55"),
+            Message.raw(" ").color("#55FF55"),
             Message.raw(String.join(", ", homes)).color("#FFFFFF")
         ));
     }

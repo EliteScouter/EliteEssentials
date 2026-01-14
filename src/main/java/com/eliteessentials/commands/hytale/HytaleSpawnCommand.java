@@ -1,11 +1,13 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
@@ -50,13 +52,19 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
                           PlayerRef player, World world) {
         UUID playerId = player.getUuid();
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+        
+        // Check if command is enabled (disabled = OP only)
+        if (!CommandPermissionUtil.canExecute(ctx, player, config.spawn.enabled)) {
+            return;
+        }
         
         // Check cooldown
         int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
         if (cooldownRemaining > 0) {
-            ctx.sendMessage(Message.raw("You must wait " + cooldownRemaining + " seconds before using /spawn again.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining))).color("#FF5555"));
             return;
         }
         
@@ -65,14 +73,14 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         ISpawnProvider spawnProvider = worldConfig.getSpawnProvider();
         
         if (spawnProvider == null) {
-            ctx.sendMessage(Message.raw("No spawn point configured for this world.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("spawnNoSpawn")).color("#FF5555"));
             return;
         }
         
         Transform spawnTransform = spawnProvider.getSpawnPoint(world, playerId);
         
         if (spawnTransform == null) {
-            ctx.sendMessage(Message.raw("Could not find spawn point.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("spawnNotFound")).color("#FF5555"));
             return;
         }
         
@@ -82,7 +90,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         // Get current position for /back and warmup
         TransformComponent currentTransform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (currentTransform == null) {
-            ctx.sendMessage(Message.raw("Could not get your position.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("couldNotGetPosition")).color("#FF5555"));
             return;
         }
         
@@ -109,7 +117,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
                 Teleport teleport = new Teleport(world, spawnPos, spawnRot);
                 store.addComponent(ref, Teleport.getComponentType(), teleport);
                 
-                ctx.sendMessage(Message.raw("Teleported to spawn!").color("#55FF55"));
+                ctx.sendMessage(Message.raw(configManager.getMessage("spawnTeleported")).color("#55FF55"));
             });
             
             // Set cooldown
@@ -118,11 +126,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         
         // Start warmup or teleport immediately
         if (warmupSeconds > 0) {
-            ctx.sendMessage(Message.join(
-                Message.raw("Teleporting to spawn in ").color("#FFAA00"),
-                Message.raw(warmupSeconds + " seconds").color("#FFFFFF"),
-                Message.raw("... Stand still!").color("#FFAA00")
-            ));
+            ctx.sendMessage(Message.raw(configManager.getMessage("spawnWarmup", "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }
         warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref);
     }

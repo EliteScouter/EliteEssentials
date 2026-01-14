@@ -1,6 +1,9 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.services.HomeService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -38,25 +41,30 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
         deleteHome(ctx, player, "home", homeService);
     }
     
     static void deleteHome(CommandContext ctx, PlayerRef player, String homeName, HomeService homeService) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         HomeService.Result result = homeService.deleteHome(playerId, homeName);
 
         switch (result) {
-            case SUCCESS -> ctx.sendMessage(Message.join(
-                Message.raw("Home '").color("#55FF55"),
-                Message.raw(homeName).color("#FFFFFF"),
-                Message.raw("' has been deleted.").color("#55FF55")
-            ));
-            case HOME_NOT_FOUND -> ctx.sendMessage(Message.join(
-                Message.raw("Home '").color("#FF5555"),
-                Message.raw(homeName).color("#FFFFFF"),
-                Message.raw("' not found.").color("#FF5555")
-            ));
-            default -> ctx.sendMessage(Message.raw("Failed to delete home.").color("#FF5555"));
+            case SUCCESS -> ctx.sendMessage(Message.raw(configManager.getMessage("homeDeleted", "name", homeName)).color("#55FF55"));
+            case HOME_NOT_FOUND -> ctx.sendMessage(Message.raw(configManager.getMessage("homeNotFound", "name", homeName)).color("#FF5555"));
+            default -> ctx.sendMessage(Message.raw(configManager.getMessage("homeDeleteFailed")).color("#FF5555"));
         }
     }
     

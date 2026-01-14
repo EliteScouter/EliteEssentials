@@ -1,7 +1,10 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.services.HomeService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -44,15 +47,29 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
         // Default: use "home" as name
         setHome(ctx, store, ref, player, world, "home");
     }
     
     static void setHome(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                         PlayerRef player, World world, String homeName, HomeService homeService) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        
         TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
-            ctx.sendMessage(Message.raw("Could not get your position.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("couldNotGetPosition")).color("#FF5555"));
             return;
         }
 
@@ -74,20 +91,13 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         HomeService.Result result = homeService.setHome(playerId, homeName, location);
 
         switch (result) {
-            case SUCCESS -> ctx.sendMessage(Message.join(
-                Message.raw("Home '").color("#55FF55"),
-                Message.raw(homeName).color("#FFFFFF"),
-                Message.raw("' set at ").color("#55FF55"),
-                Message.raw(String.format("%.1f, %.1f, %.1f", position.getX(), position.getY(), position.getZ())).color("#FFFFFF"),
-                Message.raw(" in ").color("#55FF55"),
-                Message.raw(world.getName()).color("#FFFFFF")
-            ));
+            case SUCCESS -> ctx.sendMessage(Message.raw(configManager.getMessage("homeSet", "name", homeName)).color("#55FF55"));
             case LIMIT_REACHED -> {
                 int max = homeService.getMaxHomes(playerId);
-                ctx.sendMessage(Message.raw("You have reached your home limit (" + max + ").").color("#FF5555"));
+                ctx.sendMessage(Message.raw(configManager.getMessage("homeLimitReached", "max", String.valueOf(max))).color("#FF5555"));
             }
-            case INVALID_NAME -> ctx.sendMessage(Message.raw("Invalid home name.").color("#FF5555"));
-            default -> ctx.sendMessage(Message.raw("Failed to set home.").color("#FF5555"));
+            case INVALID_NAME -> ctx.sendMessage(Message.raw(configManager.getMessage("homeInvalidName")).color("#FF5555"));
+            default -> ctx.sendMessage(Message.raw(configManager.getMessage("homeSetFailed")).color("#FF5555"));
         }
     }
     

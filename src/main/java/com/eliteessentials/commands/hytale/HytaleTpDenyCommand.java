@@ -1,7 +1,10 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.TpaRequest;
 import com.eliteessentials.services.TpaService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -36,30 +39,30 @@ public class HytaleTpDenyCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
+        // Check if command is enabled (disabled = OP only)
+        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().tpa.enabled;
+        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+            return;
+        }
+        
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         
         Optional<TpaRequest> requestOpt = tpaService.denyRequest(playerId);
 
         if (requestOpt.isEmpty()) {
-            ctx.sendMessage(Message.raw("You have no pending teleport requests.").color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("tpaNoPending")).color("#FF5555"));
             return;
         }
 
         TpaRequest request = requestOpt.get();
         
-        ctx.sendMessage(Message.join(
-            Message.raw("Teleport request from ").color("#FF5555"),
-            Message.raw(request.getRequesterName()).color("#FFFFFF"),
-            Message.raw(" denied.").color("#FF5555")
-        ));
+        ctx.sendMessage(Message.raw(configManager.getMessage("tpaDenied", "player", request.getRequesterName())).color("#FF5555"));
         
         // Notify the requester that their request was denied
         PlayerRef requester = Universe.get().getPlayer(request.getRequesterId());
         if (requester != null && requester.isValid()) {
-            requester.sendMessage(Message.join(
-                Message.raw(player.getUsername()).color("#FFFFFF"),
-                Message.raw(" denied your teleport request.").color("#FF5555")
-            ));
+            requester.sendMessage(Message.raw(configManager.getMessage("tpaDeniedRequester", "player", player.getUsername())).color("#FF5555"));
         }
     }
 }
