@@ -9,8 +9,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -52,20 +50,9 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
 
         Location destination = previousLocation.get();
         
-        // Save current location so they can /back again
-        TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform != null) {
-            HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-            Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
-            Vector3d position = transform.getPosition();
-            
-            Location currentLoc = new Location(
-                world.getName(),
-                position.getX(), position.getY(), position.getZ(),
-                rotation.getYaw(), rotation.getPitch()
-            );
-            backService.pushLocation(playerId, currentLoc);
-        }
+        // NOTE: We intentionally do NOT save current location when using /back
+        // This prevents ping-ponging between locations when using /back multiple times
+        // The back history is a stack of teleport origins, not a bidirectional history
 
         // Get target world
         World targetWorld = Universe.get().getWorld(destination.getWorld());
