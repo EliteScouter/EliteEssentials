@@ -2,6 +2,7 @@ package com.eliteessentials;
 
 import com.eliteessentials.commands.hytale.*;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.DamageTrackingService;
@@ -115,6 +116,9 @@ public class EliteEssentials extends JavaPlugin {
         
         // Register commands
         registerCommands();
+        
+        // Register permissions with LuckPerms for autocomplete/discovery
+        LuckPermsIntegration.registerPermissions();
         
         // Register the death tracking ECS system (hooks into Hytale's death events)
         if (configManager.isBackOnDeathEnabled() || configManager.getConfig().deathMessages.enabled) {

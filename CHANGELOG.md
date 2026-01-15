@@ -2,6 +2,12 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [1.0.3] - 2026-01-15
+
+### Added
+- **LuckPerms Integration**: All 52 EliteEssentials permissions are now automatically registered with LuckPerms for autocomplete and discovery in the web editor and commands
+- Permissions appear in LuckPerms dropdown immediately on server start (no need to use commands first)
+
 ## [1.0.2] - 2026-01-15
 
 ### Added
