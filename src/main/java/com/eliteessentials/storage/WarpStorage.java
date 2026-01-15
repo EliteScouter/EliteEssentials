@@ -27,6 +27,9 @@ public class WarpStorage {
     
     // WarpName (lowercase) -> Warp
     private final Map<String, Warp> warps = new ConcurrentHashMap<>();
+    
+    // Lock for file I/O operations to prevent concurrent writes
+    private final Object fileLock = new Object();
 
     public WarpStorage(File dataFolder) {
         this.dataFolder = dataFolder;
@@ -52,15 +55,17 @@ public class WarpStorage {
     }
 
     public void save() {
-        if (!dataFolder.exists()) {
-            dataFolder.mkdirs();
-        }
-        
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(warpsFile), StandardCharsets.UTF_8)) {
-            gson.toJson(warps, DATA_TYPE, writer);
-            logger.info("Saved warps data.");
-        } catch (Exception e) {
-            logger.severe("Failed to save warps.json: " + e.getMessage());
+        synchronized (fileLock) {
+            if (!dataFolder.exists()) {
+                dataFolder.mkdirs();
+            }
+            
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(warpsFile), StandardCharsets.UTF_8)) {
+                gson.toJson(warps, DATA_TYPE, writer);
+                logger.info("Saved warps data.");
+            } catch (Exception e) {
+                logger.severe("Failed to save warps.json: " + e.getMessage());
+            }
         }
     }
 

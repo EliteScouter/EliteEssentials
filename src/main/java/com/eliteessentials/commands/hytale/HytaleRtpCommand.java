@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.WarmupService;
@@ -35,11 +36,17 @@ import java.util.logging.Logger;
 /**
  * Command: /rtp
  * Teleports the player to a random location within the configured range.
+ * 
+ * Permissions:
+ * - eliteessentials.command.rtp - Use /rtp command
+ * - eliteessentials.bypass.warmup.rtp - Skip warmup
+ * - eliteessentials.bypass.cooldown.rtp - Skip cooldown
  */
 public class HytaleRtpCommand extends AbstractPlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private static final String COMMAND_NAME = "rtp";
     
     private final RtpService rtpService;
     private final BackService backService;
@@ -47,11 +54,13 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
     private final WarmupService warmupService;
 
     public HytaleRtpCommand(RtpService rtpService, BackService backService, ConfigManager configManager, WarmupService warmupService) {
-        super("rtp", "Teleport to a random location");
+        super(COMMAND_NAME, "Teleport to a random location");
         this.rtpService = rtpService;
         this.backService = backService;
         this.configManager = configManager;
         this.warmupService = warmupService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -71,8 +80,8 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             plugin.getDeathTrackingService().trackPlayer(playerId);
         }
         
-        // Check if command is enabled (disabled = OP only)
-        if (!CommandPermissionUtil.canExecute(ctx, player, rtpConfig.enabled)) {
+        // Check permission and enabled state
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.RTP, rtpConfig.enabled)) {
             return;
         }
         
@@ -82,11 +91,13 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             return;
         }
         
-        // Check cooldown
-        int cooldownRemaining = rtpService.getCooldownRemaining(playerId);
-        if (cooldownRemaining > 0) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining))).color("#FF5555"));
-            return;
+        // Check cooldown (with bypass check)
+        if (!CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
+            int cooldownRemaining = rtpService.getCooldownRemaining(playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(Message.raw(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining))).color("#FF5555"));
+                return;
+            }
         }
 
         // Get player's current position
@@ -109,9 +120,12 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             rotation.x, rotation.y
         );
 
-        int warmupSeconds = rtpConfig.warmupSeconds;
+        // Get effective warmup (check bypass permission)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, rtpConfig.warmupSeconds);
+        
         if (configManager.isDebugEnabled()) {
-            logger.info("[RTP] Config warmup: " + warmupSeconds + ", min: " + rtpConfig.minRange + ", max: " + rtpConfig.maxRange);
+            logger.info("[RTP] Config warmup: " + rtpConfig.warmupSeconds + ", effective: " + warmupSeconds + 
+                       ", min: " + rtpConfig.minRange + ", max: " + rtpConfig.maxRange);
         }
         
         // If warmup is configured, do warmup FIRST, then find location
@@ -125,7 +139,7 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             };
             
             // Pass current position and world context for movement checking
-            warmupService.startWarmup(player, currentPos, warmupSeconds, afterWarmup, "rtp", world, store, ref);
+            warmupService.startWarmup(player, currentPos, warmupSeconds, afterWarmup, COMMAND_NAME, world, store, ref);
         } else {
             // No warmup, search and teleport immediately
             ctx.sendMessage(Message.raw(configManager.getMessage("rtpSearching")).color("#AAAAAA"));

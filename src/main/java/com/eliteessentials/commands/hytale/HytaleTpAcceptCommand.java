@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.TpaRequest;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
@@ -31,19 +32,25 @@ import java.util.logging.Logger;
 /**
  * Command: /tpaccept
  * Accepts a pending teleport request and teleports the requester to you.
- * Supports warmup (requester must stand still) from config.
+ * 
+ * Permissions:
+ * - eliteessentials.command.tpaccept - Accept teleport requests
+ * - eliteessentials.bypass.warmup.tpa - Skip warmup for TPA
  */
 public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
+    private static final String COMMAND_NAME = "tpaccept";
     
     private final TpaService tpaService;
     private final BackService backService;
 
     public HytaleTpAcceptCommand(TpaService tpaService, BackService backService) {
-        super("tpaccept", "Accept a teleport request");
+        super(COMMAND_NAME, "Accept a teleport request");
         this.tpaService = tpaService;
         this.backService = backService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -55,7 +62,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.tpa.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPACCEPT, config.tpa.enabled)) {
             return;
         }
         
@@ -155,8 +162,8 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
             requester.sendMessage(Message.raw(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername())).color("#55FF55"));
         };
 
-        // Start warmup on the REQUESTER (they must stand still)
-        int warmupSeconds = config.tpa.warmupSeconds;
+        // Get effective warmup (check bypass permission for requester)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(request.getRequesterId(), "tpa", config.tpa.warmupSeconds);
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
         // Check if requester already has a warmup

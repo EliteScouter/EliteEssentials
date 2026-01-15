@@ -4,6 +4,7 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
@@ -30,7 +31,11 @@ import java.util.UUID;
 /**
  * Command: /spawn
  * Teleports the player to the world spawn point.
- * Supports warmup (stand still) and cooldown.
+ * 
+ * Permissions:
+ * - eliteessentials.command.spawn - Use /spawn command
+ * - eliteessentials.bypass.warmup.spawn - Skip warmup
+ * - eliteessentials.bypass.cooldown.spawn - Skip cooldown
  */
 public class HytaleSpawnCommand extends AbstractPlayerCommand {
 
@@ -38,8 +43,10 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     private final BackService backService;
 
     public HytaleSpawnCommand(BackService backService) {
-        super("spawn", "Teleport to spawn");
+        super(COMMAND_NAME, "Teleport to spawn");
         this.backService = backService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -56,16 +63,18 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
-        // Check if command is enabled (disabled = OP only)
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.spawn.enabled)) {
+        // Check permission and enabled state
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SPAWN, config.spawn.enabled)) {
             return;
         }
         
-        // Check cooldown
-        int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
-        if (cooldownRemaining > 0) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining))).color("#FF5555"));
-            return;
+        // Check cooldown (with bypass check)
+        if (!CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(Message.raw(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining))).color("#FF5555"));
+                return;
+            }
         }
         
         // Get spawn point from world config
@@ -83,9 +92,6 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             ctx.sendMessage(Message.raw(configManager.getMessage("spawnNotFound")).color("#FF5555"));
             return;
         }
-        
-        // Get warmup config
-        int warmupSeconds = config.spawn.warmupSeconds;
         
         // Get current position for /back and warmup
         TransformComponent currentTransform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
@@ -124,7 +130,9 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             cooldownService.setCooldown(COMMAND_NAME, playerId, config.spawn.cooldownSeconds);
         };
         
-        // Start warmup or teleport immediately
+        // Get effective warmup (check bypass permission)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.spawn.warmupSeconds);
+        
         if (warmupSeconds > 0) {
             ctx.sendMessage(Message.raw(configManager.getMessage("spawnWarmup", "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }

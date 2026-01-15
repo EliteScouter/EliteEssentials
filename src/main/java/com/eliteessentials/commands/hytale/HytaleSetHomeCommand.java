@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -25,15 +26,23 @@ import java.util.UUID;
 /**
  * Command: /sethome [name]
  * Sets a home at the player's current location.
- * Base command (no args) uses "home" as default name.
+ * 
+ * Permissions:
+ * - eliteessentials.command.sethome.self - Set own homes
+ * - eliteessentials.limit.homes.<number> - Max homes allowed
+ * - eliteessentials.limit.homes.unlimited - Unlimited homes
  */
 public class HytaleSetHomeCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "sethome";
+    
     private final HomeService homeService;
 
     public HytaleSetHomeCommand(HomeService homeService) {
-        super("sethome", "Set your home location");
+        super(COMMAND_NAME, "Set your home location");
         this.homeService = homeService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         // Add variant that accepts a name argument
         addUsageVariant(new SetHomeWithNameCommand(homeService));
@@ -47,9 +56,8 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SETHOME, enabled)) {
             return;
         }
         
@@ -59,9 +67,8 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     
     static void setHome(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                         PlayerRef player, World world, String homeName, HomeService homeService) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SETHOME, enabled)) {
             return;
         }
         
@@ -114,9 +121,11 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         private final RequiredArg<String> nameArg;
         
         SetHomeWithNameCommand(HomeService homeService) {
-            super("sethome");
+            super(COMMAND_NAME);
             this.homeService = homeService;
             this.nameArg = withRequiredArg("name", "Home name", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override

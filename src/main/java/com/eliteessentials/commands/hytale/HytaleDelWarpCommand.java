@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -19,19 +20,23 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 /**
  * Command: /delwarp <name>
  * Deletes a server warp.
- * Admin only command.
+ * 
+ * Permissions:
+ * - eliteessentials.command.delwarp - Delete warps (admin)
  */
 public class HytaleDelWarpCommand extends AbstractPlayerCommand {
 
-    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    private static final String COMMAND_NAME = "delwarp";
     
     private final WarpService warpService;
     private final RequiredArg<String> nameArg;
 
     public HytaleDelWarpCommand(WarpService warpService) {
-        super("delwarp", "Delete a warp (Admin)");
+        super(COMMAND_NAME, "Delete a warp (Admin)");
         this.warpService = warpService;
         this.nameArg = withRequiredArg("name", "Warp name to delete", ArgTypes.STRING);
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -43,15 +48,9 @@ public class HytaleDelWarpCommand extends AbstractPlayerCommand {
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                           PlayerRef player, World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
-        
-        // Admin only command
-        if (ctx.sender() == null || !ctx.sender().hasPermission(ADMIN_PERMISSION)) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("noPermission")).color("#FF5555"));
-            return;
-        }
-        
         PluginConfig config = configManager.getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+        
+        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.DELWARP, config.warps.enabled)) {
             return;
         }
         

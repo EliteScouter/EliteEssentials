@@ -2,6 +2,8 @@ package com.eliteessentials.services;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.storage.BackStorage;
 
 import java.util.*;
@@ -41,15 +43,26 @@ public class BackService {
 
     /**
      * Record a death location for a player.
-     * Only records if workOnDeath is enabled in config.
+     * - Simple mode: Records if backOnDeath is enabled in config (everyone gets it)
+     * - Advanced mode: Records only if player has eliteessentials.command.tp.back.ondeath permission
      * 
      * @param playerId Player UUID
      * @param location Death location
      */
     public void pushDeathLocation(UUID playerId, Location location) {
         if (!configManager.isBackOnDeathEnabled()) {
-            logger.fine("Back on death disabled, not recording death location for " + playerId);
+            logger.fine("Back on death disabled in config, not recording death location for " + playerId);
             return;
+        }
+        
+        // In advanced permissions mode, check if player has the back.ondeath permission
+        if (configManager.isAdvancedPermissions()) {
+            if (!PermissionService.get().hasPermission(playerId, Permissions.BACK_ONDEATH)) {
+                if (configManager.isDebugEnabled()) {
+                    logger.info("[BackService] Player " + playerId + " lacks " + Permissions.BACK_ONDEATH + " permission, not recording death location");
+                }
+                return;
+            }
         }
         
         if (configManager.isDebugEnabled()) {

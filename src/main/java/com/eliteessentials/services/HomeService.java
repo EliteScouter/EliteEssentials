@@ -3,6 +3,7 @@ package com.eliteessentials.services;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.storage.HomeStorage;
 
 import java.util.Map;
@@ -13,6 +14,9 @@ import java.util.logging.Logger;
 
 /**
  * Service for managing player homes.
+ * Supports permission-based home limits via:
+ * - eliteessentials.limit.homes.<number> (e.g., eliteessentials.limit.homes.5)
+ * - eliteessentials.limit.homes.unlimited
  */
 public class HomeService {
 
@@ -63,6 +67,9 @@ public class HomeService {
 
         Home home = new Home(normalizedName, location);
         storage.setHome(playerId, home);
+        
+        // Persist immediately to disk so data isn't lost on crash
+        storage.save();
         
         logger.info("Player " + playerId + " set home '" + normalizedName + "' at " + location);
         return Result.SUCCESS;
@@ -121,12 +128,16 @@ public class HomeService {
 
     /**
      * Get the maximum number of homes allowed for a player.
-     * Can be overridden with permissions in the future.
+     * Checks permissions in this order:
+     * 1. eliteessentials.limit.homes.unlimited - returns Integer.MAX_VALUE
+     * 2. eliteessentials.limit.homes.<number> - returns highest matching number
+     * 3. Config default (homes.maxHomes)
+     * 
+     * @param playerId Player UUID
+     * @return Maximum homes allowed
      */
     public int getMaxHomes(UUID playerId) {
-        // TODO: Check for permission-based home limits
-        // e.g., eliteessentials.homes.5, eliteessentials.homes.10, etc.
-        return configManager.getMaxHomes();
+        return PermissionService.get().getMaxHomes(playerId);
     }
 
     /**

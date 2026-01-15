@@ -29,6 +29,9 @@ public class BackStorage {
     // UUID -> Location history (most recent first)
     private final Map<UUID, List<Location>> playerLocations = new ConcurrentHashMap<>();
     
+    // Lock for file I/O operations to prevent concurrent writes
+    private final Object fileLock = new Object();
+    
     private int maxHistory = 5;
 
     public BackStorage(File dataFolder) {
@@ -62,16 +65,18 @@ public class BackStorage {
     }
 
     public void save() {
-        // Ensure folder exists
-        if (!dataFolder.exists()) {
-            dataFolder.mkdirs();
-        }
-        
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(backFile), StandardCharsets.UTF_8)) {
-            gson.toJson(playerLocations, DATA_TYPE, writer);
-            logger.fine("[BackStorage] Saved back locations data.");
-        } catch (Exception e) {
-            logger.severe("[BackStorage] Failed to save back_locations.json: " + e.getMessage());
+        synchronized (fileLock) {
+            // Ensure folder exists
+            if (!dataFolder.exists()) {
+                dataFolder.mkdirs();
+            }
+            
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(backFile), StandardCharsets.UTF_8)) {
+                gson.toJson(playerLocations, DATA_TYPE, writer);
+                logger.fine("[BackStorage] Saved back locations data.");
+            } catch (Exception e) {
+                logger.severe("[BackStorage] Failed to save back_locations.json: " + e.getMessage());
+            }
         }
     }
 

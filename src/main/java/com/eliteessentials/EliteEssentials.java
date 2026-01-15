@@ -254,8 +254,9 @@ public class EliteEssentials extends JavaPlugin {
         
         // Admin commands (OP only)
         getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
+        getCommandRegistry().registerCommand(new HytaleReloadCommand());
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials");
     }
 
     public static EliteEssentials getInstance() {
@@ -296,6 +297,16 @@ public class EliteEssentials extends JavaPlugin {
     
     public DeathTrackingService getDeathTrackingService() {
         return deathTrackingService;
+    }
+    
+    /**
+     * Reload the plugin configuration.
+     * Called by /eliteessentials reload command.
+     */
+    public void reloadConfig() {
+        getLogger().at(Level.INFO).log("Reloading EliteEssentials configuration...");
+        configManager.loadConfig();
+        getLogger().at(Level.INFO).log("Configuration reloaded.");
     }
     
     /**

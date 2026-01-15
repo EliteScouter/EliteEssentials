@@ -27,6 +27,9 @@ public class HomeStorage {
     
     // UUID -> (HomeName -> Home)
     private final Map<UUID, Map<String, Home>> playerHomes = new ConcurrentHashMap<>();
+    
+    // Lock for file I/O operations to prevent concurrent writes
+    private final Object fileLock = new Object();
 
     public HomeStorage(File dataFolder) {
         this.dataFolder = dataFolder;
@@ -52,11 +55,13 @@ public class HomeStorage {
     }
 
     public void save() {
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(homesFile), StandardCharsets.UTF_8)) {
-            gson.toJson(playerHomes, DATA_TYPE, writer);
-            logger.info("Saved homes data.");
-        } catch (Exception e) {
-            logger.severe("Failed to save homes.json: " + e.getMessage());
+        synchronized (fileLock) {
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(homesFile), StandardCharsets.UTF_8)) {
+                gson.toJson(playerHomes, DATA_TYPE, writer);
+                logger.info("Saved homes data.");
+            } catch (Exception e) {
+                logger.severe("Failed to save homes.json: " + e.getMessage());
+            }
         }
     }
 

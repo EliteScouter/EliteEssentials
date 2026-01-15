@@ -27,12 +27,13 @@ logs/
 HytaleServer.jar
 run/
 test-server/
-
+/com/
 # Temporary files
 *.tmp
 *.bak
 *.swp
 *~
+perms.txt
 
 # Package files (build outputs should be in releases, not repo)
 *.jar

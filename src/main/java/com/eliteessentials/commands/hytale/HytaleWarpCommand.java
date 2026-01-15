@@ -5,6 +5,8 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.Warp;
+import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.WarmupService;
@@ -35,18 +37,26 @@ import java.util.stream.Collectors;
  * Command: /warp [name]
  * Teleports the player to a server warp location.
  * Without arguments, lists available warps.
+ * 
+ * Permissions:
+ * - eliteessentials.command.warp - Use /warp command
+ * - eliteessentials.warp.<name> - Access specific warp (for custom permission warps)
+ * - eliteessentials.bypass.warmup.warp - Skip warmup
+ * - eliteessentials.bypass.cooldown.warp - Skip cooldown
  */
 public class HytaleWarpCommand extends AbstractPlayerCommand {
 
-    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    private static final String COMMAND_NAME = "warp";
     
     private final WarpService warpService;
     private final BackService backService;
 
     public HytaleWarpCommand(WarpService warpService, BackService backService) {
-        super("warp", "Teleport to a warp location");
+        super(COMMAND_NAME, "Teleport to a warp location");
         this.warpService = warpService;
         this.backService = backService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         addUsageVariant(new WarpWithNameCommand(warpService, backService));
     }
@@ -61,13 +71,18 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                           PlayerRef player, World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARP, config.warps.enabled)) {
             return;
         }
         
+        UUID playerId = player.getUuid();
+        PermissionService perms = PermissionService.get();
+        
         // /warp with no args - list available warps
-        boolean isOp = ctx.sender() != null && ctx.sender().hasPermission(ADMIN_PERMISSION);
-        List<Warp> accessibleWarps = warpService.getAccessibleWarps(isOp);
+        boolean isAdmin = perms.hasPermission(playerId, Permissions.ADMIN);
+        List<Warp> accessibleWarps = warpService.getAllWarps().values().stream()
+            .filter(w -> perms.canAccessWarp(playerId, w.getName(), w.getPermission()))
+            .collect(Collectors.toList());
         
         if (accessibleWarps.isEmpty()) {
             ctx.sendMessage(Message.raw(configManager.getMessage("warpNoWarps")).color("#FF5555"));
@@ -77,7 +92,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         String warpList = accessibleWarps.stream()
                 .map(w -> {
                     String name = w.getName();
-                    if (isOp && w.isOpOnly()) {
+                    if (isAdmin && w.isOpOnly()) {
                         return name + " (OP)";
                     }
                     return name;
@@ -95,13 +110,13 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                          WarpService warpService, BackService backService) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARP, config.warps.enabled)) {
             return;
         }
         
         UUID playerId = player.getUuid();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
-        boolean isOp = ctx.sender() != null && ctx.sender().hasPermission(ADMIN_PERMISSION);
+        PermissionService perms = PermissionService.get();
         
         // Check if already warming up
         if (warmupService.hasActiveWarmup(playerId)) {
@@ -112,7 +127,9 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         Optional<Warp> warpOpt = warpService.getWarp(warpName);
         
         if (warpOpt.isEmpty()) {
-            List<Warp> available = warpService.getAccessibleWarps(isOp);
+            List<Warp> available = warpService.getAllWarps().values().stream()
+                .filter(w -> perms.canAccessWarp(playerId, w.getName(), w.getPermission()))
+                .collect(Collectors.toList());
             if (available.isEmpty()) {
                 ctx.sendMessage(Message.raw(configManager.getMessage("warpNoWarps")).color("#FF5555"));
             } else {
@@ -124,8 +141,8 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         
         Warp warp = warpOpt.get();
         
-        // Check permission
-        if (!warpService.canUseWarp(warp, isOp)) {
+        // Check permission using PermissionService
+        if (!perms.canAccessWarp(playerId, warp.getName(), warp.getPermission())) {
             ctx.sendMessage(Message.raw(configManager.getMessage("warpNoPermission")).color("#FF5555"));
             return;
         }
@@ -171,13 +188,14 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                 ctx.sendMessage(Message.raw(configManager.getMessage("warpTeleported", "name", finalWarpName)).color("#55FF55"));
             });
         };
+
+        // Get effective warmup (check bypass permission)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.warps.warmupSeconds);
         
-        // Start warmup or teleport immediately
-        int warmupSeconds = config.warps.warmupSeconds;
         if (warmupSeconds > 0) {
             ctx.sendMessage(Message.raw(configManager.getMessage("warpWarmup", "name", finalWarpName, "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }
-        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "warp", world, store, ref);
+        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref);
     }
     
     /**
@@ -189,10 +207,12 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         private final RequiredArg<String> nameArg;
         
         WarpWithNameCommand(WarpService warpService, BackService backService) {
-            super("warp");
+            super(COMMAND_NAME);
             this.warpService = warpService;
             this.backService = backService;
             this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override

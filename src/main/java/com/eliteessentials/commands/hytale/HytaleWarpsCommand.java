@@ -4,6 +4,8 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Warp;
+import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -16,22 +18,27 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * Command: /warps
  * Lists all available warps for the player.
- * Admins see all warps with permission indicators.
+ * 
+ * Permissions:
+ * - eliteessentials.command.warps - List warps
  */
 public class HytaleWarpsCommand extends AbstractPlayerCommand {
 
-    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    private static final String COMMAND_NAME = "warps";
     
     private final WarpService warpService;
 
     public HytaleWarpsCommand(WarpService warpService) {
-        super("warps", "List all available warps");
+        super(COMMAND_NAME, "List all available warps");
         this.warpService = warpService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -44,12 +51,17 @@ public class HytaleWarpsCommand extends AbstractPlayerCommand {
                           PlayerRef player, World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARPS, config.warps.enabled)) {
             return;
         }
         
-        boolean isOp = ctx.sender() != null && ctx.sender().hasPermission(ADMIN_PERMISSION);
-        List<Warp> accessibleWarps = warpService.getAccessibleWarps(isOp);
+        UUID playerId = player.getUuid();
+        PermissionService perms = PermissionService.get();
+        boolean isAdmin = perms.hasPermission(playerId, Permissions.ADMIN);
+        
+        List<Warp> accessibleWarps = warpService.getAllWarps().values().stream()
+            .filter(w -> perms.canAccessWarp(playerId, w.getName(), w.getPermission()))
+            .collect(Collectors.toList());
         
         if (accessibleWarps.isEmpty()) {
             ctx.sendMessage(Message.raw(configManager.getMessage("warpNoWarps")).color("#FF5555"));
@@ -65,7 +77,7 @@ public class HytaleWarpsCommand extends AbstractPlayerCommand {
                 warp.getLocation().getZ());
             
             Message line;
-            if (isOp) {
+            if (isAdmin) {
                 String permTag = warp.isOpOnly() ? " [OP]" : " [ALL]";
                 line = Message.join(
                     Message.raw("  " + warp.getName()).color("#FFFFFF"),

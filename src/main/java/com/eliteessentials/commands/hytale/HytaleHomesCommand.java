@@ -2,6 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -19,14 +20,22 @@ import java.util.UUID;
 /**
  * Command: /homes
  * Lists all player homes.
+ * 
+ * Permissions:
+ * - eliteessentials.command.homes.self - List own homes
+ * - eliteessentials.command.homes.other - List other players' homes (admin)
  */
 public class HytaleHomesCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "homes";
+    
     private final HomeService homeService;
 
     public HytaleHomesCommand(HomeService homeService) {
-        super("homes", "List your homes");
+        super(COMMAND_NAME, "List your homes");
         this.homeService = homeService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -37,9 +46,8 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOMES, enabled)) {
             return;
         }
         
@@ -54,9 +62,10 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
 
         int count = homes.size();
         int max = homeService.getMaxHomes(playerId);
+        String maxStr = max == Integer.MAX_VALUE ? "∞" : String.valueOf(max);
         
         ctx.sendMessage(Message.join(
-            Message.raw(configManager.getMessage("homeListHeader", "count", String.valueOf(count), "max", String.valueOf(max))).color("#55FF55"),
+            Message.raw(configManager.getMessage("homeListHeader", "count", String.valueOf(count), "max", maxStr)).color("#55FF55"),
             Message.raw(" ").color("#55FF55"),
             Message.raw(String.join(", ", homes)).color("#FFFFFF")
         ));

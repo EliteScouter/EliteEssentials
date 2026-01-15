@@ -1,8 +1,9 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
-import com.eliteessentials.config.PluginConfig;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Warp;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -26,20 +27,20 @@ import java.util.Optional;
  * Command: /warpadmin [info|setperm|list]
  * Admin command for managing warps.
  * 
- * Subcommands:
- * - /warpadmin list - List all warps with details
- * - /warpadmin info <name> - Show detailed info about a warp
- * - /warpadmin setperm <name> <all|op> - Change warp permission
+ * Permissions:
+ * - eliteessentials.command.warpadmin - Manage warps (admin)
  */
 public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
 
-    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    private static final String COMMAND_NAME = "warpadmin";
     
     private final WarpService warpService;
 
     public HytaleWarpAdminCommand(WarpService warpService) {
-        super("warpadmin", "Manage warps (Admin)");
+        super(COMMAND_NAME, "Manage warps (Admin)");
         this.warpService = warpService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         addUsageVariant(new WarpInfoCommand(warpService));
         addUsageVariant(new WarpSetPermCommand(warpService));
@@ -53,31 +54,22 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                           PlayerRef player, World world) {
-        // Admin only
-        if (ctx.sender() == null || !ctx.sender().hasPermission(ADMIN_PERMISSION)) {
-            ctx.sendMessage(Message.raw("You don't have permission to use this command.").color("#FF5555"));
-            return;
-        }
-        
         // Default: show help/list
         showWarpList(ctx);
     }
     
     private void showWarpList(CommandContext ctx) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         Map<String, Warp> warps = warpService.getAllWarps();
         
         if (warps.isEmpty()) {
-            ctx.sendMessage(Message.raw("No warps configured.").color("#FF5555"));
-            ctx.sendMessage(Message.join(
-                Message.raw("Use ").color("#AAAAAA"),
-                Message.raw("/setwarp <name> [all|op]").color("#FFAA00"),
-                Message.raw(" to create one.").color("#AAAAAA")
-            ));
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminNoWarps")).color("#FF5555"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminCreateHint")).color("#AAAAAA"));
             return;
         }
         
-        ctx.sendMessage(Message.raw("=== Warp Admin Panel ===").color("#55FFFF"));
-        ctx.sendMessage(Message.raw("Total warps: " + warps.size()).color("#AAAAAA"));
+        ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminTitle")).color("#55FFFF"));
+        ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminTotal", "count", String.valueOf(warps.size()))).color("#AAAAAA"));
         ctx.sendMessage(Message.raw("").color("#FFFFFF"));
         
         List<Warp> sortedWarps = warps.values().stream()
@@ -96,7 +88,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         }
         
         ctx.sendMessage(Message.raw("").color("#FFFFFF"));
-        ctx.sendMessage(Message.raw("Commands:").color("#FFAA00"));
+        ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminCommands")).color("#FFAA00"));
         ctx.sendMessage(Message.raw("  /warpadmin info <name>").color("#AAAAAA"));
         ctx.sendMessage(Message.raw("  /warpadmin setperm <name> <all|op>").color("#AAAAAA"));
         ctx.sendMessage(Message.raw("  /setwarp <name> [all|op]").color("#AAAAAA"));
@@ -114,6 +106,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
             super("info");
             this.warpService = warpService;
             this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override
@@ -124,11 +118,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef player, World world) {
-            if (ctx.sender() == null || !ctx.sender().hasPermission(ADMIN_PERMISSION)) {
-                ctx.sendMessage(Message.raw("You don't have permission to use this command.").color("#FF5555"));
-                return;
-            }
-            
+            ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             String warpName = ctx.get(nameArg);
             Optional<Warp> warpOpt = warpService.getWarp(warpName);
             
@@ -145,7 +135,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             String createdDate = sdf.format(new Date(warp.getCreatedAt()));
             
-            ctx.sendMessage(Message.raw("=== Warp: " + warp.getName() + " ===").color("#55FFFF"));
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminInfoTitle", "name", warp.getName())).color("#55FFFF"));
             ctx.sendMessage(Message.join(
                 Message.raw("  Permission: ").color("#AAAAAA"),
                 Message.raw(warp.isOpOnly() ? "OP Only" : "Everyone").color(warp.isOpOnly() ? "#FF5555" : "#55FF55")
@@ -191,6 +181,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
             this.warpService = warpService;
             this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
             this.permArg = withRequiredArg("permission", "all or op", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override
@@ -201,11 +193,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                               PlayerRef player, World world) {
-            if (ctx.sender() == null || !ctx.sender().hasPermission(ADMIN_PERMISSION)) {
-                ctx.sendMessage(Message.raw("You don't have permission to use this command.").color("#FF5555"));
-                return;
-            }
-            
+            ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             String warpName = ctx.get(nameArg);
             String permStr = ctx.get(permArg).toLowerCase();
             
@@ -236,12 +224,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
             }
             
             String permDisplay = permission == Warp.Permission.OP ? "OP only" : "everyone";
-            ctx.sendMessage(Message.join(
-                Message.raw("Updated warp '").color("#55FF55"),
-                Message.raw(warpName).color("#FFFFFF"),
-                Message.raw("' permission to ").color("#55FF55"),
-                Message.raw(permDisplay).color("#FFAA00")
-            ));
+            ctx.sendMessage(Message.raw(configManager.getMessage("warpAdminPermissionUpdated", "name", warpName, "permission", permDisplay)).color("#55FF55"));
         }
     }
 }

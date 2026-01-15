@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.TpaRequest;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -21,14 +22,21 @@ import java.util.UUID;
 /**
  * Command: /tpdeny
  * Denies a pending teleport request.
+ * 
+ * Permissions:
+ * - eliteessentials.command.tpdeny - Deny teleport requests
  */
 public class HytaleTpDenyCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "tpdeny";
+    
     private final TpaService tpaService;
 
     public HytaleTpDenyCommand(TpaService tpaService) {
-        super("tpdeny", "Deny a teleport request");
+        super(COMMAND_NAME, "Deny a teleport request");
         this.tpaService = tpaService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -39,9 +47,8 @@ public class HytaleTpDenyCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().tpa.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPDENY, enabled)) {
             return;
         }
         

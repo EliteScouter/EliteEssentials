@@ -16,6 +16,13 @@ public class PluginConfig {
     
     /** Enable debug logging (verbose output for troubleshooting) */
     public boolean debug = false;
+    
+    /** 
+     * Enable advanced permissions system.
+     * When false (default): Simple mode - commands are either for Everyone or Admin only.
+     * When true: Full granular permissions (eliteessentials.command.home.home, etc.)
+     */
+    public boolean advancedPermissions = false;
 
     // ==================== COMMAND CONFIGS ====================
     

@@ -4,6 +4,7 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
@@ -27,15 +28,24 @@ import java.util.UUID;
 /**
  * Command: /back
  * Teleports the player to their previous location.
- * Supports warmup (stand still) from config.
+ * 
+ * Permissions:
+ * - eliteessentials.command.back - Use /back command
+ * - eliteessentials.command.back.ondeath - Return to death location
+ * - eliteessentials.bypass.warmup.back - Skip warmup
+ * - eliteessentials.bypass.cooldown.back - Skip cooldown
  */
 public class HytaleBackCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "back";
+    
     private final BackService backService;
 
     public HytaleBackCommand(BackService backService) {
-        super("back", "Return to your previous location");
+        super(COMMAND_NAME, "Return to your previous location");
         this.backService = backService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -47,7 +57,7 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.back.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.BACK, config.back.enabled)) {
             return;
         }
         
@@ -103,11 +113,12 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
             });
         };
 
-        // Start warmup or teleport immediately
-        int warmupSeconds = config.back.warmupSeconds;
+        // Get effective warmup (check bypass permission)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.back.warmupSeconds);
+        
         if (warmupSeconds > 0) {
             ctx.sendMessage(Message.raw(configManager.getMessage("backWarmup", "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }
-        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "back", world, store, ref);
+        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref);
     }
 }

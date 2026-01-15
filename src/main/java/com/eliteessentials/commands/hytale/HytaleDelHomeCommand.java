@@ -2,6 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -20,14 +21,22 @@ import java.util.UUID;
 /**
  * Command: /delhome [name]
  * Deletes a saved home.
+ * 
+ * Permissions:
+ * - eliteessentials.command.delhome.self - Delete own homes
+ * - eliteessentials.command.delhome.other - Delete other players' homes (admin)
  */
 public class HytaleDelHomeCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "delhome";
+    
     private final HomeService homeService;
 
     public HytaleDelHomeCommand(HomeService homeService) {
-        super("delhome", "Delete your home");
+        super(COMMAND_NAME, "Delete your home");
         this.homeService = homeService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         // Add variant with name argument
         addUsageVariant(new DelHomeWithNameCommand(homeService));
@@ -41,9 +50,8 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.DELHOME, enabled)) {
             return;
         }
         
@@ -51,9 +59,8 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
     }
     
     static void deleteHome(CommandContext ctx, PlayerRef player, String homeName, HomeService homeService) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.DELHOME, enabled)) {
             return;
         }
         
@@ -76,9 +83,11 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
         private final RequiredArg<String> nameArg;
         
         DelHomeWithNameCommand(HomeService homeService) {
-            super("delhome");
+            super(COMMAND_NAME);
             this.homeService = homeService;
             this.nameArg = withRequiredArg("name", "Home name", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override

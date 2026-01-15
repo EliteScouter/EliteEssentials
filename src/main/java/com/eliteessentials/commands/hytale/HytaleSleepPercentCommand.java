@@ -1,6 +1,7 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.permissions.Permissions;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -14,18 +15,22 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 /**
  * Command: /sleeppercent <percentage>
- * OP-only command to set the percentage of players needed to sleep to skip night.
+ * Admin command to set the percentage of players needed to sleep to skip night.
+ * 
+ * Permissions:
+ * - eliteessentials.command.sleeppercent - Use this command (admin only by default)
  */
 public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "sleeppercent";
+    
     private final ConfigManager configManager;
 
     public HytaleSleepPercentCommand(ConfigManager configManager) {
-        super("sleeppercent", "Set sleep percentage to skip night");
+        super(COMMAND_NAME, "Set sleep percentage to skip night");
         this.configManager = configManager;
         
-        // Require OP permission
-        requirePermission("eliteessentials.sleeppercent");
+        // Permission check handled in execute() via CommandPermissionUtil
         
         // Add variant with percentage argument
         addUsageVariant(new SetPercentCommand(configManager));
@@ -57,12 +62,11 @@ public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
         private final RequiredArg<Integer> percentArg;
         
         SetPercentCommand(ConfigManager configManager) {
-            super("sleeppercent");
+            super(COMMAND_NAME);
             this.configManager = configManager;
             this.percentArg = withRequiredArg("percentage", "Percentage (0-100)", ArgTypes.INTEGER);
             
-            // Require OP permission
-            requirePermission("eliteessentials.sleeppercent");
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override

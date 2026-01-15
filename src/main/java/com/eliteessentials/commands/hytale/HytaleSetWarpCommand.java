@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.Warp;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -25,23 +26,23 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 /**
  * Command: /setwarp <name> [all|op]
  * Creates a new warp at the player's current location.
- * Admin only command.
  * 
- * Permission argument:
- * - "all" (default): Everyone can use this warp
- * - "op": Only admins/OPs can use this warp
+ * Permissions:
+ * - eliteessentials.command.setwarp - Create/update warps (admin)
  */
 public class HytaleSetWarpCommand extends AbstractPlayerCommand {
 
-    private static final String ADMIN_PERMISSION = "eliteessentials.admin";
+    private static final String COMMAND_NAME = "setwarp";
     
     private final WarpService warpService;
     private final RequiredArg<String> nameArg;
 
     public HytaleSetWarpCommand(WarpService warpService) {
-        super("setwarp", "Create a warp at your location (Admin)");
+        super(COMMAND_NAME, "Create a warp at your location (Admin)");
         this.warpService = warpService;
         this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         // Add variant with permission argument
         addUsageVariant(new SetWarpWithPermCommand(warpService));
@@ -69,10 +70,12 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
         private final RequiredArg<String> permArg;
         
         SetWarpWithPermCommand(WarpService warpService) {
-            super("setwarp");
+            super(COMMAND_NAME);
             this.warpService = warpService;
             this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
             this.permArg = withRequiredArg("permission", "all or op", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override
@@ -91,15 +94,9 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
                           PlayerRef player, World world, String warpName, String permStr, 
                           WarpService warpService) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
-        
-        // Admin only command
-        if (ctx.sender() == null || !ctx.sender().hasPermission(ADMIN_PERMISSION)) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("noPermission")).color("#FF5555"));
-            return;
-        }
-        
         PluginConfig config = configManager.getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.warps.enabled)) {
+        
+        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.SETWARP, config.warps.enabled)) {
             return;
         }
         

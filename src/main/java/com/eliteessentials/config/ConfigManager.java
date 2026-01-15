@@ -233,4 +233,8 @@ public class ConfigManager {
     public boolean isDebugEnabled() {
         return config.debug;
     }
+    
+    public boolean isAdvancedPermissions() {
+        return config.advancedPermissions;
+    }
 }

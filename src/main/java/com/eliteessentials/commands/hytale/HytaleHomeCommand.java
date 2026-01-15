@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.WarmupService;
@@ -33,17 +34,25 @@ import java.util.UUID;
 /**
  * Command: /home [name]
  * Teleports the player to their saved home location.
- * Supports warmup (stand still) from config.
+ * 
+ * Permissions:
+ * - eliteessentials.command.home.self - Teleport to own homes
+ * - eliteessentials.bypass.warmup.home - Skip warmup
+ * - eliteessentials.bypass.cooldown.home - Skip cooldown
  */
 public class HytaleHomeCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "home";
+    
     private final HomeService homeService;
     private final BackService backService;
 
     public HytaleHomeCommand(HomeService homeService, BackService backService) {
-        super("home", "Teleport to your home location");
+        super(COMMAND_NAME, "Teleport to your home location");
         this.homeService = homeService;
         this.backService = backService;
+        
+        // Permission check handled in execute() via CommandPermissionUtil
         
         addUsageVariant(new HomeWithNameCommand(homeService, backService));
     }
@@ -56,8 +65,8 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOME, config.homes.enabled)) {
             return;
         }
         goHome(ctx, store, ref, player, world, "home", homeService, backService);
@@ -67,7 +76,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
                        PlayerRef player, World world, String homeName,
                        HomeService homeService, BackService backService) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, config.homes.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOME, config.homes.enabled)) {
             return;
         }
         
@@ -140,12 +149,13 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             });
         };
 
-        // Start warmup or teleport immediately
-        int warmupSeconds = config.homes.warmupSeconds;
+        // Get effective warmup (check bypass permission)
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.homes.warmupSeconds);
+        
         if (warmupSeconds > 0) {
             ctx.sendMessage(Message.raw(configManager.getMessage("homeWarmup", "name", finalHomeName, "seconds", String.valueOf(warmupSeconds))).color("#FFAA00"));
         }
-        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "home", world, store, ref);
+        warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref);
     }
     
     /**
@@ -157,10 +167,12 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         private final RequiredArg<String> nameArg;
         
         HomeWithNameCommand(HomeService homeService, BackService backService) {
-            super("home");
+            super(COMMAND_NAME);
             this.homeService = homeService;
             this.backService = backService;
             this.nameArg = withRequiredArg("name", "Home name", ArgTypes.STRING);
+            
+            // Permission check handled in execute() via CommandPermissionUtil
         }
         
         @Override

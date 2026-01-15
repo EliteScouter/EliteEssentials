@@ -80,10 +80,17 @@ public class WarpService {
     }
 
     /**
-     * Get all warps.
+     * Get all warps as a Map.
      */
     public Map<String, Warp> getAllWarps() {
         return storage.getAllWarps();
+    }
+
+    /**
+     * Get all warps as a List.
+     */
+    public List<Warp> getAllWarpsList() {
+        return new ArrayList<>(storage.getAllWarps().values());
     }
 
     /**

@@ -2,6 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
@@ -18,16 +19,23 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 /**
  * Command: /tpa <player>
  * Sends a teleport request to another player.
+ * 
+ * Permissions:
+ * - eliteessentials.command.tpa - Send teleport requests
  */
 public class HytaleTpaCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "tpa";
+    
     private final TpaService tpaService;
     private final RequiredArg<PlayerRef> targetArg;
 
     public HytaleTpaCommand(TpaService tpaService) {
-        super("tpa", "Request to teleport to a player");
+        super(COMMAND_NAME, "Request to teleport to a player");
         this.tpaService = tpaService;
         this.targetArg = withRequiredArg("player", "Target player", ArgTypes.PLAYER_REF);
+        
+        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -38,9 +46,8 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
                           PlayerRef player, World world) {
-        // Check if command is enabled (disabled = OP only)
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().tpa.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPA, enabled)) {
             return;
         }
         
