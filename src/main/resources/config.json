@@ -78,6 +78,7 @@
   },
   
   "spawnProtection": {
+    "_comment": "Protection requires /setspawn to be used first to set the spawn location",
     "enabled": false,
     "radius": 50,
     "minY": -1,

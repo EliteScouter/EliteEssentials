@@ -20,6 +20,7 @@ import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.storage.BackStorage;
 import com.eliteessentials.storage.HomeStorage;
+import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.storage.WarpStorage;
 import com.eliteessentials.systems.DamageTrackingSystem;
 import com.eliteessentials.systems.PlayerDeathSystem;
@@ -48,6 +49,7 @@ public class EliteEssentials extends JavaPlugin {
     private HomeStorage homeStorage;
     private BackStorage backStorage;
     private WarpStorage warpStorage;
+    private SpawnStorage spawnStorage;
     private HomeService homeService;
     private BackService backService;
     private TpaService tpaService;
@@ -108,6 +110,9 @@ public class EliteEssentials extends JavaPlugin {
         warpStorage = new WarpStorage(this.dataFolder);
         warpStorage.load();
         
+        spawnStorage = new SpawnStorage(this.dataFolder);
+        spawnStorage.load();
+        
         // Initialize services
         cooldownService = new CooldownService();
         warmupService = new WarmupService();
@@ -167,9 +172,17 @@ public class EliteEssentials extends JavaPlugin {
         // Register spawn protection systems
         if (configManager.getConfig().spawnProtection.enabled) {
             try {
+                // Initialize spawn location from stored spawn
+                initializeSpawnProtectionLocation();
+                
                 spawnProtectionSystem = new SpawnProtectionSystem(spawnProtectionService);
                 spawnProtectionSystem.register(EntityStore.REGISTRY);
-                getLogger().at(Level.INFO).log("SpawnProtectionSystem registered - spawn area protected!");
+                
+                if (spawnStorage.hasSpawn()) {
+                    getLogger().at(Level.INFO).log("SpawnProtectionSystem registered - spawn area protected!");
+                } else {
+                    getLogger().at(Level.WARNING).log("SpawnProtectionSystem registered but no spawn set. Use /setspawn to enable protection.");
+                }
             } catch (Exception e) {
                 getLogger().at(Level.WARNING).log("Could not register spawn protection: " + e.getMessage());
             }
@@ -249,8 +262,9 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleTpAcceptCommand(tpaService, backService));
         getCommandRegistry().registerCommand(new HytaleTpDenyCommand(tpaService));
         
-        // Spawn command
+        // Spawn commands
         getCommandRegistry().registerCommand(new HytaleSpawnCommand(backService));
+        getCommandRegistry().registerCommand(new HytaleSetSpawnCommand(spawnStorage));
         
         // Warp commands
         try {
@@ -303,7 +317,7 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(flyCommand);
         getCommandRegistry().registerCommand(new HytaleKitCommand(kitService, configManager));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /kit");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /kit");
     }
 
     public static EliteEssentials getInstance() {
@@ -362,6 +376,10 @@ public class EliteEssentials extends JavaPlugin {
         return spawnProtectionService;
     }
     
+    public SpawnStorage getSpawnStorage() {
+        return spawnStorage;
+    }
+    
     public StarterKitEvent getStarterKitEvent() {
         return starterKitEvent;
     }
@@ -401,5 +419,18 @@ public class EliteEssentials extends JavaPlugin {
             current = parent;
         }
         return null;
+    }
+    
+    /**
+     * Initialize spawn protection location from stored spawn.
+     */
+    private void initializeSpawnProtectionLocation() {
+        SpawnStorage.SpawnData spawn = spawnStorage.getSpawn();
+        if (spawn != null) {
+            spawnProtectionService.setSpawnLocation(spawn.x, spawn.y, spawn.z);
+            getLogger().at(Level.INFO).log("Spawn protection initialized at: " + 
+                String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z) + " (radius: " + 
+                configManager.getConfig().spawnProtection.radius + ")");
+        }
     }
 }

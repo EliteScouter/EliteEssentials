@@ -11,12 +11,13 @@ import java.util.UUID;
 /**
  * Service for managing spawn protection.
  * Protects blocks within a configurable radius of spawn from being modified.
+ * Spawn location is set via /setspawn command.
  */
 public class SpawnProtectionService {
 
     private final ConfigManager configManager;
     
-    // Spawn coordinates (loaded from world spawn or config)
+    // Spawn coordinates (set via /setspawn)
     private double spawnX = 0;
     private double spawnY = 64;
     private double spawnZ = 0;
@@ -37,7 +38,7 @@ public class SpawnProtectionService {
     }
 
     /**
-     * Check if spawn protection is enabled.
+     * Check if spawn protection is enabled and spawn is set.
      */
     public boolean isEnabled() {
         return configManager.getConfig().spawnProtection.enabled && spawnSet;

@@ -8,10 +8,10 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
+import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -21,19 +21,18 @@ import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.WorldConfig;
-import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
 
 /**
  * Command: /spawn
- * Teleports the player to the world spawn point.
+ * Teleports the player to the server spawn point (set via /setspawn).
  * 
  * Permissions:
- * - eliteessentials.command.spawn - Use /spawn command
+ * - eliteessentials.command.spawn.use - Use /spawn command
  * - eliteessentials.bypass.warmup.spawn - Skip warmup
  * - eliteessentials.bypass.cooldown.spawn - Skip cooldown
  */
@@ -45,8 +44,6 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     public HytaleSpawnCommand(BackService backService) {
         super(COMMAND_NAME, "Teleport to spawn");
         this.backService = backService;
-        
-        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -62,6 +59,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+        SpawnStorage spawnStorage = EliteEssentials.getInstance().getSpawnStorage();
         
         // Check permission and enabled state
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SPAWN, config.spawn.enabled)) {
@@ -77,19 +75,17 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             }
         }
         
-        // Get spawn point from world config
-        WorldConfig worldConfig = world.getWorldConfig();
-        ISpawnProvider spawnProvider = worldConfig.getSpawnProvider();
-        
-        if (spawnProvider == null) {
+        // Get spawn from storage
+        SpawnStorage.SpawnData spawn = spawnStorage.getSpawn();
+        if (spawn == null) {
             ctx.sendMessage(Message.raw(configManager.getMessage("spawnNoSpawn")).color("#FF5555"));
             return;
         }
         
-        Transform spawnTransform = spawnProvider.getSpawnPoint(world, playerId);
-        
-        if (spawnTransform == null) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("spawnNotFound")).color("#FF5555"));
+        // Get target world
+        World targetWorld = Universe.get().getWorld(spawn.world);
+        if (targetWorld == null) {
+            ctx.sendMessage(Message.raw("Spawn world not found: " + spawn.world).color("#FF5555"));
             return;
         }
         
@@ -110,17 +106,18 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             currentRot.x, currentRot.y
         );
         
+        // Spawn position and rotation
+        Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
+        Vector3f spawnRot = new Vector3f(spawn.pitch, spawn.yaw, 0);
+        
         // Define the actual teleport action
         Runnable doTeleport = () -> {
             // Save location for /back
             backService.pushLocation(playerId, currentLoc);
 
             // Teleport player to spawn
-            Vector3d spawnPos = spawnTransform.getPosition();
-            Vector3f spawnRot = spawnTransform.getRotation();
-            
-            world.execute(() -> {
-                Teleport teleport = new Teleport(world, spawnPos, spawnRot);
+            targetWorld.execute(() -> {
+                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
                 ctx.sendMessage(Message.raw(configManager.getMessage("spawnTeleported")).color("#55FF55"));

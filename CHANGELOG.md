@@ -10,7 +10,7 @@ All notable changes to EliteEssentials will be documented in this file.
   - Configurable kits with items, cooldowns, and permissions
   - **One-time kits**: Kits that can only be claimed once per player
   - **Cooldown kits**: Configurable cooldown between kit claims
-  - **On-join kit (Starter Kit)**: Automatically give a kit to new players on first join
+  - **On-join kit (Name it "Starter")**: Automatically give a kit to new players on first join
   - Per-kit permissions: `eliteessentials.command.kit.<kitname>`
   - Cooldown bypass: `eliteessentials.command.kit.bypass.cooldown`
   - Kits stored in `kits.json` with full customization
@@ -31,10 +31,13 @@ All notable changes to EliteEssentials will be documented in this file.
 
 - Updated permission structure with new categories for kits and misc commands
 - All new commands support both simple and advanced permission modes
+- **Teleport commands now use `putComponent` instead of `addComponent`** for better compatibility with creative mode players
 
 ### Fixed
 
-- Various bug fixes and performance tweaks
+- **Creative mode compatibility**: Fixed crash when using teleport commands (RTP, spawn, home, warp, back) while in creative mode. Creative mode players already have the Invulnerable component, causing `addComponent` to fail.
+- **Kit command crash in creative mode**: Added error handling for component access issues when opening kit GUI
+- **God mode toggle**: Now uses `putComponent` to properly handle players who already have invulnerability
 
 ## [1.0.3] - 2026-01-15
 

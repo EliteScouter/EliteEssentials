@@ -127,6 +127,7 @@ public class PluginConfig {
         
         // ==================== SPAWN ====================
         messages.put("spawnNoSpawn", "No spawn point configured for this world.");
+        messages.put("spawnNoSpawn", "No spawn point set. An admin must use /setspawn first.");
         messages.put("spawnNotFound", "Could not find spawn point.");
         messages.put("spawnTeleported", "Teleported to spawn!");
         messages.put("spawnWarmup", "Teleporting to spawn in {seconds} seconds... Stand still!");
@@ -359,7 +360,10 @@ public class PluginConfig {
     // ==================== SPAWN PROTECTION ====================
     
     public static class SpawnProtectionConfig {
-        /** Enable/disable spawn protection */
+        /** 
+         * Enable/disable spawn protection.
+         * NOTE: You must use /setspawn to set the spawn location before protection will work.
+         */
         public boolean enabled = false;
         
         /** Radius in blocks from spawn to protect (square area) */
