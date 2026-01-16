@@ -97,10 +97,10 @@ Config file is automatically created on first server start with sensible default
 | `/warp [name]` | Teleport to warp | Everyone |
 | `/warps` | List all warps | Everyone |
 | `/kit [name]` | Open kit GUI or claim kit | Everyone |
-| `/god` | Toggle invincibility | Everyone |
-| `/heal` | Fully restore health | Everyone |
-| `/fly` | Toggle creative flight | Everyone |
-| `/top` | Teleport to highest block | Everyone |
+| `/god` | Toggle invincibility | Admin |
+| `/heal` | Fully restore health | Admin |
+| `/fly` | Toggle creative flight | Admin |
+| `/top` | Teleport to highest block | Admin |
 | `/msg <player> <msg>` | Private message | Everyone |
 | `/reply` | Reply to last message | Everyone |
 | `/setwarp <name> [perm]` | Create warp | Admin |
@@ -134,11 +134,6 @@ See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
 
 ## Roadmap
 
-<<<<<<< HEAD
-Features planned for future releases:
-
-- **Permissions & Groups** - Granular permission system with groups/ranks. Control access to any command per player or group, including commands from other addons.
-- **Chat Prefixes** - Display rank/group prefixes in player names and chat.
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
 - **Player Nicknames** - Allow players to set display names.
 - **MOTD & Announcements** - Customizable join messages and scheduled broadcasts.
@@ -146,16 +141,4 @@ Features planned for future releases:
 - **Vanish** - Allow admins to go invisible to players.
 - **Invsee** - View and edit other players' inventories.
 - **Trashcan** - Dispose of unwanted items.
-=======
-*   **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
-*   **Spawn Protection** - Protect spawn area from building/breaking with configurable radius.
-*   **Player Nicknames** - Allow players to set display names.
-*   **MOTD & Announcements** - Customizable join messages and scheduled broadcasts.
-*   **AFK Detection** - Auto-kick or mark players as AFK after inactivity.
-*   **Vanish** - Allow admins to go invisible to players.
-*   **Fly** - Allow admins/players to toggle creative flight.
-*   **God Mode** - Allow admins/players to become invincible.
-*   **Invsee** - View and edit other players' inventories.
-*   **Trashcan** - Dispose of unwanted items.
-*   **MSG** - Ability to message people
->>>>>>> 4f80a920f8f2d48a803498560e4b577101684d64
+- **SQL Support** - Ability to use External SQL for Mod storage.
