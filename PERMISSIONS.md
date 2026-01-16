@@ -27,6 +27,13 @@ Commands are either available to **Everyone** or **Admin only**:
 | `/warpadmin` | Warp admin panel | Admin |
 | `/sleeppercent [%]` | Set sleep percentage | Admin |
 | `/eliteessentials reload` | Reload config | Admin |
+| `/god` | Toggle invincibility | Admin |
+| `/heal` | Restore full health | Admin |
+| `/msg <player> <message>` | Private message | Everyone |
+| `/reply <message>` | Reply to last message | Everyone |
+| `/top` | Teleport to highest block | Everyone |
+| `/fly` | Toggle flight mode | Admin |
+| `/kit` | Open kit selection GUI | Everyone |
 
 In simple mode, "Admin" means players in the OP group or with `eliteessentials.admin.*` permission.
 
@@ -79,8 +86,19 @@ eliteessentials
 │   │   └── bypass
 │   │       ├── cooldown
 │   │       └── warmup
-│   └── misc
-│       └── sleeppercent        # /sleeppercent command
+│   ├── misc                    # Miscellaneous commands
+│   │   ├── sleeppercent        # /sleeppercent command
+│   │   ├── god                 # /god command
+│   │   ├── heal                # /heal command
+│   │   ├── msg                 # /msg and /reply commands
+│   │   └── fly                 # /fly command
+│   └── kit                     # Kit category
+│       ├── use                 # /kit command
+│       ├── <kitname>           # Access specific kit
+│       ├── create              # Create kits
+│       ├── delete              # Delete kits
+│       └── bypass
+│           └── cooldown        # Bypass kit cooldowns
 └── admin
     ├── *                       # Full admin access
     └── reload                  # /eliteessentials reload
@@ -134,6 +152,29 @@ eliteessentials
 | `eliteessentials.admin.*` | Full admin access |
 | `eliteessentials.admin.reload` | Reload configuration |
 | `eliteessentials.command.misc.sleeppercent` | Set sleep percentage |
+
+### Miscellaneous Commands
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.misc.god` | Toggle god mode |
+| `eliteessentials.command.misc.heal` | Heal to full health |
+| `eliteessentials.command.misc.msg` | Private messaging (/msg, /reply) |
+| `eliteessentials.command.misc.fly` | Toggle flight mode |
+| `eliteessentials.command.tp.top` | Teleport to highest block |
+
+### Kit Commands
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.kit.use` | Open kit selection GUI |
+| `eliteessentials.command.kit.<name>` | Access specific kit |
+| `eliteessentials.command.kit.create` | Create new kits |
+| `eliteessentials.command.kit.delete` | Delete kits |
+| `eliteessentials.command.kit.bypass.cooldown` | Bypass kit cooldowns |
+
+### Spawn Protection
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.spawn.protection.bypass` | Bypass spawn protection |
 
 ## Wildcard Support
 

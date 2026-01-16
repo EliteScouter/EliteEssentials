@@ -1,0 +1,40 @@
+$C = "../Common.ui";
+
+Button {
+  LayoutMode: Top;
+  Anchor: (Left: 2, Right: 2, Bottom: 5, Height: 75, Width: 400);
+  Background: $C.@InputBoxBackground;
+  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
+  Style: ButtonStyle(
+    Sounds: $C.@ButtonSounds,
+  );
+
+  Group {
+    LayoutMode: Top;
+
+    Label #KitName {
+      Style: (
+        FontSize: 16,
+        RenderBold: true,
+        TextColor: #93844c,
+        HorizontalAlignment: Center
+      );
+    }
+
+    Label #KitDescription {
+      Style: (
+        FontSize: 10,
+        TextColor: #777777,
+        HorizontalAlignment: Center
+      );
+    }
+
+    Label #KitStatus {
+      Style: (
+        FontSize: 12,
+        TextColor: #96a9be,
+        HorizontalAlignment: Center
+      );
+    }
+  }
+}

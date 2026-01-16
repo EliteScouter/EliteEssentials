@@ -34,6 +34,13 @@ public class PluginConfig {
     public WarpsConfig warps = new WarpsConfig();
     public SleepConfig sleep = new SleepConfig();
     public DeathMessagesConfig deathMessages = new DeathMessagesConfig();
+    public GodConfig god = new GodConfig();
+    public HealConfig heal = new HealConfig();
+    public MsgConfig msg = new MsgConfig();
+    public FlyConfig fly = new FlyConfig();
+    public TopConfig top = new TopConfig();
+    public KitsConfig kits = new KitsConfig();
+    public SpawnProtectionConfig spawnProtection = new SpawnProtectionConfig();
     
     // ==================== MESSAGES ====================
     
@@ -134,6 +141,43 @@ public class PluginConfig {
         // ==================== SLEEP ====================
         messages.put("sleepProgress", "{sleeping}/{needed} players sleeping...");
         messages.put("sleepSkipping", "{sleeping}/{needed} players sleeping - Skipping to morning!");
+        
+        // ==================== GOD MODE ====================
+        messages.put("godEnabled", "God mode enabled. You are now invincible!");
+        messages.put("godDisabled", "God mode disabled.");
+        
+        // ==================== HEAL ====================
+        messages.put("healSuccess", "You have been healed to full health!");
+        messages.put("healFailed", "Could not heal you.");
+        
+        // ==================== PRIVATE MESSAGING ====================
+        messages.put("msgUsage", "Usage: /msg <player> <message>");
+        messages.put("msgSelf", "You cannot message yourself.");
+        messages.put("msgSent", "[To {player}] {message}");
+        messages.put("msgReceived", "[From {player}] {message}");
+        messages.put("replyNoOne", "You have no one to reply to.");
+        messages.put("replyOffline", "That player is no longer online.");
+        messages.put("replyUsage", "Usage: /reply <message>");
+        
+        // ==================== FLY ====================
+        messages.put("flyEnabled", "Flight mode enabled! Double-tap jump to fly.");
+        messages.put("flyDisabled", "Flight mode disabled.");
+        messages.put("flyFailed", "Could not access movement settings.");
+        
+        // ==================== TOP ====================
+        messages.put("topTeleported", "Teleported to the top!");
+        messages.put("topChunkNotLoaded", "Chunk not loaded.");
+        messages.put("topNoGround", "No solid ground found above.");
+        
+        // ==================== KITS ====================
+        messages.put("kitNoKits", "No kits are available.");
+        messages.put("kitNotFound", "Kit not found.");
+        messages.put("kitNoPermission", "You don't have permission to use this kit.");
+        messages.put("kitOnCooldown", "This kit is on cooldown. {time} remaining.");
+        messages.put("kitAlreadyClaimed", "You have already claimed this one-time kit.");
+        messages.put("kitClaimed", "You received the {kit} kit!");
+        messages.put("kitClaimFailed", "Could not claim kit.");
+        messages.put("kitOpenFailed", "Could not open kit menu.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -268,5 +312,66 @@ public class PluginConfig {
         
         /** Show death cause (fall, fire, drowning, etc.) */
         public boolean showCause = true;
+    }
+
+    // ==================== GOD MODE ====================
+    
+    public static class GodConfig {
+        /** Enable/disable the /god command */
+        public boolean enabled = true;
+    }
+
+    // ==================== HEAL ====================
+    
+    public static class HealConfig {
+        /** Enable/disable the /heal command */
+        public boolean enabled = true;
+    }
+
+    // ==================== PRIVATE MESSAGING ====================
+    
+    public static class MsgConfig {
+        /** Enable/disable /msg, /reply commands */
+        public boolean enabled = true;
+    }
+
+    // ==================== FLY ====================
+    
+    public static class FlyConfig {
+        /** Enable/disable the /fly command */
+        public boolean enabled = true;
+    }
+
+    // ==================== TOP ====================
+    
+    public static class TopConfig {
+        /** Enable/disable the /top command */
+        public boolean enabled = true;
+    }
+
+    // ==================== KITS ====================
+    
+    public static class KitsConfig {
+        /** Enable/disable kit commands */
+        public boolean enabled = true;
+    }
+
+    // ==================== SPAWN PROTECTION ====================
+    
+    public static class SpawnProtectionConfig {
+        /** Enable/disable spawn protection */
+        public boolean enabled = false;
+        
+        /** Radius in blocks from spawn to protect (square area) */
+        public int radius = 50;
+        
+        /** Minimum Y level to protect (-1 = no limit) */
+        public int minY = -1;
+        
+        /** Maximum Y level to protect (-1 = no limit) */
+        public int maxY = -1;
+        
+        /** Disable PvP in spawn area */
+        public boolean disablePvp = true;
     }
 }

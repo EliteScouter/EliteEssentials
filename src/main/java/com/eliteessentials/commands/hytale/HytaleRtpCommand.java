@@ -199,7 +199,7 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
                         currentLoc, rtpConfig, attempt, targetX, targetZ, chunk);
         } else {
-            // Load async with callback - NO BLOCKING
+            // Chunk not loaded - load it async and wait for it to be fully ready
             final int currentAttempt = attempt;
             final double finalTargetX = targetX;
             final double finalTargetZ = targetZ;
@@ -215,7 +215,7 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                                        currentLoc, rtpConfig, currentAttempt + 1);
                     });
                 } else {
-                    // Process on game thread
+                    // Chunk loaded - process on game thread
                     world.execute(() -> {
                         processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
                                     currentLoc, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk);
@@ -234,23 +234,52 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         int blockX = MathUtil.floor(targetX);
         int blockZ = MathUtil.floor(targetZ);
         
-        short surfaceHeight = chunk.getHeight(blockX, blockZ);
+        // Try to find safe Y using chunk's height map
+        Integer safeY = null;
+        
+        try {
+            // Try getHeight with local coordinates
+            int localX = blockX & 15;
+            int localZ = blockZ & 15;
+            short height = chunk.getHeight(localX, localZ);
+            
+            if (debug) {
+                logger.info("[RTP] Chunk height at world(" + blockX + ", " + blockZ + ") local(" + localX + ", " + localZ + ") = " + height);
+            }
+            
+            // Only use height if it's reasonable (between minSurfaceY and 256)
+            if (height >= rtpConfig.minSurfaceY && height < 256) {
+                safeY = (int) height;
+            }
+        } catch (Exception e) {
+            if (debug) {
+                logger.info("[RTP] getHeight failed: " + e.getMessage());
+            }
+        }
+        
+        // If getHeight didn't give a valid result, use player's current Y as reference
+        // This assumes the player is standing on valid ground
+        if (safeY == null) {
+            safeY = (int) currentLoc.getY();
+            if (debug) {
+                logger.info("[RTP] Using player's current Y as fallback: " + safeY);
+            }
+        }
+        
+        // Ensure we're above minimum surface level
+        if (safeY < rtpConfig.minSurfaceY) {
+            safeY = rtpConfig.minSurfaceY;
+        }
+        
+        // Teleport 2 blocks above the ground
+        double teleportY = safeY + 2;
         
         if (debug) {
-            logger.info("[RTP] Surface height at " + blockX + ", " + blockZ + " = " + surfaceHeight);
+            logger.info("[RTP] Final teleport Y: " + teleportY);
         }
         
-        if (surfaceHeight > 0) {
-            double finalY = surfaceHeight + 2;
-            executeTeleport(ctx, store, ref, world, playerId, currentLoc, rtpConfig, targetX, finalY, targetZ);
-        } else {
-            // Invalid surface, try next
-            if (debug) {
-                logger.info("[RTP] Invalid surface height: " + surfaceHeight + ", trying next");
-            }
-            tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                           currentLoc, rtpConfig, attempt + 1);
-        }
+        executeTeleport(ctx, store, ref, world, playerId, currentLoc, rtpConfig, 
+                       targetX, teleportY, targetZ);
     }
     
     private void executeTeleport(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
@@ -268,16 +297,22 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         
         int invulnerabilitySeconds = rtpConfig.invulnerabilitySeconds;
         
+        // Create teleport - use putComponent to avoid "already exists" error
         Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
         Teleport teleport = new Teleport(targetPos, Vector3f.NaN);
-        store.addComponent(ref, Teleport.getComponentType(), teleport);
+        store.putComponent(ref, Teleport.getComponentType(), teleport);
         
         if (invulnerabilitySeconds > 0) {
-            store.addComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+            // Use putComponent instead of addComponent to handle case where component already exists
+            store.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
             
             scheduler.schedule(() -> {
                 world.execute(() -> {
-                    store.removeComponent(ref, Invulnerable.getComponentType());
+                    try {
+                        store.removeComponent(ref, Invulnerable.getComponentType());
+                    } catch (Exception e) {
+                        // Ignore - component might already be removed or player disconnected
+                    }
                 });
             }, invulnerabilitySeconds, TimeUnit.SECONDS);
         }

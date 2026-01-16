@@ -133,8 +133,23 @@ public class WarmupService {
         Store<EntityStore> store = warmup.store;
         Ref<EntityStore> ref = warmup.playerRef;
         
+        // Validate ref is still valid before accessing components
+        if (ref == null || !ref.isValid()) {
+            pending.remove(warmup.playerUuid);
+            logger.info("[Warmup] Cancelled for " + warmup.playerUuid + " - player ref invalid (disconnected?)");
+            return;
+        }
+        
         // Get Player component to send messages
-        Player playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
+        Player playerComponent;
+        try {
+            playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
+        } catch (Exception e) {
+            pending.remove(warmup.playerUuid);
+            logger.info("[Warmup] Cancelled for " + warmup.playerUuid + " - error getting player component");
+            return;
+        }
+        
         if (playerComponent == null) {
             pending.remove(warmup.playerUuid);
             return;
@@ -164,6 +179,13 @@ public class WarmupService {
         if (remainingNanos <= 0) {
             // Warmup complete - execute the teleport
             pending.remove(warmup.playerUuid);
+            
+            // Final validation before executing teleport
+            if (ref == null || !ref.isValid()) {
+                logger.info("[Warmup] Cancelled for " + warmup.commandName + " - player disconnected before completion");
+                return;
+            }
+            
             logger.info("[Warmup] Complete for " + warmup.commandName + ", executing teleport");
             try {
                 warmup.onComplete.run();
@@ -190,11 +212,19 @@ public class WarmupService {
     }
     
     private Vector3d getPlayerPosition(Ref<EntityStore> ref, Store<EntityStore> store) {
-        TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform == null) {
+        try {
+            if (ref == null || !ref.isValid()) {
+                return null;
+            }
+            TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) {
+                return null;
+            }
+            return transform.getPosition();
+        } catch (Exception e) {
+            // Entity may have been removed
             return null;
         }
-        return transform.getPosition();
     }
 
     public void cancelWarmup(UUID playerId) {

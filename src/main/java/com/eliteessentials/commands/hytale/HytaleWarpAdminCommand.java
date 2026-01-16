@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -105,7 +105,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         WarpInfoCommand(WarpService warpService) {
             super("info");
             this.warpService = warpService;
-            this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
+            this.nameArg = withRequiredArg("name", "Warp name", SimpleStringArg.WARP_NAME);
             
             // Permission check handled in execute() via CommandPermissionUtil
         }
@@ -179,8 +179,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         WarpSetPermCommand(WarpService warpService) {
             super("setperm");
             this.warpService = warpService;
-            this.nameArg = withRequiredArg("name", "Warp name", ArgTypes.STRING);
-            this.permArg = withRequiredArg("permission", "all or op", ArgTypes.STRING);
+            this.nameArg = withRequiredArg("name", "Warp name", SimpleStringArg.WARP_NAME);
+            this.permArg = withRequiredArg("permission", "all or op", SimpleStringArg.PERMISSION);
             
             // Permission check handled in execute() via CommandPermissionUtil
         }

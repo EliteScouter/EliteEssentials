@@ -107,7 +107,7 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
                 Vector3f targetRot = new Vector3f(destination.getPitch(), destination.getYaw(), 0);
                 
                 Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
-                store.addComponent(ref, Teleport.getComponentType(), teleport);
+                store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
                 ctx.sendMessage(Message.raw(configManager.getMessage("backTeleported")).color("#55FF55"));
             });

@@ -121,7 +121,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             
             world.execute(() -> {
                 Teleport teleport = new Teleport(world, spawnPos, spawnRot);
-                store.addComponent(ref, Teleport.getComponentType(), teleport);
+                store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
                 ctx.sendMessage(Message.raw(configManager.getMessage("spawnTeleported")).color("#55FF55"));
             });

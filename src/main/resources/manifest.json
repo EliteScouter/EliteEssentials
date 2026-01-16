@@ -12,5 +12,6 @@
   "ServerVersion": ">=2026.1.0",
   "Dependencies": {},
   "OptionalDependencies": {},
-  "DisabledByDefault": false
+  "DisabledByDefault": false,
+  "IncludesAssetPack": true
 }

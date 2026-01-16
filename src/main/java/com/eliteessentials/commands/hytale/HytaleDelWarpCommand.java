@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -34,7 +34,7 @@ public class HytaleDelWarpCommand extends AbstractPlayerCommand {
     public HytaleDelWarpCommand(WarpService warpService) {
         super(COMMAND_NAME, "Delete a warp (Admin)");
         this.warpService = warpService;
-        this.nameArg = withRequiredArg("name", "Warp name to delete", ArgTypes.STRING);
+        this.nameArg = withRequiredArg("name", "Warp name to delete", SimpleStringArg.WARP_NAME);
         
         // Permission check handled in execute() via CommandPermissionUtil
     }

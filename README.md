@@ -45,6 +45,21 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
 ### Spawn
 - **`/spawn`** - Teleport to the world spawn point
 
+### Kit System
+- **`/kit [name]`** - Open kit GUI or claim a specific kit
+- **One-time kits** - Kits that can only be claimed once per player
+- **Cooldown kits** - Configurable cooldown between claims
+- **Starter Kit** - Automatically given to new players on first join
+- Fully configurable items, cooldowns, and permissions per kit
+
+### Utility Commands
+- **`/god`** - Toggle invincibility (become immune to all damage)
+- **`/heal`** - Fully restore your health
+- **`/fly`** - Toggle creative flight without creative mode
+- **`/top`** - Teleport to the highest block at your current position
+- **`/msg <player> <message>`** - Send a private message
+- **`/reply`** - Reply to the last private message (aliases: /r)
+
 ### Sleep Percentage (Admin)
 - **`/sleeppercent <0-100>`** - Set percentage of players needed to skip the night
 - Progress messages shown to all players
@@ -81,6 +96,13 @@ Config file is automatically created on first server start with sensible default
 | `/tpdeny` | Deny teleport request | Everyone |
 | `/warp [name]` | Teleport to warp | Everyone |
 | `/warps` | List all warps | Everyone |
+| `/kit [name]` | Open kit GUI or claim kit | Everyone |
+| `/god` | Toggle invincibility | Everyone |
+| `/heal` | Fully restore health | Everyone |
+| `/fly` | Toggle creative flight | Everyone |
+| `/top` | Teleport to highest block | Everyone |
+| `/msg <player> <msg>` | Private message | Everyone |
+| `/reply` | Reply to last message | Everyone |
 | `/setwarp <name> [perm]` | Create warp | Admin |
 | `/delwarp <name>` | Delete warp | Admin |
 | `/warpadmin` | Warp admin panel | Admin |
@@ -117,12 +139,9 @@ Features planned for future releases:
 - **Permissions & Groups** - Granular permission system with groups/ranks. Control access to any command per player or group, including commands from other addons.
 - **Chat Prefixes** - Display rank/group prefixes in player names and chat.
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
-- **Spawn Protection** - Protect spawn area from building/breaking with configurable radius.
 - **Player Nicknames** - Allow players to set display names.
 - **MOTD & Announcements** - Customizable join messages and scheduled broadcasts.
 - **AFK Detection** - Auto-kick or mark players as AFK after inactivity.
 - **Vanish** - Allow admins to go invisible to players.
-- **Fly** - Allow admins/players to toggle creative flight.
-- **God Mode** - Allow admins/players to become invincible.
 - **Invsee** - View and edit other players' inventories.
 - **Trashcan** - Dispose of unwanted items.

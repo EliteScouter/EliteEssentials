@@ -95,6 +95,26 @@ public final class Permissions {
     public static final String MISC_CATEGORY = COMMAND_BASE + ".misc";
     
     public static final String SLEEPPERCENT = MISC_CATEGORY + ".sleeppercent";
+    public static final String GOD = MISC_CATEGORY + ".god";
+    public static final String HEAL = MISC_CATEGORY + ".heal";
+    public static final String MSG = MISC_CATEGORY + ".msg";
+    public static final String FLY = MISC_CATEGORY + ".fly";
+    public static final String TOP = TP_CATEGORY + ".top";
+
+    // ==================== KIT CATEGORY ====================
+    // eliteessentials.command.kit.*
+    public static final String KIT_CATEGORY = COMMAND_BASE + ".kit";
+    
+    public static final String KIT = KIT_CATEGORY + ".use";
+    public static final String KIT_CREATE = KIT_CATEGORY + ".create";
+    public static final String KIT_DELETE = KIT_CATEGORY + ".delete";
+    public static final String KIT_BYPASS_COOLDOWN = KIT_CATEGORY + ".bypass.cooldown";
+    
+    // Kit access: eliteessentials.command.kit.<kitname>
+    // (handled by kitAccess() method)
+
+    // ==================== SPAWN PROTECTION ====================
+    public static final String SPAWN_PROTECTION_BYPASS = SPAWN_CATEGORY + ".protection.bypass";
 
     // ==================== ADMIN PERMISSIONS ====================
     // eliteessentials.admin.*
@@ -119,6 +139,15 @@ public final class Permissions {
      */
     public static String warpAccess(String warpName) {
         return WARP_CATEGORY + "." + warpName.toLowerCase();
+    }
+    
+    /**
+     * Get permission for accessing a specific kit.
+     * @param kitId Kit ID
+     * @return eliteessentials.command.kit.<kitId>
+     */
+    public static String kitAccess(String kitId) {
+        return KIT_CATEGORY + "." + kitId.toLowerCase();
     }
     
     /**

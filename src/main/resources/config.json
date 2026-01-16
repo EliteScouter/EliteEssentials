@@ -2,6 +2,7 @@
   "_comment": "EliteEssentials Configuration - Edit these values to customize the plugin",
   
   "debug": false,
+  "advancedPermissions": false,
   
   "rtp": {
     "enabled": true,
@@ -50,6 +51,38 @@
     "enabled": true,
     "showKiller": true,
     "showCause": true
+  },
+  
+  "god": {
+    "enabled": true
+  },
+  
+  "heal": {
+    "enabled": true
+  },
+  
+  "msg": {
+    "enabled": true
+  },
+  
+  "fly": {
+    "enabled": true
+  },
+  
+  "top": {
+    "enabled": true
+  },
+  
+  "kits": {
+    "enabled": true
+  },
+  
+  "spawnProtection": {
+    "enabled": false,
+    "radius": 50,
+    "minY": -1,
+    "maxY": -1,
+    "disablePvp": true
   },
   
   "messages": {

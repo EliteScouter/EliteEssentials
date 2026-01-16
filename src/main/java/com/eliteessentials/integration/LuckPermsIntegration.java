@@ -29,7 +29,7 @@ public class LuckPermsIntegration {
     public static void registerPermissions() {
         // Schedule registration with a delay to ensure LuckPerms is loaded
         Thread registrationThread = new Thread(() -> {
-            // Wait for LuckPerms to load (try multiple times with delays)
+            // Wait for LuckPerms to load (try multiple times with delays, silently)
             for (int attempt = 1; attempt <= 10; attempt++) {
                 try {
                     Thread.sleep(1000 * attempt); // Increasing delay: 1s, 2s, 3s...
@@ -41,13 +41,9 @@ public class LuckPermsIntegration {
                 if (tryRegisterPermissions()) {
                     return; // Success
                 }
-                
-                if (attempt < 10) {
-                    logger.info("[LuckPerms] Waiting for LuckPerms to load... (attempt " + attempt + "/10)");
-                }
             }
             
-            logger.info("[LuckPerms] LuckPerms not detected after 10 attempts, skipping permission registration.");
+            logger.info("[LuckPerms] LuckPerms not detected, skipping permission registration.");
         }, "EliteEssentials-LuckPerms-Registration");
         
         registrationThread.setDaemon(true);
@@ -272,6 +268,24 @@ public class LuckPermsIntegration {
         
         // Misc commands
         perms.add(Permissions.SLEEPPERCENT);
+        perms.add(Permissions.GOD);
+        perms.add(Permissions.HEAL);
+        perms.add(Permissions.MSG);
+        perms.add(Permissions.FLY);
+        perms.add(Permissions.TOP);
+        perms.add("eliteessentials.command.misc.*");
+        
+        // Kit commands
+        perms.add(Permissions.KIT);
+        perms.add(Permissions.KIT_CREATE);
+        perms.add(Permissions.KIT_DELETE);
+        perms.add(Permissions.KIT_BYPASS_COOLDOWN);
+        perms.add("eliteessentials.command.kit.*");
+        // Note: Kit-specific permissions (e.g., eliteessentials.command.kit.starter) 
+        // are registered dynamically when kits are loaded from kits.json
+        
+        // Spawn protection
+        perms.add(Permissions.SPAWN_PROTECTION_BYPASS);
         
         // Admin
         perms.add(Permissions.ADMIN);

@@ -12,8 +12,8 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -123,7 +123,7 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         SetHomeWithNameCommand(HomeService homeService) {
             super(COMMAND_NAME);
             this.homeService = homeService;
-            this.nameArg = withRequiredArg("name", "Home name", ArgTypes.STRING);
+            this.nameArg = withRequiredArg("name", "Home name", SimpleStringArg.HOME_NAME);
             
             // Permission check handled in execute() via CommandPermissionUtil
         }
