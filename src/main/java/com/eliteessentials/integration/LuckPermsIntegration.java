@@ -272,6 +272,7 @@ public class LuckPermsIntegration {
         perms.add(Permissions.HEAL);
         perms.add(Permissions.MSG);
         perms.add(Permissions.FLY);
+        perms.add(Permissions.FLYSPEED);
         perms.add(Permissions.TOP);
         perms.add("eliteessentials.command.misc.*");
         

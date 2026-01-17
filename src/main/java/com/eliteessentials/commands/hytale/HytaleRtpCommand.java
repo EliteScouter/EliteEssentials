@@ -103,7 +103,7 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             }
         }
 
-        // Get player's current position
+        // Get player's current position for /back
         TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             ctx.sendMessage(Message.raw(configManager.getMessage("rtpCouldNotDeterminePosition")).color("#FF5555"));
@@ -111,8 +111,10 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         }
         
         Vector3d currentPos = transform.getPosition();
-        double centerX = currentPos.getX();
-        double centerZ = currentPos.getZ();
+        
+        // Use world center (1, 1) as the center for RTP range calculation
+        double centerX = 1.0;
+        double centerZ = 1.0;
 
         // Save current location for /back
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());

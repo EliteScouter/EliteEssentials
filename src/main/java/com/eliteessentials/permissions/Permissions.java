@@ -100,6 +100,7 @@ public final class Permissions {
     public static final String HEAL = MISC_CATEGORY + ".heal";
     public static final String MSG = MISC_CATEGORY + ".msg";
     public static final String FLY = MISC_CATEGORY + ".fly";
+    public static final String FLYSPEED = MISC_CATEGORY + ".flyspeed";
     public static final String TOP = TP_CATEGORY + ".top";
 
     // ==================== KIT CATEGORY ====================

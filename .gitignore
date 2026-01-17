@@ -23,33 +23,6 @@ desktop.ini
 *.log
 logs/
 
-# Local test files
-HytaleServer.jar
-hytaleserver.jar
-run/
-test-server/
-
-# Decompiled/extracted Hytale classes (do not distribute)
-/com/
-
-# Notes and temp files
-perms.txt
-jar_contents.txt
-*.tmp
-*.bak
-*.swp
-*~
-
-# Development notes and research (not for distribution)
-dev-notes/
-
 # Package files (build outputs should be in releases, not repo)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
-
-# Local configuration overrides
-local.properties
-local.gradle
-
-# Wiki is a separate repo
-EliteEssentials.wiki/

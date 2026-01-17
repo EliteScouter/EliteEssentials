@@ -316,9 +316,10 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleTopCommand(backService, configManager));
         flyCommand = new HytaleFlyCommand(configManager);
         getCommandRegistry().registerCommand(flyCommand);
+        getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleKitCommand(kitService, configManager));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /kit");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit");
     }
 
     public static EliteEssentials getInstance() {

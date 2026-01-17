@@ -27,10 +27,14 @@ public class KitService {
     private final Map<UUID, Map<String, Long>> cooldowns = new ConcurrentHashMap<>();
     // Player UUID -> Kit ID -> true if claimed (for onetime kits)
     private final Map<UUID, Set<String>> onetimeClaimed = new ConcurrentHashMap<>();
+    
+    // Lock for file I/O operations to prevent concurrent writes
+    private final Object fileLock = new Object();
 
     public KitService(File dataFolder) {
         this.dataFolder = dataFolder;
         loadKits();
+        loadOnetimeClaims();
     }
 
     /**
@@ -70,11 +74,13 @@ public class KitService {
         }
 
         File kitsFile = new File(dataFolder, "kits.json");
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(kitsFile), StandardCharsets.UTF_8)) {
-            gson.toJson(new ArrayList<>(kits.values()), writer);
-            logger.info("Saved " + kits.size() + " kits to kits.json");
-        } catch (Exception e) {
-            logger.severe("Failed to save kits.json: " + e.getMessage());
+        synchronized (fileLock) {
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(kitsFile), StandardCharsets.UTF_8)) {
+                gson.toJson(new ArrayList<>(kits.values()), writer);
+                logger.info("Saved " + kits.size() + " kits to kits.json");
+            } catch (Exception e) {
+                logger.severe("Failed to save kits.json: " + e.getMessage());
+            }
         }
     }
 
@@ -82,26 +88,9 @@ public class KitService {
      * Create default starter kit
      */
     private void createDefaultKits() {
-        List<KitItem> starterItems = Arrays.asList(
-            new KitItem("hytale:wooden_sword", 1, "hotbar", 0),
-            new KitItem("hytale:wooden_pickaxe", 1, "hotbar", 1),
-            new KitItem("hytale:wooden_axe", 1, "hotbar", 2),
-            new KitItem("hytale:bread", 16, "hotbar", 3)
-        );
-        
-        Kit starterKit = new Kit(
-            "starter",
-            "Starter Kit",
-            "Basic tools to get you started!",
-            "hytale:wooden_sword",
-            3600, // 1 hour cooldown
-            false,
-            starterItems
-        );
-        
-        kits.put("starter", starterKit);
+        // Don't create any default kits - start with empty list
+        logger.info("No kits.json found, starting with 0 kits");
         saveKits();
-        logger.info("Created default starter kit");
     }
 
     /**
@@ -183,6 +172,7 @@ public class KitService {
      */
     public void reload() {
         loadKits();
+        loadOnetimeClaims();
     }
 
     /**
@@ -190,15 +180,48 @@ public class KitService {
      */
     public boolean hasClaimedOnetime(UUID playerId, String kitId) {
         Set<String> claimed = onetimeClaimed.get(playerId);
-        return claimed != null && claimed.contains(kitId.toLowerCase());
+        boolean hasClaimed = claimed != null && claimed.contains(kitId.toLowerCase());
+        // Only log if debug is enabled - need to get config from EliteEssentials instance
+        if (hasClaimed) {
+            try {
+                com.eliteessentials.EliteEssentials plugin = com.eliteessentials.EliteEssentials.getInstance();
+                if (plugin != null && plugin.getConfigManager().isDebugEnabled()) {
+                    logger.info("hasClaimedOnetime check: playerId=" + playerId + ", kitId=" + kitId + 
+                               ", claimed=" + hasClaimed + ", claimedSet=" + claimed);
+                }
+            } catch (Exception e) {
+                // Ignore if we can't get config
+            }
+        }
+        return hasClaimed;
     }
 
     /**
      * Mark a one-time kit as claimed
      */
     public void setOnetimeClaimed(UUID playerId, String kitId) {
+        try {
+            com.eliteessentials.EliteEssentials plugin = com.eliteessentials.EliteEssentials.getInstance();
+            if (plugin != null && plugin.getConfigManager().isDebugEnabled()) {
+                logger.info("setOnetimeClaimed called: playerId=" + playerId + ", kitId=" + kitId);
+            }
+        } catch (Exception e) {
+            // Ignore if we can't get config
+        }
+        
         onetimeClaimed.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet())
                       .add(kitId.toLowerCase());
+        
+        try {
+            com.eliteessentials.EliteEssentials plugin = com.eliteessentials.EliteEssentials.getInstance();
+            if (plugin != null && plugin.getConfigManager().isDebugEnabled()) {
+                logger.info("After adding, onetimeClaimed for player: " + onetimeClaimed.get(playerId));
+            }
+        } catch (Exception e) {
+            // Ignore if we can't get config
+        }
+        
+        saveOnetimeClaims();
     }
 
     /**
@@ -213,5 +236,63 @@ public class KitService {
             }
         }
         return starters;
+    }
+
+    /**
+     * Load one-time kit claims from file
+     */
+    private void loadOnetimeClaims() {
+        File claimsFile = new File(dataFolder, "kit_claims.json");
+        
+        if (!claimsFile.exists()) {
+            return;
+        }
+
+        try (Reader reader = new InputStreamReader(new FileInputStream(claimsFile), StandardCharsets.UTF_8)) {
+            Type mapType = new TypeToken<Map<String, List<String>>>(){}.getType();
+            Map<String, List<String>> loadedClaims = gson.fromJson(reader, mapType);
+            
+            onetimeClaimed.clear();
+            if (loadedClaims != null) {
+                for (Map.Entry<String, List<String>> entry : loadedClaims.entrySet()) {
+                    try {
+                        UUID playerId = UUID.fromString(entry.getKey());
+                        Set<String> kitIds = ConcurrentHashMap.newKeySet();
+                        kitIds.addAll(entry.getValue());
+                        onetimeClaimed.put(playerId, kitIds);
+                    } catch (IllegalArgumentException e) {
+                        logger.warning("Invalid UUID in kit_claims.json: " + entry.getKey());
+                    }
+                }
+            }
+            logger.info("Loaded one-time kit claims for " + onetimeClaimed.size() + " players");
+        } catch (Exception e) {
+            logger.severe("Failed to load kit_claims.json: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Save one-time kit claims to file
+     */
+    private void saveOnetimeClaims() {
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
+
+        File claimsFile = new File(dataFolder, "kit_claims.json");
+        
+        // Convert to serializable format (UUID -> String)
+        Map<String, List<String>> serializableClaims = new LinkedHashMap<>();
+        for (Map.Entry<UUID, Set<String>> entry : onetimeClaimed.entrySet()) {
+            serializableClaims.put(entry.getKey().toString(), new ArrayList<>(entry.getValue()));
+        }
+        
+        synchronized (fileLock) {
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(claimsFile), StandardCharsets.UTF_8)) {
+                gson.toJson(serializableClaims, writer);
+            } catch (Exception e) {
+                logger.severe("Failed to save kit_claims.json: " + e.getMessage());
+            }
+        }
     }
 }

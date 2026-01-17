@@ -126,7 +126,7 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
         Location location = new Location(
             world.getName(),
             pos.getX(), pos.getY(), pos.getZ(),
-            rotation.getYaw(), rotation.getPitch()
+            rotation.y, rotation.x  // yaw=rotation.y, pitch=rotation.x
         );
         
         // Check if warp already exists

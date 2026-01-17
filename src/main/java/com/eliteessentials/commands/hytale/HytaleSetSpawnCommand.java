@@ -42,8 +42,8 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
     protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                           PlayerRef player, World world) {
         
-        // Check permission (OP only)
-        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SETSPAWN, true)) {
+        // Check permission (Admin only)
+        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.SETSPAWN, true)) {
             return;
         }
 

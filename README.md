@@ -56,6 +56,7 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
 - **`/god`** - Toggle invincibility (become immune to all damage)
 - **`/heal`** - Fully restore your health
 - **`/fly`** - Toggle creative flight without creative mode
+- **`/flyspeed <speed>`** - Set fly speed multiplier (0-10, 0 = default)
 - **`/top`** - Teleport to the highest block at your current position
 - **`/msg <player> <message>`** - Send a private message
 - **`/reply`** - Reply to the last private message (aliases: /r)
@@ -100,6 +101,7 @@ Config file is automatically created on first server start with sensible default
 | `/god` | Toggle invincibility | Admin |
 | `/heal` | Fully restore health | Admin |
 | `/fly` | Toggle creative flight | Admin |
+| `/flyspeed <speed>` | Set fly speed (0-10) | Admin |
 | `/top` | Teleport to highest block | Admin |
 | `/msg <player> <msg>` | Private message | Everyone |
 | `/reply` | Reply to last message | Everyone |

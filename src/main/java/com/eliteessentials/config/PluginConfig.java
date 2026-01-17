@@ -164,6 +164,10 @@ public class PluginConfig {
         messages.put("flyEnabled", "Flight mode enabled! Double-tap jump to fly.");
         messages.put("flyDisabled", "Flight mode disabled.");
         messages.put("flyFailed", "Could not access movement settings.");
+        messages.put("flySpeedSet", "Fly speed set to {speed}.");
+        messages.put("flySpeedReset", "Fly speed reset to default.");
+        messages.put("flySpeedInvalid", "Invalid speed value. Please enter a number.");
+        messages.put("flySpeedOutOfRange", "Speed must be between 0 and 10.");
         
         // ==================== TOP ====================
         messages.put("topTeleported", "Teleported to the top!");
@@ -200,7 +204,7 @@ public class PluginConfig {
         public int warmupSeconds = 3;
         
         /** Max attempts to find a safe location before giving up */
-        public int maxAttempts = 10;
+        public int maxAttempts = 5;
         
         /** Minimum Y level - rejects locations below this (avoid dungeons) */
         public int minSurfaceY = 50;

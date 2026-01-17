@@ -91,8 +91,8 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
             position.getX(),
             position.getY(),
             position.getZ(),
-            rotation.getYaw(),
-            rotation.getPitch()
+            rotation.y,  // yaw=rotation.y
+            rotation.x   // pitch=rotation.x
         );
 
         HomeService.Result result = homeService.setHome(playerId, homeName, location);

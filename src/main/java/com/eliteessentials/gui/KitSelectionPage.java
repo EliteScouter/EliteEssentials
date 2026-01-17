@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 /**
  * EliteEssentials Kit Selection GUI.
@@ -37,6 +38,7 @@ import java.util.UUID;
  */
 public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.KitPageData> {
 
+    private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final KitService kitService;
     private final ConfigManager configManager;
 
@@ -75,7 +77,7 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
 
             // Check permission and cooldown
             String kitPermission = Permissions.kitAccess(kit.getId());
-            boolean hasPermission = PermissionService.get().hasPermission(playerId, kitPermission) ||
+            boolean hasPermission = PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) ||
                                    PermissionService.get().isAdmin(playerId);
 
             String statusText;
@@ -121,7 +123,7 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
 
         // Check permission
         String kitPermission = Permissions.kitAccess(kit.getId());
-        if (!PermissionService.get().hasPermission(playerId, kitPermission) &&
+        if (!PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) &&
             !PermissionService.get().isAdmin(playerId)) {
             sendMessage(configManager.getMessage("kitNoPermission"), "#FF5555");
             this.close();
@@ -130,14 +132,19 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
 
         // Check cooldown (unless player has bypass)
         boolean canBypass = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
-        if (!canBypass) {
-            // Check one-time kit
-            if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
-                sendMessage(configManager.getMessage("kitAlreadyClaimed"), "#FF5555");
-                this.close();
-                return;
+        
+        // Check one-time kit (bypass doesn't apply to one-time restrictions)
+        if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
+            if (configManager.isDebugEnabled()) {
+                logger.info("Player " + playerId + " tried to claim one-time kit '" + kit.getId() + "' but already claimed it");
             }
-            
+            sendMessage(configManager.getMessage("kitAlreadyClaimed"), "#FF5555");
+            this.close();
+            return;
+        }
+        
+        // Check cooldown (can be bypassed)
+        if (!canBypass) {
             long remaining = kitService.getRemainingCooldown(playerId, kit.getId());
             if (remaining > 0) {
                 sendMessage(configManager.getMessage("kitOnCooldown", 
@@ -175,6 +182,9 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
 
         // Set cooldown or mark as claimed
         if (kit.isOnetime()) {
+            if (configManager.isDebugEnabled()) {
+                logger.info("Marking kit '" + kit.getId() + "' as claimed for player " + playerId);
+            }
             kitService.setOnetimeClaimed(playerId, kit.getId());
         } else if (kit.getCooldown() > 0) {
             kitService.setKitUsed(playerId, kit.getId());
