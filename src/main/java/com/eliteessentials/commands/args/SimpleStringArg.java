@@ -36,7 +36,11 @@ public class SimpleStringArg extends SingleArgumentType<String> {
     
     // ===== FLY SPEED =====
     // Fly speed multiplier
-    public static final SimpleStringArg FLY_SPEED = new SimpleStringArg("1-100", "Fly speed (1-100 or 'reset')", new String[]{"reset", "10", "50", "100"});
+    public static final SimpleStringArg FLY_SPEED = new SimpleStringArg("10-100", "Fly speed (10-100 or 'reset')", new String[]{"reset", "10", "50", "100"});
+    
+    // ===== GREEDY STRING =====
+    // Greedy string - captures all remaining text
+    public static final SimpleStringArg GREEDY = new SimpleStringArg("Message", "Message text", new String[]{"Hello world!", "This is a test"});
 
     private final String[] examples;
 

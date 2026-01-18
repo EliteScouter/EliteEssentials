@@ -83,8 +83,33 @@ All 60+ player-facing messages are configurable in `config.json`. Translate the 
 *   **`/god`** - Toggle invincibility (Admin)
 *   **`/heal`** - Fully restore health (Admin)
 *   **`/fly`** - Toggle creative flight mode (Admin)
-*   **`/flyspeed <speed>`** - Set fly speed multiplier 0-10 (Admin)
+*   **`/flyspeed <speed>`** - Set fly speed multiplier 10-100 or 'reset' (Admin)
 *   **`/top`** - Teleport to highest block at your position
+*   **`/clearinv`** - Clear all items from inventory (Admin, aliases: /clearinventory, /ci)
+
+### Communication & Server Management
+
+*   **`/motd`** - Display the Message of the Day
+    *   Rich formatting with color codes (`&a`, `&c`, `&l`, etc.)
+    *   Clickable URLs automatically detected
+    *   Placeholders: `{player}`, `{server}`, `{world}`, `{playercount}`
+    *   Stored in `motd.json` for easy editing
+    *   Auto-display on join (configurable)
+*   **`/rules`** - Display the server rules
+    *   Color-coded formatting for readability
+    *   Stored in `rules.json` for easy editing
+    *   Fully customizable content
+*   **`/broadcast <message>`** - Broadcast a message to all players (Admin, alias: /bc)
+*   **Group-Based Chat Formatting** - Customize chat appearance by player group
+    *   Works with LuckPerms groups and simple permissions
+    *   Priority-based group selection (highest priority wins)
+    *   Color codes and placeholders: `{player}`, `{displayname}`, `{message}`
+    *   Fully configurable per group in `config.json`
+    *   Easy to add custom groups
+*   **Join Messages** - Automatic messages when players join
+    *   First join messages broadcast to everyone
+    *   Fully customizable in config
+    *   Option to suppress default Hytale join messages
 
 ### Sleep Percentage (Admin)
 
@@ -132,6 +157,10 @@ Config file is automatically created on first server start with sensible default
 | <code>/kit</code>            |Open kit selection GUI      |Everyone   |
 | <code>/msg &lt;player&gt; &lt;msg&gt;</code> |Private message             |Everyone   |
 | <code>/reply &lt;msg&gt;</code> |Reply to last message       |Everyone   |
+| <code>/motd</code>           |Display MOTD                |Everyone   |
+| <code>/rules</code>          |Display server rules        |Everyone   |
+| <code>/broadcast &lt;message&gt;</code> |Broadcast to all players    |Admin      |
+| <code>/clearinv</code>       |Clear all inventory items   |Admin      |
 | <code>/top</code>            |Teleport to highest block   |Admin      |
 | <code>/god</code>            |Toggle invincibility        |Admin      |
 | <code>/heal</code>           |Restore full health         |Admin      |
@@ -162,7 +191,7 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Warp     |<code>command.warp.use</code>, <code>command.warp.&lt;warpname&gt;</code> |
 | Spawn    |<code>command.spawn.use</code>, <code>command.spawn.set</code>, <code>command.spawn.protection.bypass</code> |
 | Kit      |<code>command.kit.use</code>, <code>command.kit.&lt;kitname&gt;</code>, <code>command.kit.bypass.cooldown</code> |
-| Misc     |<code>command.misc.fly</code>, <code>command.misc.flyspeed</code>, <code>command.misc.god</code>, <code>command.misc.heal</code> |
+| Misc     |<code>command.misc.fly</code>, <code>command.misc.flyspeed</code>, <code>command.misc.god</code>, <code>command.misc.heal</code>, <code>command.misc.motd</code>, <code>command.misc.rules</code>, <code>command.misc.broadcast</code>, <code>command.misc.clearinv</code> |
 | Bypass   |<code>command.home.bypass.cooldown</code>, <code>command.tp.bypass.warmup</code> |
 
 Enable advanced mode by setting `"advancedPermissions": true` in config.json.
@@ -171,7 +200,6 @@ Enable advanced mode by setting `"advancedPermissions": true` in config.json.
 
 *   **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
 *   **Player Nicknames** - Allow players to set display names.
-*   **MOTD & Announcements** - Customizable join messages and scheduled broadcasts.
 *   **AFK Detection** - Auto-kick or mark players as AFK after inactivity.
 *   **Vanish** - Allow admins to go invisible to players.
 *   **Invsee** - View and edit other players' inventories.

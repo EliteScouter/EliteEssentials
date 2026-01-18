@@ -2,6 +2,72 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [1.0.6] - 2026-01-18
+
+### Added
+
+- **Group-Based Chat Formatting**: Customize chat messages based on player groups
+  - Works with both LuckPerms groups and simple permission system
+  - Priority-based group selection (highest priority wins when player has multiple groups)
+  - Color code support (`&a`, `&c`, `&l`, `&o`, `&r`)
+  - Placeholders: `{player}`, `{displayname}`, `{message}`
+  - Fully configurable in `config.json` under `chatFormat` section
+  - Default formats for Owner, Admin, Moderator, OP, VIP, Player, and Default groups
+  - Easy to add custom groups - just add to `groupFormats` and `groupPriorities`
+  - Can be enabled/disabled via config
+- **MOTD System Overhaul**: Professional Message of the Day with rich formatting
+  - `/motd` command displays customizable welcome message
+  - Stored in separate `motd.json` file for easy editing
+  - Color code support (`&a`, `&b`, `&c`, `&l`, `&o`, `&r`)
+  - Clickable URL detection and formatting
+  - Placeholders: `{player}`, `{server}`, `{world}`, `{playercount}`
+  - Auto-display on player join (configurable delay)
+  - Reloaded by `/ee reload` command
+  - Permission: `eliteessentials.command.misc.motd` (Everyone)
+- **Rules Command**: `/rules` displays server rules in chat
+  - Stored in separate `rules.json` file for easy editing
+  - Color code support for attractive formatting
+  - Default rules: Be Respectful, No Cheating/Hacking, No Griefing, Have fun!
+  - Reloaded by `/ee reload` command
+  - Permission: `eliteessentials.command.misc.rules` (Everyone)
+- **MessageFormatter Utility**: Centralized color code and URL formatting
+  - Converts Minecraft-style color codes (`&a`, `&c`, etc.) to Hytale colors
+  - Detects and makes URLs clickable
+  - Used by MOTD, Rules, and Chat Formatting systems
+- **Broadcast Command**: `/broadcast <message>` (alias: `/bc`) sends server-wide announcements
+  - Customizable broadcast format with `[BROADCAST]` prefix
+  - Permission: `eliteessentials.command.misc.broadcast` (Admin only)
+- **Clear Inventory Command**: `/clearinv` (aliases: `/clearinventory`, `/ci`) clears all player items
+  - Clears hotbar, storage, armor, utility, and tool slots
+  - Shows count of items cleared
+  - Permission: `eliteessentials.command.misc.clearinv` (Admin only)
+- **Join Messages**: Automatic messages when players join the server
+  - Regular join messages: `{player} joined the server.`
+  - First join messages: Special broadcast for new players
+  - All messages customizable with `{player}` placeholder
+  - First join tracking stored in `first_join.json`
+  - Config options: `joinMsg.joinEnabled`, `joinMsg.firstJoinEnabled`
+  - Suppress default Hytale join messages (config: `joinMsg.suppressDefaultMessages`)
+- **LuckPerms Integration Enhancements**:
+  - Added `isAvailable()` method to check if LuckPerms is loaded
+  - Added `getPrimaryGroup(UUID)` to get player's primary group
+  - Added `getGroups(UUID)` to get all groups including inherited groups
+  - Used by chat formatting system for group detection
+
+### Changed
+
+- Command registration log now includes `/motd`, `/rules`, `/broadcast`, `/clearinv`
+- Added `bin/` to `.gitignore` to exclude IDE build artifacts
+
+### Technical Improvements
+
+- Join listener uses `PlayerReadyEvent` for reliable player join detection
+- Default join message suppression via `AddPlayerToWorldEvent.setBroadcastJoinMessage(false)`
+- MOTD and Rules reload support in `/ee reload` command
+- Thread-safe file I/O for MOTD and Rules storage
+- Chat formatting uses `PlayerChatEvent.Formatter` interface for proper message formatting
+- All new commands follow EliteEssentials coding standards and patterns
+
 ## [1.0.5] - 2026-01-17
 
 ### Added
@@ -13,13 +79,13 @@ All notable changes to EliteEssentials will be documented in this file.
   - Config messages: `tpahereRequestSent`, `tpahereRequestReceived`
   - Both players' `/back` locations are saved
   - Warmup applies to the person being teleported
-- **Fly Speed Command**: `/flyspeed <speed>` or `/flyspeed reset` sets fly speed multiplier (1-100, default is 15)
-  - Range: 1 = very slow, 15 = default, 100 = maximum speed
-  - `/flyspeed reset` restores default speed (15)
+- **Fly Speed Command**: `/flyspeed <speed>` or `/flyspeed reset` sets fly speed multiplier (10-100, default is 10)
+  - Range: 10 = default, 50 = fast, 100 = maximum speed
+  - `/flyspeed reset` restores default speed (10)
   - Admin-only command in simple mode
   - Permission: `eliteessentials.command.misc.flyspeed` in advanced mode
   - Config messages: `flySpeedSet`, `flySpeedReset`, `flySpeedInvalid`, `flySpeedOutOfRange`
-  - **WARNING**: Setting speed to 0 will crash the server - validation prevents this
+  - **WARNING**: Minimum speed is 10 to prevent server issues
 
 ### Fixed
 

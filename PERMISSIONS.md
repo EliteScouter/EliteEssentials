@@ -33,7 +33,7 @@ Commands are either available to **Everyone** or **Admin only**:
 | `/reply <message>` | Reply to last message | Everyone |
 | `/top` | Teleport to highest block | Everyone |
 | `/fly` | Toggle flight mode | Admin |
-| `/flyspeed <speed>` | Set fly speed (0-10) | Admin |
+| `/flyspeed <speed>` | Set fly speed (10-100) | Admin |
 | `/kit` | Open kit selection GUI | Everyone |
 
 In simple mode, "Admin" means players in the OP group or with `eliteessentials.admin.*` permission.
@@ -162,7 +162,7 @@ eliteessentials
 | `eliteessentials.command.misc.heal` | Heal to full health |
 | `eliteessentials.command.misc.msg` | Private messaging (/msg, /reply) |
 | `eliteessentials.command.misc.fly` | Toggle flight mode |
-| `eliteessentials.command.misc.flyspeed` | Set fly speed (0-10) |
+| `eliteessentials.command.misc.flyspeed` | Set fly speed (10-100) |
 | `eliteessentials.command.tp.top` | Teleport to highest block |
 
 ### Kit Commands

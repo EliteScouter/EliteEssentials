@@ -274,6 +274,10 @@ public class LuckPermsIntegration {
         perms.add(Permissions.FLY);
         perms.add(Permissions.FLYSPEED);
         perms.add(Permissions.TOP);
+        perms.add(Permissions.MOTD);
+        perms.add(Permissions.RULES);
+        perms.add(Permissions.BROADCAST);
+        perms.add(Permissions.CLEARINV);
         perms.add("eliteessentials.command.misc.*");
         
         // Kit commands
@@ -293,5 +297,96 @@ public class LuckPermsIntegration {
         perms.add(Permissions.ADMIN_RELOAD);
         
         return perms;
+    }
+    
+    // ==================== LUCKPERMS UTILITY METHODS ====================
+    
+    /**
+     * Check if LuckPerms is available.
+     */
+    public static boolean isAvailable() {
+        try {
+            Class.forName("net.luckperms.api.LuckPermsProvider");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Get the primary group for a player.
+     * @param playerId Player UUID
+     * @return Primary group name, or null if not found
+     */
+    public static String getPrimaryGroup(java.util.UUID playerId) {
+        try {
+            Class<?> providerClass = Class.forName("net.luckperms.api.LuckPermsProvider");
+            Method getMethod = providerClass.getMethod("get");
+            Object luckPerms = getMethod.invoke(null);
+            
+            // Get UserManager
+            Method getUserManagerMethod = luckPerms.getClass().getMethod("getUserManager");
+            Object userManager = getUserManagerMethod.invoke(luckPerms);
+            
+            // Get User
+            Method getUserMethod = userManager.getClass().getMethod("getUser", java.util.UUID.class);
+            Object user = getUserMethod.invoke(userManager, playerId);
+            
+            if (user == null) {
+                return null;
+            }
+            
+            // Get primary group
+            Method getPrimaryGroupMethod = user.getClass().getMethod("getPrimaryGroup");
+            return (String) getPrimaryGroupMethod.invoke(user);
+            
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    /**
+     * Get all groups for a player (including inherited groups).
+     * @param playerId Player UUID
+     * @return List of group names, or empty list if not found
+     */
+    public static List<String> getGroups(java.util.UUID playerId) {
+        List<String> groups = new ArrayList<>();
+        
+        try {
+            Class<?> providerClass = Class.forName("net.luckperms.api.LuckPermsProvider");
+            Method getMethod = providerClass.getMethod("get");
+            Object luckPerms = getMethod.invoke(null);
+            
+            // Get UserManager
+            Method getUserManagerMethod = luckPerms.getClass().getMethod("getUserManager");
+            Object userManager = getUserManagerMethod.invoke(luckPerms);
+            
+            // Get User
+            Method getUserMethod = userManager.getClass().getMethod("getUser", java.util.UUID.class);
+            Object user = getUserMethod.invoke(userManager, playerId);
+            
+            if (user == null) {
+                return groups;
+            }
+            
+            // Get inherited groups (includes all groups the player is in)
+            Method getInheritedGroupsMethod = user.getClass().getMethod("getInheritedGroups");
+            Object groupsCollection = getInheritedGroupsMethod.invoke(user);
+            
+            // Convert to list of group names
+            if (groupsCollection instanceof java.util.Collection) {
+                for (Object group : (java.util.Collection<?>) groupsCollection) {
+                    Method getNameMethod = group.getClass().getMethod("getName");
+                    String groupName = (String) getNameMethod.invoke(group);
+                    groups.add(groupName);
+                }
+            }
+            
+        } catch (Exception e) {
+            // Silently fail - LuckPerms might not be available
+        }
+        
+        return groups;
     }
 }

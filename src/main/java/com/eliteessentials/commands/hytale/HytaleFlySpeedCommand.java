@@ -20,12 +20,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
  * Sets the player's fly speed multiplier.
  * 
  * Usage:
- * - /flyspeed reset - Reset to default fly speed (15)
- * - /flyspeed 10 - Set fly speed to 10x
+ * - /flyspeed reset - Reset to default fly speed (10)
+ * - /flyspeed 10 - Set fly speed to 10x (default)
  * - /flyspeed 50 - Set fly speed to 50x (very fast!)
  * - /flyspeed 100 - Set fly speed to 100x (insane!)
  * 
- * Speed Range: 1 to 100, or "reset" to restore default (15)
+ * Speed Range: 10 to 100, or "reset" to restore default (10)
  * 
  * Permissions:
  * - Simple Mode: Admin only
@@ -37,9 +37,9 @@ public class HytaleFlySpeedCommand extends AbstractPlayerCommand {
     private final RequiredArg<String> speedArg;
 
     public HytaleFlySpeedCommand(ConfigManager configManager) {
-        super("flyspeed", "Set your fly speed (1-100 or 'reset')");
+        super("flyspeed", "Set your fly speed (10-100 or 'reset')");
         this.configManager = configManager;
-        this.speedArg = withRequiredArg("speed", "Fly speed (1-100 or 'reset')", SimpleStringArg.FLY_SPEED);
+        this.speedArg = withRequiredArg("speed", "Fly speed (10-100 or 'reset')", SimpleStringArg.FLY_SPEED);
     }
 
     @Override
@@ -71,8 +71,8 @@ public class HytaleFlySpeedCommand extends AbstractPlayerCommand {
                 return;
             }
 
-            // Validate speed range (1 to 100)
-            if (speed < 1.0f || speed > 100.0f) {
+            // Validate speed range (10 to 100)
+            if (speed < 10.0f || speed > 100.0f) {
                 ctx.sendMessage(Message.raw(configManager.getMessage("flySpeedOutOfRange")).color("#FF5555"));
                 return;
             }
@@ -95,14 +95,14 @@ public class HytaleFlySpeedCommand extends AbstractPlayerCommand {
             java.lang.reflect.Field verticalField = settings.getClass().getField("verticalFlySpeed");
             
             if (isReset) {
-                // Reset to default speed of 15
-                horizontalField.setFloat(settings, 15.0f);
-                verticalField.setFloat(settings, 15.0f);
+                // Reset to default speed of 10
+                horizontalField.setFloat(settings, 10.0f);
+                verticalField.setFloat(settings, 10.0f);
                 movementManager.update(player.getPacketHandler());
                 
                 ctx.sendMessage(Message.raw(configManager.getMessage("flySpeedReset")).color("#55FF55"));
                 if (configManager.isDebugEnabled()) {
-                    ctx.sendMessage(Message.raw("Speed reset to default: 15.0").color("#AAAAAA"));
+                    ctx.sendMessage(Message.raw("Speed reset to default: 10.0").color("#AAAAAA"));
                 }
             } else {
                 horizontalField.setFloat(settings, speed);

@@ -4,6 +4,8 @@ import com.eliteessentials.commands.hytale.*;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.events.StarterKitEvent;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.listeners.ChatListener;
+import com.eliteessentials.listeners.JoinQuitListener;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.DamageTrackingService;
@@ -20,6 +22,8 @@ import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.storage.BackStorage;
 import com.eliteessentials.storage.HomeStorage;
+import com.eliteessentials.storage.MotdStorage;
+import com.eliteessentials.storage.RulesStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.storage.WarpStorage;
 import com.eliteessentials.systems.DamageTrackingSystem;
@@ -50,6 +54,8 @@ public class EliteEssentials extends JavaPlugin {
     private BackStorage backStorage;
     private WarpStorage warpStorage;
     private SpawnStorage spawnStorage;
+    private MotdStorage motdStorage;
+    private RulesStorage rulesStorage;
     private HomeService homeService;
     private BackService backService;
     private TpaService tpaService;
@@ -69,6 +75,8 @@ public class EliteEssentials extends JavaPlugin {
     private DamageTrackingSystem damageTrackingSystem;
     private SpawnProtectionSystem spawnProtectionSystem;
     private StarterKitEvent starterKitEvent;
+    private JoinQuitListener joinQuitListener;
+    private ChatListener chatListener;
     private File dataFolder;
 
     public EliteEssentials(JavaPluginInit init) {
@@ -113,6 +121,12 @@ public class EliteEssentials extends JavaPlugin {
         spawnStorage = new SpawnStorage(this.dataFolder);
         spawnStorage.load();
         
+        motdStorage = new MotdStorage(this.dataFolder);
+        motdStorage.load();
+        
+        rulesStorage = new RulesStorage(this.dataFolder);
+        rulesStorage.load();
+        
         // Initialize services
         cooldownService = new CooldownService();
         warmupService = new WarmupService();
@@ -146,6 +160,18 @@ public class EliteEssentials extends JavaPlugin {
         starterKitEvent = new StarterKitEvent(kitService, this.dataFolder);
         starterKitEvent.registerEvents(getEventRegistry());
         getLogger().at(Level.INFO).log("Starter kit system registered.");
+        
+        // Register join/quit listener for join/quit messages, first join, and MOTD
+        joinQuitListener = new JoinQuitListener(configManager, motdStorage, this.dataFolder);
+        joinQuitListener.registerEvents(getEventRegistry());
+        getLogger().at(Level.INFO).log("Join/Quit listener registered.");
+        
+        // Register chat listener for group-based chat formatting
+        chatListener = new ChatListener(configManager);
+        chatListener.registerEvents(getEventRegistry());
+        if (configManager.getConfig().chatFormat.enabled) {
+            getLogger().at(Level.INFO).log("Chat formatting system registered.");
+        }
         
         // Register the death tracking ECS system (hooks into Hytale's death events)
         if (configManager.isBackOnDeathEnabled() || configManager.getConfig().deathMessages.enabled) {
@@ -318,8 +344,12 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(flyCommand);
         getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleKitCommand(kitService, configManager));
+        getCommandRegistry().registerCommand(new HytaleMotdCommand(configManager, motdStorage));
+        getCommandRegistry().registerCommand(new HytaleRulesCommand(configManager, rulesStorage));
+        getCommandRegistry().registerCommand(new HytaleBroadcastCommand(configManager));
+        getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv");
     }
 
     public static EliteEssentials getInstance() {
@@ -397,6 +427,8 @@ public class EliteEssentials extends JavaPlugin {
     public void reloadConfig() {
         getLogger().at(Level.INFO).log("Reloading EliteEssentials configuration...");
         configManager.loadConfig();
+        motdStorage.load();
+        rulesStorage.load();
         kitService.reload();
         if (starterKitEvent != null) {
             starterKitEvent.reload();

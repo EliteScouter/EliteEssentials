@@ -41,6 +41,12 @@ public class PluginConfig {
     public TopConfig top = new TopConfig();
     public KitsConfig kits = new KitsConfig();
     public SpawnProtectionConfig spawnProtection = new SpawnProtectionConfig();
+    public MotdConfig motd = new MotdConfig();
+    public RulesConfig rules = new RulesConfig();
+    public JoinMsgConfig joinMsg = new JoinMsgConfig();
+    public BroadcastConfig broadcast = new BroadcastConfig();
+    public ClearInvConfig clearInv = new ClearInvConfig();
+    public ChatFormatConfig chatFormat = new ChatFormatConfig();
     
     // ==================== MESSAGES ====================
     
@@ -170,8 +176,8 @@ public class PluginConfig {
         messages.put("flyFailed", "Could not access movement settings.");
         messages.put("flySpeedSet", "Fly speed set to {speed}x.");
         messages.put("flySpeedReset", "Fly speed reset to default.");
-        messages.put("flySpeedInvalid", "Invalid speed value. Use a number (1-100) or 'reset'.");
-        messages.put("flySpeedOutOfRange", "Speed must be between 1 and 100, or use 'reset'.");
+        messages.put("flySpeedInvalid", "Invalid speed value. Use a number (10-100) or 'reset'.");
+        messages.put("flySpeedOutOfRange", "Speed must be between 10 and 100, or use 'reset'.");
         
         // ==================== TOP ====================
         messages.put("topTeleported", "Teleported to the top!");
@@ -187,6 +193,29 @@ public class PluginConfig {
         messages.put("kitClaimed", "You received the {kit} kit!");
         messages.put("kitClaimFailed", "Could not claim kit.");
         messages.put("kitOpenFailed", "Could not open kit menu.");
+        
+        // ==================== MOTD ====================
+        messages.put("motdTitle", "=== Message of the Day ===");
+        messages.put("motdLine1", "Welcome to the server!");
+        messages.put("motdLine2", "Type /help for commands.");
+        messages.put("motdLine3", "Have fun!");
+        
+        // ==================== MOTD ====================
+        messages.put("motdEmpty", "No MOTD configured.");
+        
+        // ==================== RULES ====================
+        messages.put("rulesEmpty", "No rules configured.");
+        
+        // ==================== JOIN MESSAGES ====================
+        messages.put("joinMessage", "{player} joined the server.");
+        messages.put("firstJoinMessage", "{player} joined the server for the first time! Welcome!");
+        
+        // ==================== BROADCAST ====================
+        messages.put("broadcast", "[BROADCAST] {message}");
+        
+        // ==================== CLEAR INVENTORY ====================
+        messages.put("clearInvSuccess", "Cleared {count} items from your inventory.");
+        messages.put("clearInvFailed", "Could not clear inventory.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -385,5 +414,104 @@ public class PluginConfig {
         
         /** Disable PvP in spawn area */
         public boolean disablePvp = true;
+    }
+    
+    // ==================== MOTD (Message of the Day) ====================
+    
+    public static class MotdConfig {
+        /** Enable/disable MOTD display on join */
+        public boolean enabled = true;
+        
+        /** Show MOTD automatically when player joins */
+        public boolean showOnJoin = true;
+        
+        /** Delay in seconds before showing MOTD on join (0 = instant) */
+        public int delaySeconds = 1;
+        
+        /** Server name for {server} placeholder */
+        public String serverName = "Our Server";
+    }
+    
+    // ==================== RULES ====================
+    
+    public static class RulesConfig {
+        /** Enable/disable the /rules command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== JOIN MESSAGES ====================
+    
+    public static class JoinMsgConfig {
+        /** Enable/disable join messages */
+        public boolean joinEnabled = true;
+        
+        /** Enable/disable first join message (broadcast to everyone) */
+        public boolean firstJoinEnabled = true;
+        
+        /** 
+         * Suppress default Hytale join messages (recommended: true)
+         * Prevents the built-in "player has joined default" message
+         */
+        public boolean suppressDefaultMessages = true;
+    }
+    
+    // ==================== BROADCAST ====================
+    
+    public static class BroadcastConfig {
+        /** Enable/disable the /broadcast command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== CLEAR INVENTORY ====================
+    
+    public static class ClearInvConfig {
+        /** Enable/disable the /clearinv command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== CHAT FORMAT ====================
+    
+    public static class ChatFormatConfig {
+        /** Enable/disable group-based chat formatting */
+        public boolean enabled = true;
+        
+        /** 
+         * Chat format per group.
+         * Placeholders: {player}, {displayname}, {message}, {group}
+         * Color codes: &0-f, &l (bold), &o (italic), &r (reset)
+         * 
+         * Groups are checked in priority order (highest priority first).
+         * Works with both LuckPerms groups and simple permission groups.
+         */
+        public Map<String, String> groupFormats = new HashMap<>();
+        
+        /**
+         * Group priority order (highest to lowest).
+         * When a player has multiple groups, the highest priority group's format is used.
+         */
+        public Map<String, Integer> groupPriorities = new HashMap<>();
+        
+        /** Default chat format if no group matches */
+        public String defaultFormat = "&7{player}: &f{message}";
+        
+        public ChatFormatConfig() {
+            // Default group formats
+            groupFormats.put("Owner", "&4[Owner] {player}&r: {message}");
+            groupFormats.put("Admin", "&c[Admin] {player}&r: {message}");
+            groupFormats.put("Moderator", "&9[Mod] {player}&r: {message}");
+            groupFormats.put("OP", "&c[OP] {player}&r: {message}");
+            groupFormats.put("VIP", "&6[VIP] {player}&r: {message}");
+            groupFormats.put("Player", "&a{player}&r: {message}");
+            groupFormats.put("Default", "&7{player}&r: {message}");
+            
+            // Default priorities (higher number = higher priority)
+            groupPriorities.put("Owner", 100);
+            groupPriorities.put("Admin", 90);
+            groupPriorities.put("Moderator", 80);
+            groupPriorities.put("OP", 75);
+            groupPriorities.put("VIP", 50);
+            groupPriorities.put("Player", 10);
+            groupPriorities.put("Default", 0);
+        }
     }
 }

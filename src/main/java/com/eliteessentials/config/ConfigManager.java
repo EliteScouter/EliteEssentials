@@ -225,6 +225,15 @@ public class ConfigManager {
         }
         return message;
     }
+    
+    /**
+     * Sets a message value in the config.
+     * @param key Message key
+     * @param value New message value
+     */
+    public void setMessage(String key, String value) {
+        config.messages.put(key, value);
+    }
 
     public String getPrefix() {
         return config.messages.getOrDefault("prefix", "&7[&bEliteEssentials&7] ");

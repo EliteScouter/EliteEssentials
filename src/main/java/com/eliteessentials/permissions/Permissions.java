@@ -102,6 +102,10 @@ public final class Permissions {
     public static final String FLY = MISC_CATEGORY + ".fly";
     public static final String FLYSPEED = MISC_CATEGORY + ".flyspeed";
     public static final String TOP = TP_CATEGORY + ".top";
+    public static final String MOTD = MISC_CATEGORY + ".motd";
+    public static final String RULES = MISC_CATEGORY + ".rules";
+    public static final String BROADCAST = MISC_CATEGORY + ".broadcast";
+    public static final String CLEARINV = MISC_CATEGORY + ".clearinv";
 
     // ==================== KIT CATEGORY ====================
     // eliteessentials.command.kit.*

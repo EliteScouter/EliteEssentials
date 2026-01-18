@@ -1,6 +1,7 @@
 # Gradle
 .gradle/
 build/
+bin/
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
 
@@ -26,3 +27,11 @@ logs/
 # Package files (build outputs should be in releases, not repo)
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+
+# Personal development/documentation files
+PRODUCTION_AUDIT.md
+QUICK_REFERENCE.md
+RELEASE_READY.md
+FEATURE_SUMMARY.md
+NEW_FEATURES.md
+CURSEFORGE.MD

@@ -57,10 +57,34 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
 - **`/god`** - Toggle invincibility (become immune to all damage)
 - **`/heal`** - Fully restore your health
 - **`/fly`** - Toggle creative flight without creative mode
-- **`/flyspeed <speed>`** - Set fly speed multiplier (0-10, 0 = default)
+- **`/flyspeed <speed>`** - Set fly speed multiplier (10-100, or 'reset' for default)
 - **`/top`** - Teleport to the highest block at your current position
 - **`/msg <player> <message>`** - Send a private message
 - **`/reply`** - Reply to the last private message (aliases: /r)
+- **`/clearinv`** - Clear all items from your inventory (Admin, aliases: /clearinventory, /ci)
+
+### Communication & Server Management
+- **`/motd`** - Display the Message of the Day
+  - Rich formatting with color codes (`&a`, `&c`, `&l`, etc.)
+  - Clickable URLs automatically detected
+  - Placeholders: `{player}`, `{server}`, `{world}`, `{playercount}`
+  - Stored in `motd.json` for easy editing
+  - Auto-display on join (configurable)
+- **`/rules`** - Display the server rules
+  - Color-coded formatting for readability
+  - Stored in `rules.json` for easy editing
+  - Fully customizable content
+- **`/broadcast <message>`** - Broadcast a message to all players (Admin, alias: /bc)
+- **Group-Based Chat Formatting** - Customize chat appearance by player group
+  - Works with LuckPerms groups and simple permissions
+  - Priority-based group selection (highest priority wins)
+  - Color codes and placeholders: `{player}`, `{displayname}`, `{message}`
+  - Fully configurable per group in `config.json`
+  - Easy to add custom groups
+- **Join Messages** - Automatic messages when players join
+  - First join messages broadcast to everyone
+  - Fully customizable in config
+  - Option to suppress default Hytale join messages
 
 ### Sleep Percentage (Admin)
 - **`/sleeppercent <0-100>`** - Set percentage of players needed to skip the night
@@ -103,10 +127,14 @@ Config file is automatically created on first server start with sensible default
 | `/god` | Toggle invincibility | Admin |
 | `/heal` | Fully restore health | Admin |
 | `/fly` | Toggle creative flight | Admin |
-| `/flyspeed <speed>` | Set fly speed (0-10) | Admin |
+| `/flyspeed <speed>` | Set fly speed (10-100) | Admin |
 | `/top` | Teleport to highest block | Admin |
 | `/msg <player> <msg>` | Private message | Everyone |
 | `/reply` | Reply to last message | Everyone |
+| `/motd` | Display MOTD | Everyone |
+| `/rules` | Display server rules | Everyone |
+| `/broadcast <message>` | Broadcast to all players | Admin |
+| `/clearinv` | Clear all inventory items | Admin |
 | `/setwarp <name> [perm]` | Create warp | Admin |
 | `/delwarp <name>` | Delete warp | Admin |
 | `/warpadmin` | Warp admin panel | Admin |
@@ -123,7 +151,7 @@ EliteEssentials supports two permission modes via `advancedPermissions` in confi
 - **Everyone** commands work for all players
 - **Admin** commands require OP or `eliteessentials.admin.*`
 
-### Advanced Mode (LuckPerm Compatible!)
+### Advanced Mode (LuckPerms Compatible!)
 Full granular permissions following `eliteessentials.command.<category>.<action>` structure:
 
 | Category | Example Permissions |
@@ -131,7 +159,8 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Home | `command.home.home`, `command.home.sethome`, `command.home.limit.5` |
 | Teleport | `command.tp.tpa`, `command.tp.back`, `command.tp.back.ondeath` |
 | Warp | `command.warp.use`, `command.warp.<warpname>` |
-| Spawn | `command.spawn.use` |
+| Spawn | `command.spawn.use`, `command.spawn.protection.bypass` |
+| Kit | `command.kit.use`, `command.kit.<kitname>`, `command.kit.bypass.cooldown` |
 | Bypass | `command.home.bypass.cooldown`, `command.tp.bypass.warmup` |
 
 See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
@@ -140,7 +169,6 @@ See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
 
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
 - **Player Nicknames** - Allow players to set display names.
-- **MOTD & Announcements** - Customizable join messages and scheduled broadcasts.
 - **AFK Detection** - Auto-kick or mark players as AFK after inactivity.
 - **Vanish** - Allow admins to go invisible to players.
 - **Invsee** - View and edit other players' inventories.
