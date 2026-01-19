@@ -31,12 +31,24 @@ public class ChatListener {
      */
     public void registerEvents(EventRegistry eventRegistry) {
         if (!configManager.getConfig().chatFormat.enabled) {
+            logger.info("Chat formatting is disabled in config");
             return;
         }
         
         eventRegistry.registerGlobal(PlayerChatEvent.class, event -> {
             onPlayerChat(event);
         });
+        
+        logger.info("Chat formatting listener registered successfully");
+        
+        if (LuckPermsIntegration.isAvailable()) {
+            logger.warning("=".repeat(60));
+            logger.warning("LuckPerms detected! If chat formatting doesn't work:");
+            logger.warning("1. LuckPerms may have its own chat formatting enabled");
+            logger.warning("2. Check LuckPerms config and disable chat formatting there");
+            logger.warning("3. Or set 'advancedPermissions: false' to use simple mode");
+            logger.warning("=".repeat(60));
+        }
     }
     
     /**
@@ -45,29 +57,46 @@ public class ChatListener {
     private void onPlayerChat(PlayerChatEvent event) {
         PlayerRef sender = event.getSender();
         if (!sender.isValid()) {
+            logger.warning("Chat event received but sender is invalid");
             return;
         }
         
         String playerName = sender.getUsername();
         String originalMessage = event.getContent();
         
+        if (configManager.isDebugEnabled()) {
+            logger.info("Processing chat from " + playerName);
+            logger.info("LuckPerms available: " + LuckPermsIntegration.isAvailable());
+        }
+        
         // Get the chat format for this player's group
         String format = getChatFormat(sender);
         
-        // Create a custom formatter that applies our format
-        event.setFormatter((senderRef, message) -> {
-            // Replace placeholders
-            String formattedMessage = format
-                    .replace("{player}", playerName)
-                    .replace("{message}", message)
-                    .replace("{displayname}", playerName); // For future nickname support
-            
-            // Apply color codes and formatting
-            return MessageFormatter.format(formattedMessage);
-        });
+        if (configManager.isDebugEnabled()) {
+            logger.info("Selected format for " + playerName + ": " + format);
+        }
+        
+        // Cancel the event to prevent default/LuckPerms formatting
+        event.setCancelled(true);
+        
+        // Replace placeholders
+        String formattedMessage = format
+                .replace("{player}", playerName)
+                .replace("{message}", originalMessage)
+                .replace("{displayname}", playerName);
         
         if (configManager.isDebugEnabled()) {
-            logger.info("Chat format applied for " + playerName + ": " + format);
+            logger.info("Formatted message: " + formattedMessage);
+        }
+        
+        // Broadcast the formatted message to all players
+        Message message = MessageFormatter.format(formattedMessage);
+        for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+            player.sendMessage(message);
+        }
+        
+        if (configManager.isDebugEnabled()) {
+            logger.info("Message broadcasted to all players");
         }
     }
     
@@ -85,9 +114,17 @@ public class ChatListener {
             // Get all groups the player belongs to
             java.util.List<String> groups = LuckPermsIntegration.getGroups(playerRef.getUuid());
             
+            if (configManager.isDebugEnabled()) {
+                logger.info("Player " + playerRef.getUsername() + " has groups: " + groups);
+            }
+            
             // Find the highest priority group
             for (String group : groups) {
                 int priority = config.groupPriorities.getOrDefault(group, 0);
+                if (configManager.isDebugEnabled()) {
+                    logger.info("  Group '" + group + "' priority: " + priority + 
+                               " (has format: " + config.groupFormats.containsKey(group) + ")");
+                }
                 if (priority > highestPriority && config.groupFormats.containsKey(group)) {
                     highestPriority = priority;
                     highestPriorityGroup = group;
@@ -95,6 +132,9 @@ public class ChatListener {
             }
             
             if (highestPriorityGroup != null) {
+                if (configManager.isDebugEnabled()) {
+                    logger.info("Selected group '" + highestPriorityGroup + "' with priority " + highestPriority);
+                }
                 return config.groupFormats.get(highestPriorityGroup);
             }
         }
@@ -102,18 +142,12 @@ public class ChatListener {
         // Fall back to simple permission system
         // Check if player is OP/Admin using PermissionService
         if (PermissionService.get().isAdmin(playerRef.getUuid())) {
-            if (config.groupFormats.containsKey("OP")) {
-                int priority = config.groupPriorities.getOrDefault("OP", 0);
+            // Check all configured groups for admin
+            for (String groupName : config.groupFormats.keySet()) {
+                int priority = config.groupPriorities.getOrDefault(groupName, 0);
                 if (priority > highestPriority) {
                     highestPriority = priority;
-                    highestPriorityGroup = "OP";
-                }
-            }
-            if (config.groupFormats.containsKey("Admin")) {
-                int priority = config.groupPriorities.getOrDefault("Admin", 0);
-                if (priority > highestPriority) {
-                    highestPriority = priority;
-                    highestPriorityGroup = "Admin";
+                    highestPriorityGroup = groupName;
                 }
             }
         }
@@ -122,7 +156,10 @@ public class ChatListener {
             return config.groupFormats.get(highestPriorityGroup);
         }
         
-        // Default format
+        // Default format - try "default" first (lowercase), then "Default" (capitalized)
+        if (config.groupFormats.containsKey("default")) {
+            return config.groupFormats.get("default");
+        }
         return config.groupFormats.getOrDefault("Default", config.defaultFormat);
     }
 }

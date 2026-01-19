@@ -6,6 +6,7 @@ import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
@@ -15,12 +16,13 @@ import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.spawn.GlobalSpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 /**
  * Command: /setspawn
  * Sets the server spawn point at the player's current location.
- * This location is used for /spawn teleports and spawn protection.
+ * This location is used for /spawn teleports, spawn protection, and player respawns after death.
  * 
  * Permission: eliteessentials.command.spawn.set (OP only by default)
  */
@@ -64,8 +66,15 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
         // Update spawn protection service
         EliteEssentials.getInstance().getSpawnProtectionService().setSpawnLocation(pos.getX(), pos.getY(), pos.getZ());
 
+        // CRITICAL: Update the world's spawn provider so players respawn here after death
+        // Must create new Vector3d/Vector3f instances - Transform stores references, not copies!
+        Vector3d spawnPosition = new Vector3d(pos.getX(), pos.getY(), pos.getZ());
+        Vector3f spawnRotation = new Vector3f(rot.x, rot.y, 0); // pitch, yaw, roll
+        Transform spawnTransform = new Transform(spawnPosition, spawnRotation);
+        world.getWorldConfig().setSpawnProvider(new GlobalSpawnProvider(spawnTransform));
+
         ctx.sendMessage(Message.raw("Spawn set at " + 
             String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ()) + 
-            " in " + world.getName()).color("#55FF55"));
+            " (Players will now respawn here after death)").color("#55FF55"));
     }
 }

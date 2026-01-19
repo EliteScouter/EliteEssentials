@@ -1,6 +1,8 @@
 # EliteEssentials
 
-A server-side essentials plugin for Hytale that provides essential teleportation and utility commands for survival multiplayer servers.
+A comprehensive server essentials plugin for Hytale that brings everything you need to run a professional multiplayer server. From advanced teleportation systems and home management to group-based chat formatting and customizable kits - EliteEssentials has it all.
+
+**Fully modular design** - Enable only the features you want. **LuckPerms compatible** - Seamless integration with advanced permission systems. **Actively developed** - Regular updates with new features and improvements.
 
 ## Features
 
@@ -41,6 +43,7 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
 - **`/tpahere <player>`** - Request a player to teleport to you
 - **`/tpaccept`** - Accept a teleport request
 - **`/tpdeny`** - Deny a teleport request
+- **`/tphere <player>`** - Instantly teleport a player to you (Admin)
 - 30-second timeout (configurable)
 
 ### Spawn
@@ -75,6 +78,10 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
   - Stored in `rules.json` for easy editing
   - Fully customizable content
 - **`/broadcast <message>`** - Broadcast a message to all players (Admin, alias: /bc)
+  - Supports color codes for formatted announcements
+- **`/list`** - Show all online players (aliases: /online, /who)
+  - Displays player count and sorted list of names
+  - Helpful for finding exact player names for commands
 - **Group-Based Chat Formatting** - Customize chat appearance by player group
   - Works with LuckPerms groups and simple permissions
   - Priority-based group selection (highest priority wins)
@@ -121,6 +128,8 @@ Config file is automatically created on first server start with sensible default
 | `/tpahere <player>` | Request player to you | Everyone |
 | `/tpaccept` | Accept teleport request | Everyone |
 | `/tpdeny` | Deny teleport request | Everyone |
+| `/tphere <player>` | Teleport player to you | Admin |
+| `/list` | Show online players | Everyone |
 | `/warp [name]` | Teleport to warp | Everyone |
 | `/warps` | List all warps | Everyone |
 | `/kit [name]` | Open kit GUI or claim kit | Everyone |

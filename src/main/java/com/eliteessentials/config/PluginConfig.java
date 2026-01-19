@@ -46,6 +46,7 @@ public class PluginConfig {
     public JoinMsgConfig joinMsg = new JoinMsgConfig();
     public BroadcastConfig broadcast = new BroadcastConfig();
     public ClearInvConfig clearInv = new ClearInvConfig();
+    public ListConfig list = new ListConfig();
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
     
     // ==================== MESSAGES ====================
@@ -92,6 +93,11 @@ public class PluginConfig {
         messages.put("tpahereRequestSent", "Teleport request sent to {player}. They will teleport to you if they accept.");
         messages.put("tpahereRequestReceived", "{player} wants you to teleport to them.");
         
+        // ==================== TPHERE (Admin) ====================
+        messages.put("tphereSuccess", "Teleported {player} to your location.");
+        messages.put("tphereTeleported", "You have been teleported to {player}.");
+        messages.put("tphereSelf", "You cannot teleport yourself to yourself!");
+        
         // ==================== HOMES ====================
         messages.put("homeNoHomes", "You have no homes set. Use /sethome to create one.");
         messages.put("homeListHeader", "Your homes ({count}/{max}):");
@@ -105,6 +111,7 @@ public class PluginConfig {
         messages.put("homeSetFailed", "Failed to set home.");
         messages.put("homeDeleted", "Home '{name}' has been deleted.");
         messages.put("homeDeleteFailed", "Failed to delete home.");
+        messages.put("cannotSetHomeInInstance", "You cannot set a home in a temporary instance world!");
         
         // ==================== WARPS ====================
         messages.put("warpNoWarps", "No warps available.");
@@ -120,6 +127,7 @@ public class PluginConfig {
         messages.put("warpDeleteFailed", "Failed to delete warp.");
         messages.put("warpListTitle", "=== Server Warps ===");
         messages.put("warpListFooter", "Use /warp <name> to teleport.");
+        messages.put("cannotSetWarpInInstance", "You cannot set a warp in a temporary instance world!");
         
         // ==================== WARP ADMIN ====================
         messages.put("warpAdminNoWarps", "No warps configured.");
@@ -216,6 +224,11 @@ public class PluginConfig {
         // ==================== CLEAR INVENTORY ====================
         messages.put("clearInvSuccess", "Cleared {count} items from your inventory.");
         messages.put("clearInvFailed", "Could not clear inventory.");
+        
+        // ==================== LIST (Online Players) ====================
+        messages.put("listHeader", "Online Players ({count}/{max}):");
+        messages.put("listPlayers", "{players}");
+        messages.put("listNoPlayers", "No players online.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -469,6 +482,16 @@ public class PluginConfig {
         public boolean enabled = true;
     }
     
+    // ==================== LIST (Online Players) ====================
+    
+    public static class ListConfig {
+        /** Enable/disable the /list command */
+        public boolean enabled = true;
+        
+        /** Maximum players (for display purposes) */
+        public int maxPlayers = 100;
+    }
+    
     // ==================== CHAT FORMAT ====================
     
     public static class ChatFormatConfig {
@@ -483,35 +506,39 @@ public class PluginConfig {
          * Groups are checked in priority order (highest priority first).
          * Works with both LuckPerms groups and simple permission groups.
          */
-        public Map<String, String> groupFormats = new HashMap<>();
+        public Map<String, String> groupFormats = createDefaultGroupFormats();
         
         /**
          * Group priority order (highest to lowest).
          * When a player has multiple groups, the highest priority group's format is used.
          */
-        public Map<String, Integer> groupPriorities = new HashMap<>();
+        public Map<String, Integer> groupPriorities = createDefaultGroupPriorities();
         
         /** Default chat format if no group matches */
         public String defaultFormat = "&7{player}: &f{message}";
         
-        public ChatFormatConfig() {
-            // Default group formats
-            groupFormats.put("Owner", "&4[Owner] {player}&r: {message}");
-            groupFormats.put("Admin", "&c[Admin] {player}&r: {message}");
-            groupFormats.put("Moderator", "&9[Mod] {player}&r: {message}");
-            groupFormats.put("OP", "&c[OP] {player}&r: {message}");
-            groupFormats.put("VIP", "&6[VIP] {player}&r: {message}");
-            groupFormats.put("Player", "&a{player}&r: {message}");
-            groupFormats.put("Default", "&7{player}&r: {message}");
-            
-            // Default priorities (higher number = higher priority)
-            groupPriorities.put("Owner", 100);
-            groupPriorities.put("Admin", 90);
-            groupPriorities.put("Moderator", 80);
-            groupPriorities.put("OP", 75);
-            groupPriorities.put("VIP", 50);
-            groupPriorities.put("Player", 10);
-            groupPriorities.put("Default", 0);
+        private static Map<String, String> createDefaultGroupFormats() {
+            Map<String, String> formats = new HashMap<>();
+            formats.put("Owner", "&4[Owner] {player}&r: {message}");
+            formats.put("Admin", "&c[Admin] {player}&r: {message}");
+            formats.put("Moderator", "&9[Mod] {player}&r: {message}");
+            formats.put("OP", "&c[OP] {player}&r: {message}");
+            formats.put("VIP", "&6[VIP] {player}&r: {message}");
+            formats.put("Player", "&a{player}&r: {message}");
+            formats.put("Default", "&7{player}&r: {message}");
+            return formats;
+        }
+        
+        private static Map<String, Integer> createDefaultGroupPriorities() {
+            Map<String, Integer> priorities = new HashMap<>();
+            priorities.put("Owner", 100);
+            priorities.put("Admin", 90);
+            priorities.put("Moderator", 80);
+            priorities.put("OP", 75);
+            priorities.put("VIP", 50);
+            priorities.put("Player", 10);
+            priorities.put("Default", 0);
+            return priorities;
         }
     }
 }

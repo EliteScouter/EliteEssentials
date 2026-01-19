@@ -67,6 +67,11 @@ public class HytaleMotdCommand extends AbstractPlayerCommand {
         
         // Send each line with formatting
         for (String line : motdLines) {
+            // Skip completely empty lines to avoid excessive spacing
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+            
             String processedLine = line
                     .replace("{player}", playerName)
                     .replace("{server}", serverName)

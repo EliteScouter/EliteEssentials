@@ -3,15 +3,17 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
 /**
  * /broadcast (alias: /bc) - Broadcast a message to all online players.
+ * 
+ * Supports color codes (&0-f, &l, &o, &r) in the message.
  * 
  * Usage: /broadcast <message>
  * Aliases: /bc
@@ -20,7 +22,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 public class HytaleBroadcastCommand extends CommandBase {
     
     private final ConfigManager configManager;
-    private final RequiredArg<String> messageArg;
     
     public HytaleBroadcastCommand(ConfigManager configManager) {
         super("broadcast", "Broadcast a message to all online players");
@@ -29,9 +30,8 @@ public class HytaleBroadcastCommand extends CommandBase {
         // Add alias
         addAliases("bc");
         
-        // Add argument: message (greedy string - captures all remaining text)
-        this.messageArg = withRequiredArg("message", "Message to broadcast", 
-            com.eliteessentials.commands.args.SimpleStringArg.GREEDY);
+        // Allow extra arguments to capture full message with spaces
+        setAllowsExtraArguments(true);
     }
     
     @Override
@@ -49,29 +49,39 @@ public class HytaleBroadcastCommand extends CommandBase {
             return;
         }
         
-        // Get message argument
-        String message = ctx.get(messageArg);
-        if (message == null || message.trim().isEmpty()) {
+        // Parse raw input: "/broadcast <message...>"
+        String rawInput = ctx.getInputString();
+        String[] parts = rawInput.split("\\s+", 2);
+        
+        if (parts.length < 2) {
             ctx.sendMessage(Message.raw("Usage: /broadcast <message>").color("#FF5555"));
             return;
         }
         
-        // Format broadcast message
+        String message = parts[1];
+        
+        if (message.trim().isEmpty()) {
+            ctx.sendMessage(Message.raw("Usage: /broadcast <message>").color("#FF5555"));
+            return;
+        }
+        
+        // Format broadcast message with config prefix/format
         String broadcastText = configManager.getMessage("broadcast", "message", message);
         
         // Broadcast to all online players
         broadcastMessage(broadcastText);
         
         if (configManager.isDebugEnabled()) {
-            ctx.sendMessage(Message.raw("Broadcast sent: " + broadcastText).color("#55FF55"));
+            ctx.sendMessage(Message.raw("Broadcast sent to all players").color("#55FF55"));
         }
     }
     
     /**
-     * Broadcast message to all online players.
+     * Broadcast message to all online players with color code support.
      */
     private void broadcastMessage(String text) {
-        Message message = Message.raw(text).color("#FFFF55");
+        // Use MessageFormatter to process color codes
+        Message message = MessageFormatter.format(text);
         
         try {
             // Get all online players and broadcast

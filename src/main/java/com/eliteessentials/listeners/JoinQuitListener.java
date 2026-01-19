@@ -146,6 +146,11 @@ public class JoinQuitListener {
         
         // Send each line with formatting
         for (String line : motdLines) {
+            // Skip completely empty lines to avoid excessive spacing
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+            
             String processedLine = line
                     .replace("{player}", playerName)
                     .replace("{server}", serverName)
@@ -174,7 +179,8 @@ public class JoinQuitListener {
      * Broadcast message to all online players.
      */
     private void broadcastMessage(String text, String color) {
-        Message message = Message.raw(text).color(color);
+        // Use MessageFormatter to process color codes in the text
+        Message message = MessageFormatter.format(text);
         
         // Get all online players and broadcast
         try {

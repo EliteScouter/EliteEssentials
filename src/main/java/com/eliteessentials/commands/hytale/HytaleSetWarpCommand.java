@@ -100,6 +100,13 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
             return;
         }
         
+        // Block setting warps in instance worlds (temporary worlds that close)
+        String worldName = world.getName();
+        if (worldName.startsWith("instance-")) {
+            ctx.sendMessage(Message.raw(configManager.getMessage("cannotSetWarpInInstance")).color("#FF5555"));
+            return;
+        }
+        
         // Parse permission
         Warp.Permission permission;
         String permLower = permStr.toLowerCase();

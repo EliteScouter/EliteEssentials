@@ -289,6 +289,9 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleTpAcceptCommand(tpaService, backService));
         getCommandRegistry().registerCommand(new HytaleTpDenyCommand(tpaService));
         
+        // Admin teleport commands
+        getCommandRegistry().registerCommand(new HytaleTphereCommand(backService));
+        
         // Spawn commands
         getCommandRegistry().registerCommand(new HytaleSpawnCommand(backService));
         getCommandRegistry().registerCommand(new HytaleSetSpawnCommand(spawnStorage));
@@ -348,8 +351,9 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleRulesCommand(configManager, rulesStorage));
         getCommandRegistry().registerCommand(new HytaleBroadcastCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
+        getCommandRegistry().registerCommand(new HytaleListCommand(configManager));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpaccept, /tpdeny, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpahere, /tpaccept, /tpdeny, /tphere, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv, /list");
     }
 
     public static EliteEssentials getInstance() {

@@ -4,6 +4,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.MessageService;
 import com.eliteessentials.util.CommandPermissionUtil;
+import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
@@ -63,7 +64,7 @@ public class HytaleMsgCommand extends AbstractPlayerCommand {
         String[] parts = rawInput.split("\\s+", 3);
         
         if (parts.length < 3) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("msgUsage")).color("#FF5555"));
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("msgUsage"), "#FF5555"));
             return;
         }
         
@@ -74,12 +75,12 @@ public class HytaleMsgCommand extends AbstractPlayerCommand {
         PlayerRef target = findPlayer(targetName);
         
         if (target == null) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("playerNotFound")).color("#FF5555"));
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("playerNotFound"), "#FF5555"));
             return;
         }
 
         if (target.getUuid().equals(senderId)) {
-            ctx.sendMessage(Message.raw(configManager.getMessage("msgSelf")).color("#FF5555"));
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("msgSelf"), "#FF5555"));
             return;
         }
 
@@ -100,12 +101,12 @@ public class HytaleMsgCommand extends AbstractPlayerCommand {
         // Format: [From PlayerName] message
         String toTarget = configManager.getMessage("msgReceived", 
             "player", senderName, "message", message);
-        target.sendMessage(Message.raw(toTarget).color("#D8BFD8")); // Light purple
+        target.sendMessage(MessageFormatter.formatWithFallback(toTarget, "#D8BFD8")); // Light purple
         
         // Format: [To PlayerName] message
         String toSender = configManager.getMessage("msgSent", 
             "player", targetName, "message", message);
-        ctx.sendMessage(Message.raw(toSender).color("#D8BFD8"));
+        ctx.sendMessage(MessageFormatter.formatWithFallback(toSender, "#D8BFD8"));
     }
 
     /**

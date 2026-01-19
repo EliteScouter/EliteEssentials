@@ -69,6 +69,29 @@ public class MessageFormatter {
         return Message.join(allMessages.toArray(new Message[0]));
     }
     
+    /**
+     * Convenience method to format text with a fallback color.
+     * If the text contains color codes, they will be processed.
+     * If not, the fallback color will be applied to the entire message.
+     * 
+     * @param text Text with optional color codes (& prefix)
+     * @param fallbackColor Hex color to use if no color codes present (e.g., "#FF5555")
+     * @return Formatted Message object
+     */
+    public static Message formatWithFallback(String text, String fallbackColor) {
+        if (text == null || text.isEmpty()) {
+            return Message.raw("");
+        }
+        
+        // Check if text contains color codes
+        if (text.contains("&") || text.contains("§")) {
+            return format(text);
+        }
+        
+        // No color codes, apply fallback color
+        return Message.raw(text).color(fallbackColor);
+    }
+    
     private static Message processLine(String line) {
         if (line == null || line.isEmpty()) {
             return Message.raw("");

@@ -51,6 +51,7 @@ public final class Permissions {
     public static final String RTP = TP_CATEGORY + ".rtp";
     public static final String BACK = TP_CATEGORY + ".back";
     public static final String BACK_ONDEATH = BACK + ".ondeath";
+    public static final String TPHERE = TP_CATEGORY + ".tphere";
     
     // TP bypass: eliteessentials.command.tp.bypass.*
     public static final String TP_BYPASS = TP_CATEGORY + ".bypass";
@@ -106,6 +107,7 @@ public final class Permissions {
     public static final String RULES = MISC_CATEGORY + ".rules";
     public static final String BROADCAST = MISC_CATEGORY + ".broadcast";
     public static final String CLEARINV = MISC_CATEGORY + ".clearinv";
+    public static final String LIST = MISC_CATEGORY + ".list";
 
     // ==================== KIT CATEGORY ====================
     // eliteessentials.command.kit.*

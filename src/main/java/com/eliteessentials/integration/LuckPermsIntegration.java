@@ -234,20 +234,26 @@ public class LuckPermsIntegration {
         
         // Teleport commands
         perms.add(Permissions.TPA);
+        perms.add(Permissions.TPAHERE);
         perms.add(Permissions.TPACCEPT);
         perms.add(Permissions.TPDENY);
+        perms.add(Permissions.TPHERE);
         perms.add(Permissions.RTP);
         perms.add(Permissions.BACK);
         perms.add(Permissions.BACK_ONDEATH);
+        perms.add(Permissions.TOP);
         perms.add("eliteessentials.command.tp.*");
         perms.add(Permissions.TP_BYPASS_COOLDOWN);
         perms.add(Permissions.TP_BYPASS_WARMUP);
         perms.add(Permissions.tpBypassCooldown("rtp"));
         perms.add(Permissions.tpBypassCooldown("back"));
         perms.add(Permissions.tpBypassCooldown("tpa"));
+        perms.add(Permissions.tpBypassCooldown("tpahere"));
+        perms.add(Permissions.tpBypassCooldown("tphere"));
         perms.add(Permissions.tpBypassWarmup("rtp"));
         perms.add(Permissions.tpBypassWarmup("back"));
         perms.add(Permissions.tpBypassWarmup("tpa"));
+        perms.add(Permissions.tpBypassWarmup("tpahere"));
         
         // Warp commands
         perms.add(Permissions.WARP);
@@ -278,6 +284,7 @@ public class LuckPermsIntegration {
         perms.add(Permissions.RULES);
         perms.add(Permissions.BROADCAST);
         perms.add(Permissions.CLEARINV);
+        perms.add(Permissions.LIST);
         perms.add("eliteessentials.command.misc.*");
         
         // Kit commands
@@ -352,6 +359,7 @@ public class LuckPermsIntegration {
      */
     public static List<String> getGroups(java.util.UUID playerId) {
         List<String> groups = new ArrayList<>();
+        Logger logger = Logger.getLogger("EliteEssentials");
         
         try {
             Class<?> providerClass = Class.forName("net.luckperms.api.LuckPermsProvider");
@@ -362,29 +370,70 @@ public class LuckPermsIntegration {
             Method getUserManagerMethod = luckPerms.getClass().getMethod("getUserManager");
             Object userManager = getUserManagerMethod.invoke(luckPerms);
             
-            // Get User
+            // Try to get user from cache first
             Method getUserMethod = userManager.getClass().getMethod("getUser", java.util.UUID.class);
             Object user = getUserMethod.invoke(userManager, playerId);
             
+            // If user not in cache, try to load it synchronously (blocking, but necessary for chat)
             if (user == null) {
-                return groups;
-            }
-            
-            // Get inherited groups (includes all groups the player is in)
-            Method getInheritedGroupsMethod = user.getClass().getMethod("getInheritedGroups");
-            Object groupsCollection = getInheritedGroupsMethod.invoke(user);
-            
-            // Convert to list of group names
-            if (groupsCollection instanceof java.util.Collection) {
-                for (Object group : (java.util.Collection<?>) groupsCollection) {
-                    Method getNameMethod = group.getClass().getMethod("getName");
-                    String groupName = (String) getNameMethod.invoke(group);
-                    groups.add(groupName);
+                logger.info("[LuckPerms] User not in cache, attempting to load: " + playerId);
+                try {
+                    Method loadUserMethod = userManager.getClass().getMethod("loadUser", java.util.UUID.class);
+                    Object completableFuture = loadUserMethod.invoke(userManager, playerId);
+                    
+                    // Wait for user to load (with timeout)
+                    Method joinMethod = completableFuture.getClass().getMethod("join");
+                    user = joinMethod.invoke(completableFuture);
+                    logger.info("[LuckPerms] User loaded successfully");
+                } catch (Exception loadEx) {
+                    logger.warning("[LuckPerms] Failed to load user: " + loadEx.getMessage());
+                    return groups;
                 }
             }
             
+            if (user == null) {
+                logger.warning("[LuckPerms] User is null after load attempt");
+                return groups;
+            }
+            
+            // Get the user's nodes to find group memberships
+            // Try different methods to get groups
+            try {
+                // Method 1: Try getNodes() and filter for group nodes
+                Method getNodesMethod = user.getClass().getMethod("getNodes");
+                Object nodesCollection = getNodesMethod.invoke(user);
+                
+                if (nodesCollection instanceof java.util.Collection) {
+                    for (Object node : (java.util.Collection<?>) nodesCollection) {
+                        // Check if this is a group node
+                        Method getKeyMethod = node.getClass().getMethod("getKey");
+                        String key = (String) getKeyMethod.invoke(node);
+                        
+                        // Group nodes start with "group."
+                        if (key.startsWith("group.")) {
+                            String groupName = key.substring(6); // Remove "group." prefix
+                            groups.add(groupName);
+                        }
+                    }
+                }
+            } catch (Exception e1) {
+                // Method 2: Try getPrimaryGroup() as fallback
+                try {
+                    Method getPrimaryGroupMethod = user.getClass().getMethod("getPrimaryGroup");
+                    String primaryGroup = (String) getPrimaryGroupMethod.invoke(user);
+                    if (primaryGroup != null) {
+                        groups.add(primaryGroup);
+                    }
+                } catch (Exception e2) {
+                    logger.warning("[LuckPerms] Could not get groups using any method");
+                }
+            }
+            
+            logger.info("[LuckPerms] Retrieved " + groups.size() + " groups for player: " + groups);
+            
         } catch (Exception e) {
-            // Silently fail - LuckPerms might not be available
+            logger.warning("[LuckPerms] Error getting groups: " + e.getMessage());
+            e.printStackTrace();
         }
         
         return groups;

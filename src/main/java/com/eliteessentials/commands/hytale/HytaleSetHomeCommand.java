@@ -74,6 +74,13 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         
+        // Block setting homes in instance worlds (temporary worlds that close)
+        String worldName = world.getName();
+        if (worldName.startsWith("instance-")) {
+            ctx.sendMessage(Message.raw(configManager.getMessage("cannotSetHomeInInstance")).color("#FF5555"));
+            return;
+        }
+        
         TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             ctx.sendMessage(Message.raw(configManager.getMessage("couldNotGetPosition")).color("#FF5555"));

@@ -59,6 +59,10 @@ public class HytaleRulesCommand extends AbstractPlayerCommand {
         
         // Send each line with formatting
         for (String line : rulesLines) {
+            // Skip completely empty lines to avoid excessive spacing
+            if (line.trim().isEmpty()) {
+                continue;
+            }
             player.sendMessage(MessageFormatter.format(line));
         }
     }

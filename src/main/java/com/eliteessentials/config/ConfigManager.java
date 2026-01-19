@@ -118,7 +118,7 @@ public class ConfigManager {
      * - Base provides the structure and default values
      * - Override values replace base values where they exist
      * - New fields in base (not in override) are added
-     * - Nested objects are merged recursively
+     * - Nested objects are merged recursively (except for specific fields)
      */
     private JsonObject deepMerge(JsonObject base, JsonObject override) {
         JsonObject result = new JsonObject();
@@ -131,8 +131,12 @@ public class ConfigManager {
             if (override.has(key)) {
                 JsonElement overrideValue = override.get(key);
                 
+                // Special handling for chat format maps - don't merge, use user's version entirely
+                if (key.equals("chatFormat") && baseValue.isJsonObject() && overrideValue.isJsonObject()) {
+                    result.add(key, mergeChatFormat(baseValue.getAsJsonObject(), overrideValue.getAsJsonObject()));
+                }
                 // If both are objects, merge recursively
-                if (baseValue.isJsonObject() && overrideValue.isJsonObject()) {
+                else if (baseValue.isJsonObject() && overrideValue.isJsonObject()) {
                     result.add(key, deepMerge(baseValue.getAsJsonObject(), overrideValue.getAsJsonObject()));
                 } else {
                     // Use override value (user's setting)
@@ -145,6 +149,41 @@ public class ConfigManager {
         }
         
         // Add any keys that exist only in override (user added custom fields)
+        for (Map.Entry<String, JsonElement> entry : override.entrySet()) {
+            if (!result.has(entry.getKey())) {
+                result.add(entry.getKey(), entry.getValue());
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Special merge for chatFormat - don't merge groupFormats/groupPriorities maps,
+     * use user's version entirely to allow removal of default groups.
+     */
+    private JsonObject mergeChatFormat(JsonObject base, JsonObject override) {
+        JsonObject result = new JsonObject();
+        
+        // For each field in base
+        for (Map.Entry<String, JsonElement> entry : base.entrySet()) {
+            String key = entry.getKey();
+            
+            if (override.has(key)) {
+                // For groupFormats and groupPriorities, use user's version entirely (don't merge)
+                if (key.equals("groupFormats") || key.equals("groupPriorities")) {
+                    result.add(key, override.get(key));
+                } else {
+                    // For other fields, use user's value
+                    result.add(key, override.get(key));
+                }
+            } else {
+                // New field not in user config - add from defaults
+                result.add(key, entry.getValue());
+            }
+        }
+        
+        // Add any user-added fields
         for (Map.Entry<String, JsonElement> entry : override.entrySet()) {
             if (!result.has(entry.getKey())) {
                 result.add(entry.getKey(), entry.getValue());
