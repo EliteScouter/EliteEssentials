@@ -70,7 +70,7 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
         // - Players with bed spawns will respawn at their bed (vanilla behavior)
         // - Players without bed spawns will respawn at this /setspawn location
 
-        ctx.sendMessage(MessageFormatter.formatWithFallback("Spawn set at " + 
+        ctx.sendMessage(MessageFormatter.formatWithFallback("Spawn set for world '" + world.getName() + "' at " + 
             String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ()) + 
             " (Players without beds will respawn here)", "#55FF55"));
     }

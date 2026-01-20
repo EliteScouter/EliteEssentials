@@ -15,7 +15,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -32,7 +31,8 @@ import javax.annotation.Nonnull;
 
 /**
  * Command: /spawn
- * Teleports the player to the server spawn point (set via /setspawn).
+ * Teleports the player to the spawn point in their current world.
+ * Each world can have its own spawn set via /setspawn.
  * 
  * Permissions:
  * - eliteessentials.command.spawn.use - Use /spawn command
@@ -78,40 +78,43 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             }
         }
         
-        // Get spawn from storage
-        SpawnStorage.SpawnData spawn = spawnStorage.getSpawn();
+        // Determine which world's spawn to use
+        // If perWorld is false, always use main world spawn; otherwise use current world
+        String targetWorldName = config.spawn.perWorld ? world.getName() : config.spawn.mainWorld;
+        SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
         if (spawn == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnNoSpawn"), "#FF5555"));
-            return;
-        }
-        
-        // Get target world
-        World targetWorld = Universe.get().getWorld(spawn.world);
-        if (targetWorld == null) {
-            ctx.sendMessage(Message.raw("Spawn world not found: " + spawn.world).color("#FF5555"));
+            String errorMsg = config.spawn.perWorld 
+                ? configManager.getMessage("spawnNoSpawn") + " (No spawn set for world: " + targetWorldName + ")"
+                : configManager.getMessage("spawnNoSpawn") + " (No spawn set for main world: " + targetWorldName + ")";
+            ctx.sendMessage(MessageFormatter.formatWithFallback(errorMsg, "#FF5555"));
             return;
         }
         
         // Get current position for /back and warmup
-        TransformComponent currentTransform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
+        TransformComponent currentTransform = store.getComponent(ref, TransformComponent.getComponentType());
         if (currentTransform == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("couldNotGetPosition"), "#FF5555"));
             return;
         }
         
         Vector3d currentPos = currentTransform.getPosition();
-        HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
+        HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
         Vector3f currentRot = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
         
         Location currentLoc = new Location(
             world.getName(),
             currentPos.getX(), currentPos.getY(), currentPos.getZ(),
-            currentRot.x, currentRot.y
+            currentRot.y, currentRot.x  // yaw=rotation.y, pitch=rotation.x
         );
         
+        // Get target world (may be different from current world if perWorld=false)
+        World targetWorld = Universe.get().getWorld(targetWorldName);
+        if (targetWorld == null) {
+            targetWorld = world; // Fallback to current world if target not found
+        }
+        final World finalTargetWorld = targetWorld;
+        
         // Spawn position and rotation
-        // Vector3f structure: x = pitch, y = yaw, z = roll
-        // Always use pitch=0 to keep player upright, preserve yaw for direction
         Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
         Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0);
         
@@ -120,9 +123,11 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             // Save location for /back
             backService.pushLocation(playerId, currentLoc);
 
-            // Teleport player to spawn
-            targetWorld.execute(() -> {
-                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
+            // Teleport player to spawn (may be cross-world)
+            world.execute(() -> {
+                if (!ref.isValid()) return;
+                
+                Teleport teleport = new Teleport(finalTargetWorld, spawnPos, spawnRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));

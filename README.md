@@ -7,7 +7,8 @@ A comprehensive server essentials plugin for Hytale that brings everything you n
 ## Features
 
 ### Full Localization Support
-All 60+ player-facing messages are configurable in `config.json`. Translate your server to any language!
+
+All 60+ player-facing messages are configurable in `messages.json`. Translate your server to any language!
 
 - Placeholder support: `{player}`, `{seconds}`, `{name}`, `{count}`, `{max}`, `{location}`
 - Config auto-migrates - existing settings preserved when updating
@@ -47,7 +48,12 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
 - 30-second timeout (configurable)
 
 ### Spawn
+
 - **`/spawn`** - Teleport to the world spawn point
+- **Per-world or global spawn**: Configure whether `/spawn` uses per-world spawns or always goes to main world
+  - `spawn.perWorld: false` (default) - Always teleport to main world spawn
+  - `spawn.perWorld: true` - Teleport to current world's spawn
+  - `spawn.mainWorld` - Specify which world is the main world
 
 ### Kit System
 - **`/kit [name]`** - Open kit GUI or claim a specific kit
@@ -86,6 +92,8 @@ All 60+ player-facing messages are configurable in `config.json`. Translate your
   - Works with LuckPerms groups and simple permissions
   - Priority-based group selection (highest priority wins)
   - Color codes and placeholders: `{player}`, `{displayname}`, `{message}`
+  - **Hex color support**: Use `&#RRGGBB` format for precise colors (e.g., `&#FF5555`)
+  - Create gradients with per-character hex colors
   - Fully configurable per group in `config.json`
   - Easy to add custom groups
 - **Join Messages** - Automatic messages when players join
@@ -148,6 +156,7 @@ Config file is automatically created on first server start with sensible default
 | `/delwarp <name>` | Delete warp | Admin |
 | `/warpadmin` | Warp admin panel | Admin |
 | `/sleeppercent [%]` | Set sleep percentage | Admin |
+| `/alias` | Manage command aliases | Admin |
 | `/eliteessentials reload` | Reload configuration | Admin |
 
 *In simple mode (default), "Everyone" commands work for all players, "Admin" requires OP.*

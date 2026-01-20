@@ -2,6 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.commands.args.SimpleStringArg;
+import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.hypixel.hytale.server.core.Message;
@@ -51,6 +52,20 @@ public class HytaleReloadCommand extends CommandBase {
         String action = ctx.get(actionArg);
         
         if ("reload".equalsIgnoreCase(action)) {
+            ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+            
+            // Validate all JSON files before reloading
+            java.util.List<ConfigManager.ConfigValidationResult> errors = configManager.validateAllFiles();
+            
+            if (!errors.isEmpty()) {
+                ctx.sendMessage(Message.raw("Config reload failed - invalid JSON detected!").color("#FF5555"));
+                for (ConfigManager.ConfigValidationResult error : errors) {
+                    ctx.sendMessage(Message.raw("File: " + error.getFilename()).color("#FFAA00"));
+                    ctx.sendMessage(Message.raw(error.getErrorMessage()).color("#FF7777"));
+                }
+                return;
+            }
+            
             try {
                 EliteEssentials.getInstance().reloadConfig();
                 ctx.sendMessage(Message.raw("EliteEssentials configuration reloaded!").color("#55FF55"));

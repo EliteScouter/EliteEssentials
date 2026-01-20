@@ -50,15 +50,26 @@ public class PluginConfig {
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
     public DiscordConfig discord = new DiscordConfig();
     public AutoBroadcastConfig autoBroadcast = new AutoBroadcastConfig();
+    public AliasConfig aliases = new AliasConfig();
     
     // ==================== MESSAGES ====================
     
+    /**
+     * @deprecated Messages are now stored in messages.json.
+     * This field is kept only for migration purposes and default value generation.
+     * Use ConfigManager.getMessage() to access messages.
+     */
+    @Deprecated
     public Map<String, String> messages = new HashMap<>();
 
     public PluginConfig() {
         initDefaultMessages();
     }
     
+    /**
+     * Initialize default messages.
+     * These are used for migration and to ensure all message keys exist.
+     */
     private void initDefaultMessages() {
         // ==================== GENERAL ====================
         messages.put("prefix", "&7[&bEliteEssentials&7]&r ");
@@ -237,6 +248,12 @@ public class PluginConfig {
         
         // ==================== DISCORD ====================
         messages.put("discordEmpty", "&cNo discord information configured.");
+        
+        // ==================== ALIASES ====================
+        messages.put("aliasCreated", "&aCreated alias &e/{name} &a-> &f/{command} &7[{permission}]");
+        messages.put("aliasUpdated", "&aUpdated alias &e/{name} &a-> &f/{command} &7[{permission}]");
+        messages.put("aliasDeleted", "&aDeleted alias &e/{name}&a.");
+        messages.put("aliasNotFound", "&cAlias &e'{name}' &cnot found.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -335,6 +352,19 @@ public class PluginConfig {
         
         /** Warmup in seconds - player must stand still (0 = instant) */
         public int warmupSeconds = 3;
+        
+        /** 
+         * Per-world spawn behavior.
+         * When false (default): /spawn always teleports to the main world's spawn.
+         * When true: /spawn teleports to the spawn point of the player's current world.
+         */
+        public boolean perWorld = false;
+        
+        /** 
+         * Main world name (used when perWorld = false).
+         * Players will always teleport to this world's spawn regardless of which world they're in.
+         */
+        public String mainWorld = "default";
     }
 
     // ==================== WARPS ====================
@@ -591,6 +621,16 @@ public class PluginConfig {
         /** 
          * Enable/disable auto broadcast system.
          * Individual broadcasts can be enabled/disabled in autobroadcast.json
+         */
+        public boolean enabled = true;
+    }
+    
+    // ==================== COMMAND ALIASES ====================
+    
+    public static class AliasConfig {
+        /** 
+         * Enable/disable command alias system.
+         * Aliases are stored in aliases.json
          */
         public boolean enabled = true;
     }

@@ -133,6 +133,7 @@ public final class Permissions {
     // eliteessentials.admin.*
     public static final String ADMIN = ADMIN_BASE + ".*";
     public static final String ADMIN_RELOAD = ADMIN_BASE + ".reload";
+    public static final String ADMIN_ALIAS = ADMIN_BASE + ".alias";
 
     // ==================== HELPER METHODS ====================
     

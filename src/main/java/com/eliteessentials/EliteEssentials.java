@@ -22,6 +22,7 @@ import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.AutoBroadcastService;
+import com.eliteessentials.services.AliasService;
 import com.eliteessentials.storage.BackStorage;
 import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.storage.HomeStorage;
@@ -75,6 +76,7 @@ public class EliteEssentials extends JavaPlugin {
     private KitService kitService;
     private SpawnProtectionService spawnProtectionService;
     private AutoBroadcastService autoBroadcastService;
+    private AliasService aliasService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -153,6 +155,7 @@ public class EliteEssentials extends JavaPlugin {
         kitService = new KitService(this.dataFolder);
         spawnProtectionService = new SpawnProtectionService(configManager);
         autoBroadcastService = new AutoBroadcastService(this.dataFolder);
+        aliasService = new AliasService(this.dataFolder, getCommandRegistry());
         
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
     }
@@ -239,6 +242,11 @@ public class EliteEssentials extends JavaPlugin {
         // Start auto broadcast system
         if (configManager.getConfig().autoBroadcast.enabled) {
             autoBroadcastService.start();
+        }
+        
+        // Load and register command aliases
+        if (configManager.getConfig().aliases.enabled) {
+            aliasService.load();
         }
         
         getLogger().at(Level.INFO).log("EliteEssentials started successfully!");
@@ -376,6 +384,7 @@ public class EliteEssentials extends JavaPlugin {
         // Admin commands (OP only)
         getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleReloadCommand());
+        getCommandRegistry().registerCommand(new HytaleAliasCommand());
         
         // New commands
         getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager));
@@ -461,6 +470,10 @@ public class EliteEssentials extends JavaPlugin {
         return starterKitEvent;
     }
     
+    public AliasService getAliasService() {
+        return aliasService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -495,6 +508,11 @@ public class EliteEssentials extends JavaPlugin {
             } else {
                 autoBroadcastService.shutdown();
             }
+        }
+        
+        // Reload aliases (note: deleted aliases won't be removed until restart)
+        if (aliasService != null && configManager.getConfig().aliases.enabled) {
+            aliasService.reload();
         }
         
         getLogger().at(Level.INFO).log("Configuration reloaded.");

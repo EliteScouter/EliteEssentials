@@ -103,6 +103,7 @@ public class ChatListener {
     /**
      * Get the chat format for a player based on their highest priority group.
      * Uses traditional loops instead of streams for better performance in this hot path.
+     * Supports case-insensitive group name matching.
      */
     private String getChatFormat(PlayerRef playerRef) {
         var config = configManager.getConfig().chatFormat;
@@ -119,16 +120,22 @@ public class ChatListener {
                 logger.info("Player " + playerRef.getUsername() + " has groups: " + groups);
             }
             
-            // Find the highest priority group using traditional loop
+            // Find the highest priority group using case-insensitive matching
             for (String group : groups) {
-                int priority = config.groupPriorities.getOrDefault(group, 0);
-                if (configManager.isDebugEnabled()) {
-                    logger.info("  Group '" + group + "' priority: " + priority + 
-                               " (has format: " + config.groupFormats.containsKey(group) + ")");
-                }
-                if (priority > highestPriority && config.groupFormats.containsKey(group)) {
-                    highestPriority = priority;
-                    highestPriorityGroup = group;
+                // Find matching config key (case-insensitive)
+                String matchedConfigKey = findConfigKeyIgnoreCase(config.groupFormats, group);
+                
+                if (matchedConfigKey != null) {
+                    int priority = getGroupPriorityIgnoreCase(config.groupPriorities, group, matchedConfigKey);
+                    if (configManager.isDebugEnabled()) {
+                        logger.info("  Group '" + group + "' matched config key '" + matchedConfigKey + "' with priority: " + priority);
+                    }
+                    if (priority > highestPriority) {
+                        highestPriority = priority;
+                        highestPriorityGroup = matchedConfigKey;
+                    }
+                } else if (configManager.isDebugEnabled()) {
+                    logger.info("  Group '" + group + "' has no matching format in config");
                 }
             }
             
@@ -164,6 +171,44 @@ public class ChatListener {
         }
         defaultFormat = config.groupFormats.get("Default");
         return defaultFormat != null ? defaultFormat : config.defaultFormat;
+    }
+    
+    /**
+     * Find a config key that matches the group name (case-insensitive).
+     */
+    private String findConfigKeyIgnoreCase(java.util.Map<String, String> map, String group) {
+        // Try exact match first
+        if (map.containsKey(group)) {
+            return group;
+        }
+        // Try case-insensitive match
+        for (String key : map.keySet()) {
+            if (key.equalsIgnoreCase(group)) {
+                return key;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get group priority with case-insensitive fallback.
+     */
+    private int getGroupPriorityIgnoreCase(java.util.Map<String, Integer> priorities, String group, String matchedConfigKey) {
+        // Try the matched config key first
+        if (priorities.containsKey(matchedConfigKey)) {
+            return priorities.get(matchedConfigKey);
+        }
+        // Try the original group name
+        if (priorities.containsKey(group)) {
+            return priorities.get(group);
+        }
+        // Try case-insensitive match
+        for (java.util.Map.Entry<String, Integer> entry : priorities.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(group)) {
+                return entry.getValue();
+            }
+        }
+        return 0;
     }
 }
 

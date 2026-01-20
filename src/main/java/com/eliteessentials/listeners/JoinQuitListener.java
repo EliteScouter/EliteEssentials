@@ -138,13 +138,14 @@ public class JoinQuitListener {
             
             // Show MOTD
             if (config.motd.enabled && config.motd.showOnJoin) {
+                String worldName = world.getName();
                 int delay = config.motd.delaySeconds;
                 if (delay > 0) {
                     // Schedule MOTD display after delay
-                    scheduleMotd(playerRef, delay);
+                    scheduleMotd(playerRef, delay, worldName);
                 } else {
                     // Show immediately
-                    showMotd(playerRef);
+                    showMotd(playerRef, worldName);
                 }
             }
         });
@@ -153,7 +154,7 @@ public class JoinQuitListener {
     /**
      * Show MOTD to player.
      */
-    private void showMotd(PlayerRef playerRef) {
+    private void showMotd(PlayerRef playerRef, String worldName) {
         PluginConfig config = configManager.getConfig();
         
         // Get MOTD lines
@@ -165,7 +166,6 @@ public class JoinQuitListener {
         // Replace placeholders
         String playerName = playerRef.getUsername();
         String serverName = config.motd.serverName;
-        String worldName = "default"; // PlayerRef doesn't have getWorld(), use default
         int playerCount = Universe.get().getPlayers().size();
         
         // Send each line with formatting
@@ -188,8 +188,8 @@ public class JoinQuitListener {
     /**
      * Schedule MOTD display after delay using executor service for proper thread management.
      */
-    private void scheduleMotd(PlayerRef playerRef, int delaySeconds) {
-        scheduler.schedule(() -> showMotd(playerRef), delaySeconds, TimeUnit.SECONDS);
+    private void scheduleMotd(PlayerRef playerRef, int delaySeconds, String worldName) {
+        scheduler.schedule(() -> showMotd(playerRef, worldName), delaySeconds, TimeUnit.SECONDS);
     }
     
     /**

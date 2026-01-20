@@ -2,6 +2,67 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [1.0.9] - 2026-01-20
+
+### Added
+
+- **Command Alias System**: Create custom shortcut commands that execute existing commands
+  - `/alias create <name> <command> [permission]` - Create an alias
+  - `/alias delete <name>` - Delete an alias
+  - `/alias list` - List all aliases
+  - `/alias info <name>` - Show alias details
+  - **Command chains**: Use `;` to execute multiple commands in sequence
+    - Example: `/alias create prep warp spawn; heal; fly` - teleports to spawn, heals, and enables fly
+  - **Compatible commands for aliases**: `warp`, `spawn`
+  - Permission levels: `everyone`, `op`, or custom permission nodes
+  - Example: `/alias create explore warp explore` makes `/explore` execute `/warp explore`
+  - Aliases stored in `aliases.json`
+  - Admin-only command (simple mode) or `eliteessentials.admin.alias` (advanced mode)
+
+- **Spawn perWorld config**: Control whether `/spawn` uses per-world or global spawn
+  - `spawn.perWorld: false` (default) - Always teleport to main world spawn
+  - `spawn.perWorld: true` - Teleport to current world's spawn
+  - `spawn.mainWorld: "default"` - Which world is the main world
+
+- **Config reload validation**: `/ee reload` now validates all JSON files before reloading
+  - Checks: config.json, messages.json, motd.json, rules.json, discord.json, warps.json, spawn.json, kits.json, kit_claims.json
+  - Shows which file has the error with line number and column
+  - Displays the problematic line content
+  - Provides hints for common JSON mistakes (missing commas, quotes, etc.)
+  - Prevents reload if any file has invalid JSON syntax
+
+- **Hex color code support**: MessageFormatter now supports `&#RRGGBB` format for precise colors
+  - Enables per-character gradients in chat formats (e.g., `&#FF0000A&#FF3300d&#FF6600m&#FF9900i&#FFCC00n`)
+  - Works alongside existing `&0-f` color codes
+  - Both formats can be mixed in the same message
+
+- **Per-world spawn system**: Each world can now have its own spawn point
+  - `/setspawn` sets spawn for the current world
+  - `/spawn` teleports to spawn in player's current world
+  - Respawn after death uses per-world spawn (if no bed set in that world)
+  - Automatic migration from old single-spawn format
+  - spawn.json now stores spawns as `{ "worldName": { ... }, ... }`
+
+- **Messages moved to separate file**: Messages are now stored in `messages.json`
+  - Cleaner config.json without 100+ message entries
+  - Easier to edit and share message customizations
+  - Automatic one-time migration from config.json on upgrade
+  - Old messages in config.json are moved to messages.json and removed from config
+  - New message keys are automatically added on reload
+
+### Fixed
+
+- **Chat formatting case sensitivity**: LuckPerms group names are now matched case-insensitively
+  - Groups like `admin` now match config keys like `Admin`
+  - Previously, mismatched case would fall back to highest priority group (e.g., showing "Owner" instead of "Admin")
+
+- **MOTD {world} placeholder**: Now correctly shows the player's actual world name instead of "default"
+  - Fixed by passing world name from join event through to MOTD display
+
+- **Cross-world /spawn teleport crash**: Fixed `IllegalStateException: Assert not in thread!` error
+  - Previously crashed when using /spawn from a different world than where spawn was set
+  - Now teleports to spawn in player's CURRENT world (per-world spawns)
+
 ## [1.0.8] - 2026-01-19
 
 ### Added

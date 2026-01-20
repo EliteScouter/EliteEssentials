@@ -79,9 +79,10 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         // Get world info early - needed for both bed check and spawn teleport
         EntityStore entityStore = store.getExternalData();
         World world = entityStore.getWorld();
+        String worldName = world.getName();
         
-        // Get our spawn location for comparison
-        SpawnStorage.SpawnData ourSpawn = spawnStorage.getSpawn();
+        // Get our spawn location for this world
+        SpawnStorage.SpawnData ourSpawn = spawnStorage.getSpawn(worldName);
         
         // Check if player has a bed spawn set using Player.getRespawnPosition()
         try {
@@ -163,16 +164,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         // Player has no bed spawn - teleport to /setspawn location
         if (ourSpawn == null) {
             if (debugEnabled) {
-                logger.info("[Respawn] No spawn set, using vanilla respawn");
-                logger.info("[Respawn] ========================================");
-            }
-            return;
-        }
-        
-        // Check if spawn is for the current world
-        if (!world.getName().equals(ourSpawn.world)) {
-            if (debugEnabled) {
-                logger.info("[Respawn] Spawn is for different world (" + ourSpawn.world + " vs " + world.getName() + "), using vanilla respawn");
+                logger.info("[Respawn] No spawn set for world '" + worldName + "', using vanilla respawn");
                 logger.info("[Respawn] ========================================");
             }
             return;
