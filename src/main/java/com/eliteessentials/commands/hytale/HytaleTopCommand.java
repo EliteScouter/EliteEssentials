@@ -12,7 +12,6 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -25,6 +24,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /top
@@ -52,8 +53,8 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
         
         // Check permission (Admin command)

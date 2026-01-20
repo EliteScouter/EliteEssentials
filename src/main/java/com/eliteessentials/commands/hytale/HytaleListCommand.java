@@ -1,11 +1,9 @@
 package com.eliteessentials.commands.hytale;
 
-import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -13,6 +11,8 @@ import com.hypixel.hytale.server.core.universe.Universe;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /list
@@ -41,7 +41,7 @@ public class HytaleListCommand extends CommandBase {
     }
     
     @Override
-    protected void executeSync(CommandContext ctx) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
         // Permission check - everyone can use
         PermissionService perms = PermissionService.get();
         if (!perms.canUseEveryoneCommand(ctx.sender(), Permissions.LIST, 

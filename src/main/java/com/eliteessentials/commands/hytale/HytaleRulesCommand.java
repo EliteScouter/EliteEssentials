@@ -16,6 +16,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 /**
  * /rules - Display the server rules.
  * 
@@ -41,8 +43,8 @@ public class HytaleRulesCommand extends AbstractPlayerCommand {
     }
     
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, 
-                          Ref<EntityStore> ref, PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, 
+                          @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
         // Permission check - everyone can use
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.RULES, 
                 configManager.getConfig().rules.enabled)) {

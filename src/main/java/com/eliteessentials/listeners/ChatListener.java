@@ -102,6 +102,7 @@ public class ChatListener {
     
     /**
      * Get the chat format for a player based on their highest priority group.
+     * Uses traditional loops instead of streams for better performance in this hot path.
      */
     private String getChatFormat(PlayerRef playerRef) {
         var config = configManager.getConfig().chatFormat;
@@ -118,7 +119,7 @@ public class ChatListener {
                 logger.info("Player " + playerRef.getUsername() + " has groups: " + groups);
             }
             
-            // Find the highest priority group
+            // Find the highest priority group using traditional loop
             for (String group : groups) {
                 int priority = config.groupPriorities.getOrDefault(group, 0);
                 if (configManager.isDebugEnabled()) {
@@ -142,7 +143,7 @@ public class ChatListener {
         // Fall back to simple permission system
         // Check if player is OP/Admin using PermissionService
         if (PermissionService.get().isAdmin(playerRef.getUuid())) {
-            // Check all configured groups for admin
+            // Check all configured groups for admin using traditional loop
             for (String groupName : config.groupFormats.keySet()) {
                 int priority = config.groupPriorities.getOrDefault(groupName, 0);
                 if (priority > highestPriority) {
@@ -157,10 +158,12 @@ public class ChatListener {
         }
         
         // Default format - try "default" first (lowercase), then "Default" (capitalized)
-        if (config.groupFormats.containsKey("default")) {
-            return config.groupFormats.get("default");
+        String defaultFormat = config.groupFormats.get("default");
+        if (defaultFormat != null) {
+            return defaultFormat;
         }
-        return config.groupFormats.getOrDefault("Default", config.defaultFormat);
+        defaultFormat = config.groupFormats.get("Default");
+        return defaultFormat != null ? defaultFormat : config.defaultFormat;
     }
 }
 

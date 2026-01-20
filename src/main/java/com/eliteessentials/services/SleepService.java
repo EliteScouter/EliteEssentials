@@ -30,6 +30,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class SleepService {
 
+    // Time in milliseconds a player must be in NoddingOff state before counting as sleeping
+    private static final long NODDING_OFF_THRESHOLD_MS = 3200;
+
     private final ConfigManager configManager;
     private final ScheduledExecutorService scheduler;
     private volatile boolean slumberTriggered = false;
@@ -95,9 +98,7 @@ public class SleepService {
                 }
                 
                 List<PlayerRef> players = new ArrayList<>(world.getPlayerRefs());
-                if (players.isEmpty()) {
-                    return;
-                }
+                if (players.isEmpty()) return;
                 
                 int totalPlayers = players.size();
                 int sleepingPlayers = 0;
@@ -136,9 +137,9 @@ public class SleepService {
                     if (state instanceof PlayerSleep.Slumber) {
                         sleepingPlayers++;
                     }
-                    // Count NoddingOff only if enough time has passed (3.2 seconds)
+                    // Count NoddingOff only if enough time has passed
                     else if (state instanceof PlayerSleep.NoddingOff noddingOff) {
-                        Instant threshold = noddingOff.realTimeStart().plusMillis(3200);
+                        Instant threshold = noddingOff.realTimeStart().plusMillis(NODDING_OFF_THRESHOLD_MS);
                         if (Instant.now().isAfter(threshold)) {
                             sleepingPlayers++;
                         }
@@ -151,7 +152,6 @@ public class SleepService {
                     lastSleepingCount = -1;
                     return;
                 }
-                
                 // Calculate percentage and check threshold
                 int currentPercent = (sleepingPlayers * 100) / totalPlayers;
                 int playersNeeded = Math.max(1, (int) Math.ceil(totalPlayers * requiredPercent / 100.0));
@@ -194,9 +194,6 @@ public class SleepService {
         }
         
         WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
-        if (timeResource == null) {
-            return;
-        }
         
         // Get wake-up hour from game config
         SleepConfig sleepConfig = world.getGameplayConfig().getWorldConfig().getSleepConfig();

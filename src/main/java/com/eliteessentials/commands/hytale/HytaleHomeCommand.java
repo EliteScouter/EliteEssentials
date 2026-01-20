@@ -32,6 +32,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /home [name]
  * Teleports the player to their saved home location.
@@ -64,8 +66,8 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOME, config.homes.enabled)) {
             return;
@@ -183,8 +185,8 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             String homeName = ctx.get(nameArg);
             HytaleHomeCommand.goHome(ctx, store, ref, player, world, homeName, homeService, backService);
         }

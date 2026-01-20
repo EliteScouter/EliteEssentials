@@ -6,16 +6,14 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 
 /**
  * Command: /fly
@@ -26,7 +24,6 @@ import java.util.logging.Logger;
  */
 public class HytaleFlyCommand extends AbstractPlayerCommand {
 
-    private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final ConfigManager configManager;
 
     public HytaleFlyCommand(ConfigManager configManager) {
@@ -40,8 +37,8 @@ public class HytaleFlyCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.FLY, 
                 configManager.getConfig().fly.enabled)) {

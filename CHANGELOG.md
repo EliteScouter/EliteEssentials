@@ -4,19 +4,50 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ## [1.0.8] - 2026-01-19
 
+### Added
+
+- **Discord Command**: `/discord` displays server discord info with clickable invite link
+  - Stored in `discord.json` for easy customization
+  - URLs automatically become clickable
+  - Default template includes example discord link
+- **Warp Limits**: Configurable limits on total warps
+  - Global `maxWarps` setting (-1 for unlimited)
+  - Per-group limits via `groupLimits` config (advanced permissions mode)
+  - Permission-based limits: `eliteessentials.command.warp.limit.<number>`
+- **Spawn Protection - Disable All Damage**: New `disableAllDamage` option
+  - Blocks ALL damage in spawn area (mobs, NPCs, fall damage, fire, etc.)
+  - Separate from PvP protection - can enable both or either
+- **Color Code Support in Messages**: Added `MessageFormatter.formatWithFallback()` utility method
+  - Config messages now support color codes using `&` prefix
+  - Updated ALL 40+ command files, services, and GUI to support color codes
+  - Users can customize message colors in config.json
+  - No breaking changes for existing configs
+- **Auto Broadcast System**: Automatic server announcements at configurable intervals
+  - Multiple broadcast groups with independent intervals
+  - Configurable prefix with color/formatting support (e.g., `&6&l[TIP]`)
+  - Sequential or random message selection per group
+  - `requirePlayers` option - skip broadcasts when server is empty
+  - Full color code support (`&a`, `&c`, `&l`, etc.)
+  - Stored in `autobroadcast.json` for easy editing
+  - Enable/disable individual broadcasts or entire system
+  - Reloads with `/ee reload`
+
 ### Fixed
 
-- **Thread safety in join listener**: Fixed potential "Assert not in thread!" error on player join
-  - `onPlayerJoin` now wraps store component access in `world.execute()` for thread safety
-  - Prevents race condition if `PlayerReadyEvent` fires from a non-world thread
-  - Re-validates entity ref inside execute block in case it becomes invalid between scheduling and execution
+- **Spawn protection bypass for damage**: OPs no longer bypass damage protection
+  - Block protection bypass still works (admins can build at spawn)
+  - Damage protection protects everyone including admins
+- **Spawn protection not working after config change**: System now always registers at startup
+- **Thread safety in join listener**: Fixed potential race condition
+- **Custom "player not found" message**: TPA commands now use configurable message
 
 ### Changed
 
-- **Custom "player not found" message**: TPA commands now show customizable error when target player is offline
-  - `/tpa`, `/tpahere`, `/tphere` now use string argument with manual player lookup
-  - Message includes player name: `Player 'name' is not online.`
-  - Configurable via `playerNotFound` message with `{player}` placeholder
+- Spawn protection system always registers (checks enabled state internally)
+- **Config merge system**: No longer overwrites user's custom group formats in chat formatting
+- Updated wiki documentation for new features
+- General code optimization and cleanup
+- Removed test data and debug artifacts
 
 ## [1.0.7] - 2026-01-18
 
@@ -34,15 +65,6 @@ All notable changes to EliteEssentials will be documented in this file.
 - **List Command**: `/list` (aliases: `/online`) shows all online players
   - Displays player count and sorted list of player names
   - Permission: `eliteessentials.command.misc.list` (Everyone)
-- **Color Code Support in Messages**: Added `MessageFormatter.formatWithFallback()` utility method
-  - Config messages now support color codes using `&` prefix (e.g., `&c` for red, `&a` for green)
-  - Updated ALL 40+ command files to support color codes in config messages
-  - Updated service files (WarmupService, SleepService) to support color codes
-  - Updated GUI files (KitSelectionPage) to support color codes
-  - Users can now customize message colors in config.json (e.g., `"msgSent": "&d[To {player}] {message}"`)
-  - Falls back to default color if no color codes are present
-  - Supports multiple colors in a single message
-  - No breaking changes for existing configs
 
 ### Fixed
 
@@ -57,7 +79,6 @@ All notable changes to EliteEssentials will be documented in this file.
 - **Chat formatting with LuckPerms**: Fixed chat formatting not working when LuckPerms is enabled
   - Changed approach to cancel chat event and manually broadcast formatted messages
   - Fixed LuckPerms group retrieval by parsing user nodes (group.groupname format)
-  - Added debug logging to help diagnose issues
   - **Important:** EliteEssentials chat formatting now overrides LuckPerms chat formatting. If you want to use LuckPerms prefixes/suffixes instead, disable chat formatting in config by setting `chatFormat.enabled: false`
 - **MOTD spacing**: Fixed excessive spacing between MOTD lines
   - Empty strings in config no longer create double spacing
@@ -72,20 +93,6 @@ All notable changes to EliteEssentials will be documented in this file.
 - **Respawn at custom spawn**: Players now respawn at `/setspawn` location after death
   - Uses Hytale's native spawn provider system
   - `/setspawn` now sets the world's spawn provider directly
-
-### Changed
-
-- **Config merge system**: No longer overwrites user's custom group formats in chat formatting
-  - Preserves exact user values instead of merging map contents
-  - Users can now safely customize group names and formats
-
-### Technical Improvements
-
-- Chat formatting uses event cancellation approach to override LuckPerms
-- Spawn system uses `world.getWorldConfig().setSpawnProvider()` for respawn handling
-- Broadcast command uses `setAllowsExtraArguments(true)` for full message capture
-- Updated steering documentation to note Unicode symbols are not supported in Hytale chat
-- Added `MessageFormatter.formatWithFallback()` for easier color code support in commands
 
 ## [1.0.6] - 2026-01-18
 

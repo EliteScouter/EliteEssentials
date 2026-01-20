@@ -22,6 +22,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import com.google.gson.Gson;
@@ -45,12 +48,18 @@ public class JoinQuitListener {
     private final File firstJoinFile;
     private final Set<UUID> firstJoinPlayers;
     private final Object fileLock = new Object();
+    private final ScheduledExecutorService scheduler;
     
     public JoinQuitListener(ConfigManager configManager, MotdStorage motdStorage, File dataFolder) {
         this.configManager = configManager;
         this.motdStorage = motdStorage;
         this.firstJoinFile = new File(dataFolder, "first_join.json");
         this.firstJoinPlayers = new HashSet<>();
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "EliteEssentials-JoinQuit");
+            t.setDaemon(true);
+            return t;
+        });
         load();
     }
     
@@ -89,14 +98,7 @@ public class JoinQuitListener {
         
         // Get world for thread-safe execution
         EntityStore entityStore = store.getExternalData();
-        if (entityStore == null) {
-            return;
-        }
-        
         World world = entityStore.getWorld();
-        if (world == null) {
-            return;
-        }
         
         // Execute on world thread to ensure thread safety
         world.execute(() -> {
@@ -184,17 +186,10 @@ public class JoinQuitListener {
     }
     
     /**
-     * Schedule MOTD display after delay.
+     * Schedule MOTD display after delay using executor service for proper thread management.
      */
     private void scheduleMotd(PlayerRef playerRef, int delaySeconds) {
-        new Thread(() -> {
-            try {
-                Thread.sleep(delaySeconds * 1000L);
-                showMotd(playerRef);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        scheduler.schedule(() -> showMotd(playerRef), delaySeconds, TimeUnit.SECONDS);
     }
     
     /**
@@ -248,6 +243,21 @@ public class JoinQuitListener {
             } catch (IOException e) {
                 logger.severe("Could not save first_join.json: " + e.getMessage());
             }
+        }
+    }
+    
+    /**
+     * Shutdown the executor service for clean plugin unload.
+     */
+    public void shutdown() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 }

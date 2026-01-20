@@ -3,9 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Warp;
-import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.WarpService;
-import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -23,6 +21,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /warpadmin [info|setperm|list]
@@ -53,8 +53,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         // Default: show help/list
         showWarpList(ctx);
     }
@@ -117,8 +117,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             String warpName = ctx.get(nameArg);
             Optional<Warp> warpOpt = warpService.getWarp(warpName);
@@ -192,8 +192,8 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             String warpName = ctx.get(nameArg);
             String permStr = ctx.get(permArg).toLowerCase();

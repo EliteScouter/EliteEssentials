@@ -135,10 +135,11 @@ public class SpawnProtectionSystem {
         }
     }
 
-    // ==================== PVP PROTECTION ====================
+    // ==================== PVP AND ALL DAMAGE PROTECTION ====================
     
     private static class PvpProtection extends DamageEventSystem {
         private final SpawnProtectionService service;
+        private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger("EliteEssentials");
 
         PvpProtection(SpawnProtectionService service) {
             super();
@@ -158,7 +159,13 @@ public class SpawnProtectionSystem {
         @Override
         public void handle(int index, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store,
                           CommandBuffer<EntityStore> buffer, Damage event) {
-            if (!service.isEnabled() || !service.isPvpProtectionEnabled() || event.isCancelled()) {
+            // Early exit if already cancelled
+            if (event.isCancelled()) {
+                return;
+            }
+            
+            // Check if spawn protection is enabled at all
+            if (!service.isEnabled()) {
                 return;
             }
 
@@ -170,8 +177,23 @@ public class SpawnProtectionSystem {
             if (!service.isInProtectedArea(victim.getTransform().getPosition())) {
                 return;
             }
+            
+            // Check if ALL damage protection is enabled (blocks everything including NPC/mob damage)
+            if (service.isAllDamageProtectionEnabled()) {
+                // Use damage-specific bypass check (nobody bypasses by default - even admins are protected)
+                if (!service.canBypassDamageProtection(victim.getUuid())) {
+                    event.setCancelled(true);
+                    event.setAmount(0);
+                    return; // Block ALL damage - no need to check PvP
+                }
+            }
 
-            // Check if attacker is a player
+            // If all damage protection didn't block, check PvP protection
+            if (!service.isPvpProtectionEnabled()) {
+                return;
+            }
+
+            // Check if attacker is a player (for PvP-only protection)
             Damage.Source source = event.getSource();
             if (!(source instanceof Damage.EntitySource entitySource)) {
                 return;

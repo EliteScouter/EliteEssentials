@@ -15,8 +15,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
-import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -187,6 +185,7 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
         }
     }
     
+    @SuppressWarnings("deprecation") // getCause() is deprecated but no alternative available yet
     private String buildDeathMessage(String playerName, UUID playerId, DeathComponent deathComponent, Universe universe) {
         // Try to get the death message directly from DeathComponent
         try {

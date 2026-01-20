@@ -264,6 +264,11 @@ public class LuckPermsIntegration {
         perms.add("eliteessentials.command.warp.*");
         perms.add(Permissions.WARP_BYPASS_COOLDOWN);
         perms.add(Permissions.WARP_BYPASS_WARMUP);
+        perms.add(Permissions.WARP_LIMIT_UNLIMITED);
+        // Common warp limits
+        for (int limit : new int[]{1, 2, 3, 5, 10, 15, 20, 25, 50, 100}) {
+            perms.add(Permissions.warpLimit(limit));
+        }
         
         // Spawn commands
         perms.add(Permissions.SPAWN);
@@ -285,6 +290,7 @@ public class LuckPermsIntegration {
         perms.add(Permissions.BROADCAST);
         perms.add(Permissions.CLEARINV);
         perms.add(Permissions.LIST);
+        perms.add(Permissions.DISCORD);
         perms.add("eliteessentials.command.misc.*");
         
         // Kit commands

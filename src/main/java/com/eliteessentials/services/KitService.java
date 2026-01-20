@@ -1,7 +1,6 @@
 package com.eliteessentials.services;
 
 import com.eliteessentials.model.Kit;
-import com.eliteessentials.model.KitItem;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;

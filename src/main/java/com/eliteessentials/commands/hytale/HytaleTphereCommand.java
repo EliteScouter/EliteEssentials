@@ -26,6 +26,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /tphere <player>
  * Instantly teleports a player to the admin's location.
@@ -56,8 +58,8 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         // Permission check - admin only
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.TPHERE, true)) {
             return;

@@ -24,6 +24,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /setwarp <name> [all|op]
  * Creates a new warp at the player's current location.
@@ -55,8 +57,8 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         // /setwarp <name> - creates warp with default "all" permission
         String warpName = ctx.get(nameArg);
         doSetWarp(ctx, store, ref, player, world, warpName, "all", warpService);
@@ -85,8 +87,8 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             doSetWarp(ctx, store, ref, player, world, ctx.get(nameArg), ctx.get(permArg), warpService);
         }
     }
@@ -139,6 +141,16 @@ public class HytaleSetWarpCommand extends AbstractPlayerCommand {
         
         // Check if warp already exists
         boolean isUpdate = warpService.warpExists(warpName);
+        
+        // Check warp limit (only for new warps, not updates)
+        if (!isUpdate && !warpService.canCreateWarp(player.getUuid())) {
+            int limit = warpService.getWarpLimit(player.getUuid());
+            int count = warpService.getWarpCount();
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("warpLimitReached", "count", String.valueOf(count), "max", String.valueOf(limit)), 
+                "#FF5555"));
+            return;
+        }
         
         // Create/update warp
         String error = warpService.setWarp(warpName, location, permission, player.getUsername());

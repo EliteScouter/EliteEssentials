@@ -48,6 +48,8 @@ public class PluginConfig {
     public ClearInvConfig clearInv = new ClearInvConfig();
     public ListConfig list = new ListConfig();
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
+    public DiscordConfig discord = new DiscordConfig();
+    public AutoBroadcastConfig autoBroadcast = new AutoBroadcastConfig();
     
     // ==================== MESSAGES ====================
     
@@ -92,6 +94,8 @@ public class PluginConfig {
         // ==================== TPAHERE ====================
         messages.put("tpahereRequestSent", "&aTeleport request sent to &f{player}&a. They will teleport to you if they accept.");
         messages.put("tpahereRequestReceived", "&e{player} &awants you to teleport to them.");
+        messages.put("tpahereAcceptedTarget", "&aTeleporting to &f{player}&a...");
+        messages.put("tpahereAcceptedRequester", "&a{player} &aaccepted your request and is teleporting to you!");
         
         // ==================== TPHERE (Admin) ====================
         messages.put("tphereSuccess", "&aTeleported &f{player} &ato your location.");
@@ -226,6 +230,13 @@ public class PluginConfig {
         messages.put("listHeader", "&aOnline Players &7({count}/{max})&a:");
         messages.put("listPlayers", "&f{players}");
         messages.put("listNoPlayers", "&cNo players online.");
+        
+        // ==================== WARPS (additional) ====================
+        messages.put("warpLimitReached", "&cWarp limit reached! &7({count}/{max})");
+        messages.put("warpLimitInfo", "&7Warp limit: &e{count}&7/&e{max}");
+        
+        // ==================== DISCORD ====================
+        messages.put("discordEmpty", "&cNo discord information configured.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -337,6 +348,31 @@ public class PluginConfig {
         
         /** Warmup in seconds - player must stand still (0 = instant) */
         public int warmupSeconds = 3;
+        
+        /**
+         * Maximum warps that can be created.
+         * Set to -1 for unlimited warps.
+         * In advanced permissions mode, use eliteessentials.command.warp.limit.<number> to override per-group.
+         */
+        public int maxWarps = -1;
+        
+        /**
+         * Warp limits per group (for advanced permissions mode).
+         * Key = group name (case-insensitive), Value = max warps for that group.
+         * Use -1 for unlimited. Players get the highest limit from their groups.
+         * Example: {"Admin": -1, "VIP": 10, "Default": 3}
+         */
+        public Map<String, Integer> groupLimits = createDefaultWarpLimits();
+        
+        private static Map<String, Integer> createDefaultWarpLimits() {
+            Map<String, Integer> limits = new HashMap<>();
+            limits.put("Admin", -1);      // Unlimited
+            limits.put("Owner", -1);      // Unlimited
+            limits.put("Moderator", 20);
+            limits.put("VIP", 10);
+            limits.put("Default", 5);
+            return limits;
+        }
     }
 
     // ==================== SLEEP (Night Skip) ====================
@@ -424,6 +460,9 @@ public class PluginConfig {
         
         /** Disable PvP in spawn area */
         public boolean disablePvp = true;
+        
+        /** Disable ALL damage in spawn area (fall damage, fire, drowning, etc.) */
+        public boolean disableAllDamage = false;
     }
     
     // ==================== MOTD (Message of the Day) ====================
@@ -537,5 +576,22 @@ public class PluginConfig {
             priorities.put("Default", 0);
             return priorities;
         }
+    }
+    
+    // ==================== DISCORD ====================
+    
+    public static class DiscordConfig {
+        /** Enable/disable the /discord command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== AUTO BROADCAST ====================
+    
+    public static class AutoBroadcastConfig {
+        /** 
+         * Enable/disable auto broadcast system.
+         * Individual broadcasts can be enabled/disabled in autobroadcast.json
+         */
+        public boolean enabled = true;
     }
 }

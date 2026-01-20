@@ -37,6 +37,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /rtp
  * Teleports the player to a random location within the configured range.
@@ -45,6 +47,12 @@ import java.util.logging.Logger;
  * - eliteessentials.command.rtp - Use /rtp command
  * - eliteessentials.bypass.warmup.rtp - Skip warmup
  * - eliteessentials.bypass.cooldown.rtp - Skip cooldown
+ * 
+ * NOTE: This class uses reflection to call WorldChunk.getFluidId() because:
+ * 1. The method exists but isn't exposed in the public API interface
+ * 2. Direct fluid detection is essential for safe teleport location validation
+ * 3. No alternative API method exists for checking water/lava at coordinates
+ * If the Hytale API exposes getFluidId() directly in the future, this should be refactored.
  */
 public class HytaleRtpCommand extends AbstractPlayerCommand {
 
@@ -73,8 +81,8 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
         PluginConfig.RtpConfig rtpConfig = configManager.getConfig().rtp;
         

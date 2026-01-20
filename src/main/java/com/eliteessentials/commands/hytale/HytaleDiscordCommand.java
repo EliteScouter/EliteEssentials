@@ -2,7 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
-import com.eliteessentials.storage.MotdStorage;
+import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -20,23 +19,22 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 /**
- * /motd - Display the Message of the Day.
+ * /discord - Display the server's discord information.
  * 
  * Supports color codes (&0-f, &l, &o, &r) and clickable URLs.
- * Placeholders: {player}, {server}, {world}, {playercount}
  * 
- * Usage: /motd
- * Permission: eliteessentials.command.misc.motd (Everyone)
+ * Usage: /discord
+ * Permission: eliteessentials.command.misc.discord (Everyone)
  */
-public class HytaleMotdCommand extends AbstractPlayerCommand {
+public class HytaleDiscordCommand extends AbstractPlayerCommand {
     
     private final ConfigManager configManager;
-    private final MotdStorage motdStorage;
+    private final DiscordStorage discordStorage;
     
-    public HytaleMotdCommand(ConfigManager configManager, MotdStorage motdStorage) {
-        super("motd", "Display the Message of the Day");
+    public HytaleDiscordCommand(ConfigManager configManager, DiscordStorage discordStorage) {
+        super("discord", "Display the server's discord information");
         this.configManager = configManager;
-        this.motdStorage = motdStorage;
+        this.discordStorage = discordStorage;
     }
     
     @Override
@@ -48,39 +46,26 @@ public class HytaleMotdCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, 
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
         // Permission check - everyone can use
-        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.MOTD, 
-                configManager.getConfig().motd.enabled)) {
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.DISCORD, 
+                configManager.getConfig().discord.enabled)) {
             return;
         }
         
-        // Get MOTD lines
-        List<String> motdLines = motdStorage.getMotdLines();
-        if (motdLines.isEmpty()) {
-            String message = configManager.getMessage("motdEmpty");
+        // Get discord lines
+        List<String> discordLines = discordStorage.getDiscordLines();
+        if (discordLines.isEmpty()) {
+            String message = configManager.getMessage("discordEmpty");
             player.sendMessage(Message.raw(message).color("#FF5555"));
             return;
         }
         
-        // Replace placeholders
-        String playerName = player.getUsername();
-        String serverName = configManager.getConfig().motd.serverName;
-        String worldName = world.getName();
-        int playerCount = Universe.get().getPlayers().size();
-        
-        // Send each line with formatting
-        for (String line : motdLines) {
+        // Send each line with formatting (URLs become clickable)
+        for (String line : discordLines) {
             // Skip completely empty lines to avoid excessive spacing
             if (line.trim().isEmpty()) {
                 continue;
             }
-            
-            String processedLine = line
-                    .replace("{player}", playerName)
-                    .replace("{server}", serverName)
-                    .replace("{world}", worldName)
-                    .replace("{playercount}", String.valueOf(playerCount));
-            
-            player.sendMessage(MessageFormatter.format(processedLine));
+            player.sendMessage(MessageFormatter.format(line));
         }
     }
 }

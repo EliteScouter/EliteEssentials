@@ -1,6 +1,5 @@
 package com.eliteessentials.services;
 
-import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.permissions.PermissionService;
@@ -23,11 +22,9 @@ public class HomeService {
     private static final Logger logger = Logger.getLogger("EliteEssentials");
 
     private final HomeStorage storage;
-    private final ConfigManager configManager;
 
-    public HomeService(HomeStorage storage, ConfigManager configManager) {
+    public HomeService(HomeStorage storage) {
         this.storage = storage;
-        this.configManager = configManager;
     }
 
     /**

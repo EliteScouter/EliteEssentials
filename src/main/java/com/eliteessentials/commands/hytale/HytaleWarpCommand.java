@@ -34,6 +34,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /warp [name]
  * Teleports the player to a server warp location.
@@ -50,12 +52,10 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
     private static final String COMMAND_NAME = "warp";
     
     private final WarpService warpService;
-    private final BackService backService;
 
     public HytaleWarpCommand(WarpService warpService, BackService backService) {
         super(COMMAND_NAME, "Teleport to a warp location");
         this.warpService = warpService;
-        this.backService = backService;
         
         // Permission check handled in execute() via CommandPermissionUtil
         
@@ -68,10 +68,10 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                          PlayerRef player, World world) {
-        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARP, config.warps.enabled)) {
             return;
         }
@@ -109,8 +109,8 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
     static void goToWarp(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                          PlayerRef player, World world, String warpName,
                          WarpService warpService, BackService backService) {
-        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARP, config.warps.enabled)) {
             return;
         }
@@ -223,8 +223,8 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             String warpName = ctx.get(nameArg);
             HytaleWarpCommand.goToWarp(ctx, store, ref, player, world, warpName, warpService, backService);
         }

@@ -2,6 +2,7 @@ package com.eliteessentials.util;
 
 import com.hypixel.hytale.server.core.Message;
 
+import javax.annotation.Nonnull;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,8 +47,9 @@ public class MessageFormatter {
      * Supports multi-line text with \n separator.
      * 
      * @param text Text with color codes (& prefix)
-     * @return Formatted Message object
+     * @return Formatted Message object (never null)
      */
+    @Nonnull
     public static Message format(String text) {
         if (text == null || text.isEmpty()) {
             return Message.raw("");
@@ -76,9 +78,10 @@ public class MessageFormatter {
      * 
      * @param text Text with optional color codes (& prefix)
      * @param fallbackColor Hex color to use if no color codes present (e.g., "#FF5555")
-     * @return Formatted Message object
+     * @return Formatted Message object (never null)
      */
-    public static Message formatWithFallback(String text, String fallbackColor) {
+    @Nonnull
+    public static Message formatWithFallback(String text, @Nonnull String fallbackColor) {
         if (text == null || text.isEmpty()) {
             return Message.raw("");
         }
@@ -92,6 +95,7 @@ public class MessageFormatter {
         return Message.raw(text).color(fallbackColor);
     }
     
+    @Nonnull
     private static Message processLine(String line) {
         if (line == null || line.isEmpty()) {
             return Message.raw("");
@@ -223,7 +227,8 @@ public class MessageFormatter {
         return messages;
     }
     
-    private static Message buildMessage(String text, Color color, boolean bold, boolean italic, String linkUrl) {
+    @Nonnull
+    private static Message buildMessage(String text, @Nonnull Color color, boolean bold, boolean italic, String linkUrl) {
         if (text.isEmpty()) {
             return Message.raw("");
         }

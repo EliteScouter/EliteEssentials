@@ -75,6 +75,10 @@ public final class Permissions {
     // Warp access: eliteessentials.command.warp.<warpname>
     // (handled by warpAccess() method)
     
+    // Warp limits: eliteessentials.command.warp.limit.<number>
+    public static final String WARP_LIMIT_PREFIX = WARP_CATEGORY + ".limit.";
+    public static final String WARP_LIMIT_UNLIMITED = WARP_CATEGORY + ".limit.unlimited";
+    
     // Warp bypass: eliteessentials.command.warp.bypass.*
     public static final String WARP_BYPASS = WARP_CATEGORY + ".bypass";
     public static final String WARP_BYPASS_COOLDOWN = WARP_BYPASS + ".cooldown";
@@ -108,6 +112,7 @@ public final class Permissions {
     public static final String BROADCAST = MISC_CATEGORY + ".broadcast";
     public static final String CLEARINV = MISC_CATEGORY + ".clearinv";
     public static final String LIST = MISC_CATEGORY + ".list";
+    public static final String DISCORD = MISC_CATEGORY + ".discord";
 
     // ==================== KIT CATEGORY ====================
     // eliteessentials.command.kit.*
@@ -138,6 +143,15 @@ public final class Permissions {
      */
     public static String homeLimit(int count) {
         return HOME_LIMIT_PREFIX + count;
+    }
+    
+    /**
+     * Get warp limit permission for a number.
+     * @param count Number of warps
+     * @return eliteessentials.command.warp.limit.<count>
+     */
+    public static String warpLimit(int count) {
+        return WARP_LIMIT_PREFIX + count;
     }
 
     /**

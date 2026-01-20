@@ -28,6 +28,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /spawn
  * Teleports the player to the server spawn point (set via /setspawn).
@@ -53,11 +55,11 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
-        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         SpawnStorage spawnStorage = EliteEssentials.getInstance().getSpawnStorage();

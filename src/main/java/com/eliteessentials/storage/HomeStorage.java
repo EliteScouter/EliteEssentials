@@ -22,7 +22,6 @@ public class HomeStorage {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private static final Type DATA_TYPE = new TypeToken<Map<UUID, Map<String, Home>>>() {}.getType();
 
-    private final File dataFolder;
     private final File homesFile;
     
     // UUID -> (HomeName -> Home)
@@ -32,7 +31,6 @@ public class HomeStorage {
     private final Object fileLock = new Object();
 
     public HomeStorage(File dataFolder) {
-        this.dataFolder = dataFolder;
         this.homesFile = new File(dataFolder, "homes.json");
     }
 

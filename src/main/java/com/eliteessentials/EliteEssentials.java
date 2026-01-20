@@ -21,7 +21,9 @@ import com.eliteessentials.services.SpawnProtectionService;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
+import com.eliteessentials.services.AutoBroadcastService;
 import com.eliteessentials.storage.BackStorage;
+import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.storage.HomeStorage;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.RulesStorage;
@@ -57,6 +59,7 @@ public class EliteEssentials extends JavaPlugin {
     private SpawnStorage spawnStorage;
     private MotdStorage motdStorage;
     private RulesStorage rulesStorage;
+    private DiscordStorage discordStorage;
     private HomeService homeService;
     private BackService backService;
     private TpaService tpaService;
@@ -71,6 +74,7 @@ public class EliteEssentials extends JavaPlugin {
     private MessageService messageService;
     private KitService kitService;
     private SpawnProtectionService spawnProtectionService;
+    private AutoBroadcastService autoBroadcastService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -129,12 +133,16 @@ public class EliteEssentials extends JavaPlugin {
         rulesStorage = new RulesStorage(this.dataFolder);
         rulesStorage.load();
         
+        discordStorage = new DiscordStorage(this.dataFolder);
+        discordStorage.load();
+        
         // Initialize services
         cooldownService = new CooldownService();
         warmupService = new WarmupService();
-        homeService = new HomeService(homeStorage, configManager);
+        homeService = new HomeService(homeStorage);
         backService = new BackService(configManager, backStorage);
-        warpService = new WarpService(warpStorage, configManager);
+        warpService = new WarpService(warpStorage);
+        warpService.setConfigManager(configManager);
         damageTrackingService = new DamageTrackingService();
         deathTrackingService = new DeathTrackingService(backService, configManager);
         tpaService = new TpaService(configManager);
@@ -144,6 +152,7 @@ public class EliteEssentials extends JavaPlugin {
         messageService = new MessageService();
         kitService = new KitService(this.dataFolder);
         spawnProtectionService = new SpawnProtectionService(configManager);
+        autoBroadcastService = new AutoBroadcastService(this.dataFolder);
         
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
     }
@@ -197,23 +206,25 @@ public class EliteEssentials extends JavaPlugin {
             }
         }
         
-        // Register spawn protection systems
-        if (configManager.getConfig().spawnProtection.enabled) {
-            try {
-                // Initialize spawn location from stored spawn
-                initializeSpawnProtectionLocation();
-                
-                spawnProtectionSystem = new SpawnProtectionSystem(spawnProtectionService);
-                spawnProtectionSystem.register(EntityStore.REGISTRY);
-                
+        // Register spawn protection systems (always register - checks enabled state internally)
+        try {
+            // Initialize spawn location from stored spawn
+            initializeSpawnProtectionLocation();
+            
+            spawnProtectionSystem = new SpawnProtectionSystem(spawnProtectionService);
+            spawnProtectionSystem.register(EntityStore.REGISTRY);
+            
+            if (configManager.getConfig().spawnProtection.enabled) {
                 if (spawnStorage.hasSpawn()) {
                     getLogger().at(Level.INFO).log("SpawnProtectionSystem registered - spawn area protected!");
                 } else {
                     getLogger().at(Level.WARNING).log("SpawnProtectionSystem registered but no spawn set. Use /setspawn to enable protection.");
                 }
-            } catch (Exception e) {
-                getLogger().at(Level.WARNING).log("Could not register spawn protection: " + e.getMessage());
+            } else {
+                getLogger().at(Level.INFO).log("SpawnProtectionSystem registered (currently disabled in config).");
             }
+        } catch (Exception e) {
+            getLogger().at(Level.WARNING).log("Could not register spawn protection: " + e.getMessage());
         }
         
         // Register respawn system (handles respawning at spawn if no bed is set)
@@ -223,6 +234,11 @@ public class EliteEssentials extends JavaPlugin {
             getLogger().at(Level.INFO).log("RespawnListener registered - players without beds will respawn at /setspawn location!");
         } catch (Exception e) {
             getLogger().at(Level.WARNING).log("Could not register respawn system: " + e.getMessage());
+        }
+        
+        // Start auto broadcast system
+        if (configManager.getConfig().autoBroadcast.enabled) {
+            autoBroadcastService.start();
         }
         
         getLogger().at(Level.INFO).log("EliteEssentials started successfully!");
@@ -283,6 +299,12 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (deathTrackingService != null) {
             deathTrackingService.shutdown();
+        }
+        if (joinQuitListener != null) {
+            joinQuitListener.shutdown();
+        }
+        if (autoBroadcastService != null) {
+            autoBroadcastService.shutdown();
         }
         
         getLogger().at(Level.INFO).log("EliteEssentials disabled.");
@@ -370,8 +392,9 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleBroadcastCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
         getCommandRegistry().registerCommand(new HytaleListCommand(configManager));
+        getCommandRegistry().registerCommand(new HytaleDiscordCommand(configManager, discordStorage));
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpahere, /tpaccept, /tpdeny, /tphere, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv, /list");
+        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpahere, /tpaccept, /tpdeny, /tphere, /spawn, /setspawn, /warp, /setwarp, /delwarp, /warps, /warpadmin, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv, /list, /discord");
     }
 
     public static EliteEssentials getInstance() {
@@ -448,13 +471,32 @@ public class EliteEssentials extends JavaPlugin {
      */
     public void reloadConfig() {
         getLogger().at(Level.INFO).log("Reloading EliteEssentials configuration...");
+        
+        // Reload main config
         configManager.loadConfig();
+        
+        // Reload storage files (allows external edits to be picked up)
         motdStorage.load();
         rulesStorage.load();
+        discordStorage.load();
+        warpStorage.load();
+        spawnStorage.load();
+        
+        // Reload services
         kitService.reload();
         if (starterKitEvent != null) {
             starterKitEvent.reload();
         }
+        
+        // Reload auto broadcast
+        if (autoBroadcastService != null) {
+            if (configManager.getConfig().autoBroadcast.enabled) {
+                autoBroadcastService.reload();
+            } else {
+                autoBroadcastService.shutdown();
+            }
+        }
+        
         getLogger().at(Level.INFO).log("Configuration reloaded.");
     }
     

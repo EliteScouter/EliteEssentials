@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 /**
  * Service that tracks player positions and saves their location on death.
  * Uses multiple detection strategies:
- * 1. Polls player positions every 200ms to maintain accurate last-known location
+ * 1. Polls player positions every POLL_INTERVAL_MS to maintain accurate last-known location
  * 2. Detects when player becomes invalid (death/disconnect)
  * 3. Detects sudden large teleports (respawn after death)
  * 4. Tracks health changes if available
@@ -34,6 +34,10 @@ public class DeathTrackingService {
     
     // Detection thresholds
     private static final double RESPAWN_DISTANCE_THRESHOLD = 50.0;  // Blocks - lowered for better detection
+    private static final double STABLE_MOVEMENT_THRESHOLD = 5.0;    // Max distance to consider player "settled"
+    
+    // Polling interval for position tracking
+    private static final long POLL_INTERVAL_MS = 200;
     
     private final BackService backService;
     private final ConfigManager configManager;
@@ -75,10 +79,10 @@ public class DeathTrackingService {
             return;
         }
         
-        // Poll every 200ms for more accurate position tracking
-        trackingTask = scheduler.scheduleAtFixedRate(this::trackPlayers, 500, 200, TimeUnit.MILLISECONDS);
+        // Poll every POLL_INTERVAL_MS for more accurate position tracking
+        trackingTask = scheduler.scheduleAtFixedRate(this::trackPlayers, 500, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
         started = true;
-        logger.fine("[DeathTracking] Service started successfully with 200ms polling.");
+        logger.fine("[DeathTracking] Service started successfully with " + POLL_INTERVAL_MS + "ms polling.");
     }
     
     /**
@@ -177,7 +181,7 @@ public class DeathTrackingService {
                     } else {
                         // Normal movement - update stable position
                         // Only update stable if movement is small (player is "settled")
-                        if (distance < 5.0) {
+                        if (distance < STABLE_MOVEMENT_THRESHOLD) {
                             stablePositions.put(playerId, newPos.clone());
                             // Reset death saved flag when player is moving normally
                             deathLocationSaved.put(playerId, false);

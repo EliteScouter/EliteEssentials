@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -23,6 +22,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /sethome [name]
@@ -55,8 +56,8 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SETHOME, enabled)) {
             return;
@@ -142,8 +143,8 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         }
         
         @Override
-        protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
-                              PlayerRef player, World world) {
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
             String homeName = ctx.get(nameArg);
             HytaleSetHomeCommand.setHome(ctx, store, ref, player, world, homeName, homeService);
         }

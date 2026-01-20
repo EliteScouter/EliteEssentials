@@ -18,6 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /homes
  * Lists all player homes.
@@ -45,8 +47,8 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOMES, enabled)) {
             return;

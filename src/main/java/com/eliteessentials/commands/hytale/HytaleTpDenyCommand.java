@@ -2,6 +2,7 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.TpaRequest;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.TpaService;
@@ -9,7 +10,6 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -19,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /tpdeny
@@ -46,14 +48,14 @@ public class HytaleTpDenyCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
-        boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().tpa.enabled;
-        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPDENY, enabled)) {
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
+        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPDENY, config.tpa.enabled)) {
             return;
         }
         
-        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         
         Optional<TpaRequest> requestOpt = tpaService.denyRequest(playerId);

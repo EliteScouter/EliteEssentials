@@ -50,6 +50,13 @@ public class SpawnProtectionService {
     public boolean isPvpProtectionEnabled() {
         return configManager.getConfig().spawnProtection.disablePvp;
     }
+    
+    /**
+     * Check if ALL damage protection is enabled in spawn area.
+     */
+    public boolean isAllDamageProtectionEnabled() {
+        return configManager.getConfig().spawnProtection.disableAllDamage;
+    }
 
     /**
      * Get the protection radius.
@@ -113,10 +120,22 @@ public class SpawnProtectionService {
     }
 
     /**
-     * Check if a player can bypass spawn protection.
+     * Check if a player can bypass spawn protection (for block breaking/placing).
+     * Note: This does NOT bypass damage protection - admins should still be protected from damage.
      */
     public boolean canBypass(UUID playerId) {
         return PermissionService.get().hasPermission(playerId, Permissions.SPAWN_PROTECTION_BYPASS);
+    }
+    
+    /**
+     * Check if a player can bypass damage protection.
+     * By default, nobody bypasses damage protection (even admins are protected).
+     * This is intentional - you want admins to be safe at spawn too!
+     */
+    public boolean canBypassDamageProtection(UUID playerId) {
+        // Nobody bypasses damage protection by default - everyone is protected at spawn
+        // If you want admins to take damage, you could add a separate permission here
+        return false;
     }
 
     public double getSpawnX() { return spawnX; }

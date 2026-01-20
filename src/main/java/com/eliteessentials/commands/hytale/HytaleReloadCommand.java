@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 
+import javax.annotation.Nonnull;
+
 /**
  * Command: /eliteessentials reload
  * Reloads the plugin configuration.
@@ -38,7 +40,7 @@ public class HytaleReloadCommand extends CommandBase {
     }
 
     @Override
-    protected void executeSync(CommandContext ctx) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
         // Check admin permission
         PermissionService perms = PermissionService.get();
         if (!perms.canUseAdminCommand(ctx.sender(), Permissions.ADMIN_RELOAD, true)) {

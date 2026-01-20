@@ -15,7 +15,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -29,6 +28,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
+
+import javax.annotation.Nonnull;
 
 /**
  * Command: /tpaccept
@@ -60,14 +61,14 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
-                          PlayerRef player, World world) {
-        PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
+                          @Nonnull PlayerRef player, @Nonnull World world) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPACCEPT, config.tpa.enabled)) {
             return;
         }
         
-        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         
         // First, peek at the pending request WITHOUT removing it
@@ -107,11 +108,6 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         }
         
         Store<EntityStore> requesterStore = requesterRef.getStore();
-        if (requesterStore == null) {
-            tpaService.denyRequestFrom(playerId, request.getRequesterId());
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotFindRequester"), "#FF5555"));
-            return;
-        }
         
         // Get requester's transform from store/ref (not holder - holder may be null for remote players)
         TransformComponent requesterTransform = (TransformComponent) requesterStore.getComponent(requesterRef, TransformComponent.getComponentType());

@@ -26,6 +26,12 @@ import java.util.logging.Logger;
  * If player has no bed spawn, they respawn at the /setspawn location.
  * 
  * This system listens for DeathComponent removal, which happens when a player respawns.
+ * 
+ * NOTE: This class uses reflection to call Player.getRespawnPosition() because:
+ * 1. The method requires a ComponentAccessor parameter that isn't easily accessible
+ * 2. The Hytale API doesn't expose a simpler way to check bed spawn status
+ * 3. Direct API access would require internal class dependencies
+ * If the Hytale API provides a simpler method in the future, this should be refactored.
  */
 public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent> {
     

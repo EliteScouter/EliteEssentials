@@ -10,6 +10,8 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
+import javax.annotation.Nonnull;
+
 /**
  * /broadcast (alias: /bc) - Broadcast a message to all online players.
  * 
@@ -40,7 +42,7 @@ public class HytaleBroadcastCommand extends CommandBase {
     }
     
     @Override
-    protected void executeSync(CommandContext ctx) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
         // Permission check - admin only
         PermissionService perms = PermissionService.get();
         if (!perms.canUseAdminCommand(ctx.sender(), Permissions.BROADCAST, 
