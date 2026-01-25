@@ -80,7 +80,10 @@ public class WarmupService {
             return;
         }
         
-        logger.info("[Warmup] Starting " + warmupSeconds + "s warmup for " + commandName);
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        if (configManager.isDebugEnabled()) {
+            logger.info("[Warmup] Starting " + warmupSeconds + "s warmup for " + commandName);
+        }
         
         // Create pending warmup with end time in nanos (like HomeManager)
         long endTimeNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(warmupSeconds);
@@ -146,7 +149,6 @@ public class WarmupService {
         // Validate ref is still valid before accessing components
         if (ref == null || !ref.isValid()) {
             pending.remove(warmup.playerUuid);
-            logger.info("[Warmup] Cancelled for " + warmup.playerUuid + " - player ref invalid (disconnected?)");
             return;
         }
         
@@ -156,7 +158,6 @@ public class WarmupService {
             playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
         } catch (Exception e) {
             pending.remove(warmup.playerUuid);
-            logger.info("[Warmup] Cancelled for " + warmup.playerUuid + " - error getting player component");
             return;
         }
         
@@ -178,7 +179,6 @@ public class WarmupService {
         if (hasMoved(warmup.startPos, currentPos)) {
             pending.remove(warmup.playerUuid);
             playerComponent.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warmupCancelled"), "#FF5555"));
-            logger.info("[Warmup] Cancelled for " + warmup.playerUuid + " - player moved");
             return;
         }
         
@@ -192,11 +192,9 @@ public class WarmupService {
             
             // Final validation before executing teleport
             if (ref == null || !ref.isValid()) {
-                logger.info("[Warmup] Cancelled for " + warmup.commandName + " - player disconnected before completion");
                 return;
             }
             
-            logger.info("[Warmup] Complete for " + warmup.commandName + ", executing teleport");
             try {
                 warmup.onComplete.run();
             } catch (Exception e) {
@@ -241,7 +239,6 @@ public class WarmupService {
         PendingWarmup warmup = pending.remove(playerId);
         if (warmup != null) {
             warmup.cancelled = true;
-            logger.info("[Warmup] Cancelled warmup for " + playerId);
         }
     }
 

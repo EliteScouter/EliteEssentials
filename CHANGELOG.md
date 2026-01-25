@@ -2,6 +2,74 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [1.1.1] - 2026-01-25
+
+### Added
+
+- **PlayTime Rewards System**: Reward players based on their total playtime
+  - Repeatable rewards: Trigger every X minutes of playtime (e.g., every hour)
+  - Milestone rewards: One-time rewards at specific playtime thresholds (e.g., 100 hours)
+  - Custom messages sent to players when rewards are claimed
+  - Rewards defined in `playtime_rewards.json` with examples
+  - Claims tracked in `playtime_claims.json` to prevent duplicate claims
+  - Config options: `playTimeRewards.enabled`, `checkIntervalSeconds`, `onlyCountNewPlaytime`
+  - Rewards checked on player join and periodically while online
+
+- **LuckPerms API Integration for PlayTime Rewards**: LuckPerms commands execute via the LuckPerms API
+  - Supported commands:
+    - `lp user {player} group set <group>` - Set player's primary group
+    - `lp user {player} group add <group>` - Add player to a group
+    - `lp user {player} group remove <group>` - Remove player from a group
+    - `lp user {player} permission set <permission> [true/false]` - Set a permission
+    - `lp user {player} permission unset <permission>` - Remove a permission
+    - `lp user {player} promote <track>` - Promote player on a track
+    - `lp user {player} demote <track>` - Demote player on a track
+  - Works automatically when LuckPerms is installed
+  - Gracefully skips LP commands if LuckPerms is not installed (mod still works)
+
+- **Economy Commands for PlayTime Rewards**: Economy commands execute internally
+  - `eco add {player} <amount>` - Add currency to player
+  - `eco remove {player} <amount>` - Remove currency from player
+  - `eco set {player} <amount>` - Set player's balance
+
+- **onlyCountNewPlaytime Option**: Prevents flood of catch-up rewards on existing servers
+  - `playTimeRewards.onlyCountNewPlaytime: true` (default) - Only counts playtime after system was enabled
+  - `playTimeRewards.enabledTimestamp` - Auto-populated when system first starts
+  - Players who joined before the system was enabled start fresh
+
+### Changed
+
+- **Conditional Command Registration**: Disabled features no longer register their commands
+  - When a feature is disabled in config.json (e.g., `economy.enabled: false`), its commands won't be registered
+  - Frees up command names for other plugins (e.g., another economy plugin can use `/eco`, `/pay`)
+  - Affected features: Economy (`/wallet`, `/pay`, `/baltop`, `/eco`), Homes, Warps, Spawn, Back, RTP, TPA, Kits, God, Heal, Fly, FlySpeed, ClearInv, Broadcast, MOTD, Rules, Discord, List, Seen, Sleep Percent
+
+- **GUI Labels Now Configurable**: Kit and warp GUI status labels moved to messages.json
+  - `guiKitStatusLocked` - Shown when player lacks permission for a kit
+  - `guiKitStatusClaimed` - Shown for already claimed one-time kits
+  - `guiKitStatusReady` - Shown when kit is available to claim
+  - `guiWarpStatusOpOnly` - Shown to admins for OP-only warps
+  - `playTimeRewardReceived` - Default message when receiving a playtime reward
+  - `playTimeMilestoneBroadcast` - Broadcast message for milestone achievements
+  - Note: GUI titles (blue bar) are defined in .ui files and cannot be changed via messages.json
+
+- **PlayTime Rewards - Single Grant Per Cycle**: Repeatable rewards grant ONE reward per check cycle
+  - Prevents spam of multiple rewards when a player has accumulated playtime
+  - Players catch up gradually over multiple cycles
+
+### Fixed
+
+- **Cross-world TPA crash**: Fixed `IllegalStateException: Assert not in thread!` when using `/tpa` or `/tpahere` between players in different worlds
+  - The command now properly handles cross-world teleportation by gathering player data on each world's respective thread
+  - Same-world TPA continues to work as before with simpler logic
+
+- **Cross-world /tphere crash**: Fixed `/tphere` command crashing when teleporting players between different worlds
+  - Now properly handles cross-world admin teleports
+
+- **Late Session Tracking**: Fixed playtime rewards not triggering for players who joined before the service started
+  - Players who join before service starts (or after `/ee reload`) now get proper session tracking
+  - Ensures all online players are checked for rewards
+
 ## [1.1.0] - 2026-01-23
 
 ### Added

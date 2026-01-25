@@ -51,8 +51,6 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         super(COMMAND_NAME, "Accept a teleport request");
         this.tpaService = tpaService;
         this.backService = backService;
-        
-        // Permission check handled in execute() via CommandPermissionUtil
     }
 
     @Override
@@ -91,17 +89,15 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         PlayerRef requester = Universe.get().getPlayer(request.getRequesterId());
         
         if (requester == null || !requester.isValid()) {
-            // Remove the invalid request so player can accept other requests
             tpaService.denyRequestFrom(playerId, request.getRequesterId());
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaPlayerOffline", "player", request.getRequesterName()), "#FF5555"));
             return;
         }
         
-        // Get requester's ref and store directly from PlayerRef (like Essentials does)
+        // Get requester's ref and store
         Ref<EntityStore> requesterRef = requester.getReference();
         
         if (requesterRef == null || !requesterRef.isValid()) {
-            // Remove the invalid request
             tpaService.denyRequestFrom(playerId, request.getRequesterId());
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotFindRequester"), "#FF5555"));
             return;
@@ -109,101 +105,208 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         
         Store<EntityStore> requesterStore = requesterRef.getStore();
         
-        // Get requester's transform from store/ref (not holder - holder may be null for remote players)
+        // Get requester's world
+        EntityStore requesterEntityStore = requesterStore.getExternalData();
+        World requesterWorld = requesterEntityStore != null ? requesterEntityStore.getWorld() : null;
+        
+        if (requesterWorld == null) {
+            tpaService.denyRequestFrom(playerId, request.getRequesterId());
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotFindRequester"), "#FF5555"));
+            return;
+        }
+        
+        // Check if players are in different worlds - need special handling
+        boolean crossWorld = !world.getName().equals(requesterWorld.getName());
+        
+        if (crossWorld) {
+            // Cross-world teleport: gather data from each world on its own thread
+            executeCrossWorldTpa(ctx, store, ref, player, world, requester, requesterRef, 
+                                 requesterStore, requesterWorld, request, configManager, config);
+        } else {
+            // Same world: can access both stores directly
+            executeSameWorldTpa(ctx, store, ref, player, world, requester, requesterRef, 
+                               requesterStore, request, configManager, config);
+        }
+    }
+    
+    /**
+     * Handle TPA when both players are in the same world
+     */
+    private void executeSameWorldTpa(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                                      PlayerRef player, World world, PlayerRef requester, 
+                                      Ref<EntityStore> requesterRef, Store<EntityStore> requesterStore,
+                                      TpaRequest request, ConfigManager configManager, PluginConfig config) {
+        UUID playerId = player.getUuid();
+        
+        // Get requester's transform
         TransformComponent requesterTransform = (TransformComponent) requesterStore.getComponent(requesterRef, TransformComponent.getComponentType());
         if (requesterTransform == null) {
-            // Remove the invalid request
             tpaService.denyRequestFrom(playerId, request.getRequesterId());
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotGetRequesterPosition"), "#FF5555"));
             return;
         }
         
-        // Get target world from the store's external data
-        EntityStore requesterEntityStore = requesterStore.getExternalData();
-        World requesterWorld = requesterEntityStore != null ? requesterEntityStore.getWorld() : world;
-        final World finalRequesterWorld = requesterWorld != null ? requesterWorld : world;
-        
-        // Get target (acceptor's) position
+        // Get acceptor's transform
         TransformComponent targetTransform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
         if (targetTransform == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("couldNotGetPosition"), "#FF5555"));
             return;
         }
         
-        Vector3d targetPos = targetTransform.getPosition();
-        
-        // NOW that all validations passed, officially accept (remove) the request
+        // Accept the request
         tpaService.acceptRequestFrom(playerId, request.getRequesterId());
         
         Vector3d requesterPos = requesterTransform.getPosition();
+        Vector3d targetPos = targetTransform.getPosition();
+        
         HeadRotation reqHeadRot = (HeadRotation) requesterStore.getComponent(requesterRef, HeadRotation.getComponentType());
         Vector3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Vector3f(0, 0, 0);
-
-        // Save requester's location for /back
-        String worldName = finalRequesterWorld.getName();
-        Location requesterLoc = new Location(
-            worldName,
-            requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(),
-            reqRot.x, reqRot.y
-        );
-
-        // Define the teleport action based on request type
-        // CRITICAL: Must execute store operations on the correct world thread to avoid IllegalStateException
+        
+        HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
+        float targetYaw = targetHeadRot != null ? targetHeadRot.getRotation().y : 0;
+        
+        // Prepare locations for /back
+        Location requesterLoc = new Location(world.getName(), requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), reqRot.x, reqRot.y);
+        Location targetLoc = new Location(world.getName(), targetPos.getX(), targetPos.getY(), targetPos.getZ(), 
+                                          targetHeadRot != null ? targetHeadRot.getRotation().x : 0, targetYaw);
+        
+        // Define teleport action
         Runnable doTeleport = () -> {
-            if (request.getType() == TpaRequest.Type.TPA) {
-                // Regular TPA: Requester teleports to target (acceptor)
-                backService.pushLocation(request.getRequesterId(), requesterLoc);
-                
-                // Get target's yaw to face the same direction (safe - we're on acceptor's world thread)
-                HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-                float targetYaw = targetHeadRot != null ? targetHeadRot.getRotation().y : 0;
-                
-                // Execute teleport on requester's world thread (may be different from acceptor's world)
-                finalRequesterWorld.execute(() -> {
+            world.execute(() -> {
+                if (request.getType() == TpaRequest.Type.TPA) {
+                    // Requester teleports to acceptor
                     if (!requesterRef.isValid()) return;
-                    
-                    // Always use pitch=0 to keep player upright
+                    backService.pushLocation(request.getRequesterId(), requesterLoc);
                     Teleport teleport = new Teleport(world, targetPos, new Vector3f(0, targetYaw, 0));
                     requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
-                    logger.fine("[TPA] Teleport component added for " + request.getRequesterName());
-                    
                     requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
-                });
-            } else {
-                // TPAHERE: Target (acceptor) teleports to requester
-                HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-                Vector3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Vector3f(0, 0, 0);
-                Location targetLoc = new Location(
-                    world.getName(),
-                    targetPos.getX(), targetPos.getY(), targetPos.getZ(),
-                    targetRot.x, targetRot.y
-                );
-                
-                backService.pushLocation(playerId, targetLoc);
-                
-                // Get requester's yaw to face the same direction
-                float requesterYaw = reqRot.y;
-                
-                // Execute teleport on acceptor's world thread (we're already on it)
-                world.execute(() -> {
+                } else {
+                    // Acceptor teleports to requester (TPAHERE)
                     if (!ref.isValid()) return;
-                    
-                    // Always use pitch=0 to keep player upright
-                    Teleport teleport = new Teleport(finalRequesterWorld, requesterPos, new Vector3f(0, requesterYaw, 0));
+                    backService.pushLocation(playerId, targetLoc);
+                    Teleport teleport = new Teleport(world, requesterPos, new Vector3f(0, reqRot.y, 0));
                     store.putComponent(ref, Teleport.getComponentType(), teleport);
-                    logger.fine("[TPAHERE] Teleport component added for " + player.getUsername());
-                    
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
-                });
-                requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
-            }
+                    requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                }
+            });
         };
-
-        // Get effective warmup (check bypass permission for requester)
+        
+        startWarmupAndTeleport(ctx, player, requester, requesterPos, request, configManager, config, 
+                               doTeleport, world, requesterStore, requesterRef);
+    }
+    
+    /**
+     * Handle TPA when players are in different worlds
+     */
+    private void executeCrossWorldTpa(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                                       PlayerRef player, World acceptorWorld, PlayerRef requester,
+                                       Ref<EntityStore> requesterRef, Store<EntityStore> requesterStore,
+                                       World requesterWorld, TpaRequest request, 
+                                       ConfigManager configManager, PluginConfig config) {
+        UUID playerId = player.getUuid();
+        
+        // We need to gather data from both worlds on their respective threads
+        // First, gather requester data on requester's world thread
+        requesterWorld.execute(() -> {
+            if (!requesterRef.isValid()) {
+                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotFindRequester"), "#FF5555"));
+                return;
+            }
+            
+            TransformComponent requesterTransform = (TransformComponent) requesterStore.getComponent(requesterRef, TransformComponent.getComponentType());
+            if (requesterTransform == null) {
+                tpaService.denyRequestFrom(playerId, request.getRequesterId());
+                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaCouldNotGetRequesterPosition"), "#FF5555"));
+                return;
+            }
+            
+            Vector3d requesterPos = requesterTransform.getPosition();
+            HeadRotation reqHeadRot = (HeadRotation) requesterStore.getComponent(requesterRef, HeadRotation.getComponentType());
+            Vector3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Vector3f(0, 0, 0);
+            
+            // Now gather acceptor data on acceptor's world thread
+            acceptorWorld.execute(() -> {
+                if (!ref.isValid()) {
+                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("couldNotGetPosition"), "#FF5555"));
+                    return;
+                }
+                
+                TransformComponent targetTransform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
+                if (targetTransform == null) {
+                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("couldNotGetPosition"), "#FF5555"));
+                    return;
+                }
+                
+                // Accept the request now that we have all data
+                tpaService.acceptRequestFrom(playerId, request.getRequesterId());
+                
+                Vector3d targetPos = targetTransform.getPosition();
+                HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
+                float targetYaw = targetHeadRot != null ? targetHeadRot.getRotation().y : 0;
+                Vector3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Vector3f(0, 0, 0);
+                
+                // Prepare locations for /back
+                Location requesterLoc = new Location(requesterWorld.getName(), requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), reqRot.x, reqRot.y);
+                Location targetLoc = new Location(acceptorWorld.getName(), targetPos.getX(), targetPos.getY(), targetPos.getZ(), targetRot.x, targetRot.y);
+                
+                // Define teleport action
+                Runnable doTeleport = () -> {
+                    if (request.getType() == TpaRequest.Type.TPA) {
+                        // Requester teleports to acceptor (cross-world)
+                        backService.pushLocation(request.getRequesterId(), requesterLoc);
+                        requesterWorld.execute(() -> {
+                            if (!requesterRef.isValid()) return;
+                            Teleport teleport = new Teleport(acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0));
+                            requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
+                            requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                        });
+                    } else {
+                        // Acceptor teleports to requester (TPAHERE cross-world)
+                        backService.pushLocation(playerId, targetLoc);
+                        acceptorWorld.execute(() -> {
+                            if (!ref.isValid()) return;
+                            Teleport teleport = new Teleport(requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0));
+                            store.putComponent(ref, Teleport.getComponentType(), teleport);
+                            player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
+                        });
+                        requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                    }
+                };
+                
+                // Send acceptance message
+                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAccepted", "player", request.getRequesterName()), "#55FF55"));
+                
+                // Start warmup
+                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(request.getRequesterId(), "tpa", config.tpa.warmupSeconds);
+                WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+                
+                if (warmupService.hasActiveWarmup(request.getRequesterId())) {
+                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterInProgress"), "#FF5555"));
+                    return;
+                }
+                
+                if (warmupSeconds > 0) {
+                    requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterWarmup", "player", player.getUsername(), "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
+                }
+                
+                warmupService.startWarmup(requester, requesterPos, warmupSeconds, doTeleport, "tpa", 
+                                          requesterWorld, requesterStore, requesterRef);
+            });
+        });
+    }
+    
+    /**
+     * Common warmup and teleport logic
+     */
+    private void startWarmupAndTeleport(CommandContext ctx, PlayerRef player, PlayerRef requester,
+                                         Vector3d requesterPos, TpaRequest request,
+                                         ConfigManager configManager, PluginConfig config,
+                                         Runnable doTeleport, World world, 
+                                         Store<EntityStore> requesterStore, Ref<EntityStore> requesterRef) {
         int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(request.getRequesterId(), "tpa", config.tpa.warmupSeconds);
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
-        // Check if requester already has a warmup
         if (warmupService.hasActiveWarmup(request.getRequesterId())) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterInProgress"), "#FF5555"));
             return;
@@ -216,6 +319,6 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         }
         
         warmupService.startWarmup(requester, requesterPos, warmupSeconds, doTeleport, "tpa", 
-                                   finalRequesterWorld, requesterStore, requesterRef);
+                                   world, requesterStore, requesterRef);
     }
 }

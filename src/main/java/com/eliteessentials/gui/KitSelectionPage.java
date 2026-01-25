@@ -83,15 +83,15 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
             String statusText;
             
             if (!hasPermission) {
-                statusText = "[Locked]";
+                statusText = configManager.getMessage("guiKitStatusLocked");
             } else if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
-                statusText = "Claimed";
+                statusText = configManager.getMessage("guiKitStatusClaimed");
             } else {
                 long remainingCooldown = kitService.getRemainingCooldown(playerId, kit.getId());
                 if (remainingCooldown > 0) {
                     statusText = formatCooldown(remainingCooldown);
                 } else {
-                    statusText = "Ready";
+                    statusText = configManager.getMessage("guiKitStatusReady");
                 }
             }
             

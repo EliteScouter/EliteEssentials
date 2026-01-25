@@ -1,8 +1,10 @@
 package com.eliteessentials.listeners;
 
+import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.services.PlayerService;
+import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Holder;
@@ -252,6 +254,12 @@ public class JoinQuitListener {
             // Update player cache
             playerService.onPlayerJoin(playerId, playerName);
             
+            // Notify playtime reward service
+            PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();
+            if (rewardService != null) {
+                rewardService.onPlayerJoin(playerId);
+            }
+            
             // Check if first join
             boolean isFirstJoin = !firstJoinPlayers.contains(playerId);
             
@@ -310,6 +318,12 @@ public class JoinQuitListener {
         seenWorldMotds.remove(playerId);
         // Clear last world tracking
         playerLastWorld.remove(playerId);
+        
+        // Notify playtime reward service before updating player cache
+        PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();
+        if (rewardService != null) {
+            rewardService.onPlayerQuit(playerId);
+        }
         
         // Update player cache (last seen, play time)
         playerService.onPlayerQuit(playerId);

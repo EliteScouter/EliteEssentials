@@ -31,7 +31,7 @@ public class HytaleHelpCommand extends CommandBase {
 
     @Override
     protected boolean canGeneratePermission() {
-        return true;  // Generates eliteessentials.command.eehelp - set to true for default group
+        return false;  // We manually register eliteessentials.command.misc.eehelp
     }
 
     @Override

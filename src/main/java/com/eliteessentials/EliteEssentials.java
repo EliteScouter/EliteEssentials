@@ -2,6 +2,7 @@ package com.eliteessentials;
 
 import com.eliteessentials.commands.hytale.*;
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.events.StarterKitEvent;
 import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.listeners.ChatListener;
@@ -19,6 +20,7 @@ import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.services.MessageService;
 import com.eliteessentials.services.PlayerService;
+import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.SleepService;
 import com.eliteessentials.services.SpawnProtectionService;
@@ -30,6 +32,7 @@ import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.storage.HomeStorage;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.PlayerStorage;
+import com.eliteessentials.storage.PlayTimeRewardStorage;
 import com.eliteessentials.storage.RulesStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.storage.WarpStorage;
@@ -85,6 +88,8 @@ public class EliteEssentials extends JavaPlugin {
     private AliasService aliasService;
     private PlayerService playerService;
     private CostService costService;
+    private PlayTimeRewardStorage playTimeRewardStorage;
+    private PlayTimeRewardService playTimeRewardService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -169,6 +174,11 @@ public class EliteEssentials extends JavaPlugin {
         aliasService = new AliasService(this.dataFolder, getCommandRegistry());
         playerService = new PlayerService(playerStorage, configManager);
         costService = new CostService(configManager);
+        
+        // Initialize playtime rewards
+        playTimeRewardStorage = new PlayTimeRewardStorage(this.dataFolder);
+        playTimeRewardStorage.load();
+        playTimeRewardService = new PlayTimeRewardService(playTimeRewardStorage, playerService, configManager);
         
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
     }
@@ -262,6 +272,12 @@ public class EliteEssentials extends JavaPlugin {
             aliasService.load();
         }
         
+        // Start playtime rewards service
+        if (configManager.getConfig().playTimeRewards.enabled) {
+            playTimeRewardService.start();
+            getLogger().at(Level.INFO).log("PlayTime Rewards service started.");
+        }
+        
         getLogger().at(Level.INFO).log("EliteEssentials started successfully!");
         
         // Validate all JSON config files at the END of startup so errors are visible
@@ -330,6 +346,9 @@ public class EliteEssentials extends JavaPlugin {
         if (autoBroadcastService != null) {
             autoBroadcastService.shutdown();
         }
+        if (playTimeRewardService != null) {
+            playTimeRewardService.stop();
+        }
         
         // Save player cache
         if (playerService != null) {
@@ -341,92 +360,167 @@ public class EliteEssentials extends JavaPlugin {
     }
     
     private void registerCommands() {
+        PluginConfig config = configManager.getConfig();
+        StringBuilder registeredCommands = new StringBuilder();
+        
         // Home commands
-        getCommandRegistry().registerCommand(new HytaleHomeCommand(homeService, backService));
-        getCommandRegistry().registerCommand(new HytaleSetHomeCommand(homeService));
-        getCommandRegistry().registerCommand(new HytaleDelHomeCommand(homeService));
-        getCommandRegistry().registerCommand(new HytaleHomesCommand(homeService));
+        if (config.homes.enabled) {
+            getCommandRegistry().registerCommand(new HytaleHomeCommand(homeService, backService));
+            getCommandRegistry().registerCommand(new HytaleSetHomeCommand(homeService));
+            getCommandRegistry().registerCommand(new HytaleDelHomeCommand(homeService));
+            getCommandRegistry().registerCommand(new HytaleHomesCommand(homeService));
+            registeredCommands.append("/home, /sethome, /delhome, /homes, ");
+        }
         
         // Back command
-        getCommandRegistry().registerCommand(new HytaleBackCommand(backService));
+        if (config.back.enabled) {
+            getCommandRegistry().registerCommand(new HytaleBackCommand(backService));
+            registeredCommands.append("/back, ");
+        }
         
         // RTP command
-        getCommandRegistry().registerCommand(new HytaleRtpCommand(rtpService, backService, configManager, warmupService));
+        if (config.rtp.enabled) {
+            getCommandRegistry().registerCommand(new HytaleRtpCommand(rtpService, backService, configManager, warmupService));
+            registeredCommands.append("/rtp, ");
+        }
         
         // TPA commands
-        getCommandRegistry().registerCommand(new HytaleTpaCommand(tpaService));
-        getCommandRegistry().registerCommand(new HytaleTpahereCommand(tpaService));
-        getCommandRegistry().registerCommand(new HytaleTpAcceptCommand(tpaService, backService));
-        getCommandRegistry().registerCommand(new HytaleTpDenyCommand(tpaService));
+        if (config.tpa.enabled) {
+            getCommandRegistry().registerCommand(new HytaleTpaCommand(tpaService));
+            getCommandRegistry().registerCommand(new HytaleTpahereCommand(tpaService));
+            getCommandRegistry().registerCommand(new HytaleTpAcceptCommand(tpaService, backService));
+            getCommandRegistry().registerCommand(new HytaleTpDenyCommand(tpaService));
+            registeredCommands.append("/tpa, /tpahere, /tpaccept, /tpdeny, ");
+        }
         
-        // Admin teleport commands
+        // Admin teleport commands (always register - admin only)
         getCommandRegistry().registerCommand(new HytaleTphereCommand(backService));
+        registeredCommands.append("/tphere, ");
         
         // Spawn commands
-        getCommandRegistry().registerCommand(new HytaleSpawnCommand(backService));
-        getCommandRegistry().registerCommand(new HytaleSetSpawnCommand(spawnStorage));
+        if (config.spawn.enabled) {
+            getCommandRegistry().registerCommand(new HytaleSpawnCommand(backService));
+            getCommandRegistry().registerCommand(new HytaleSetSpawnCommand(spawnStorage));
+            registeredCommands.append("/spawn, /setspawn, ");
+        }
         
         // Warp commands
-        try {
-            getCommandRegistry().registerCommand(new HytaleWarpCommand(warpService, backService));
-            getLogger().at(Level.INFO).log("Registered /warp command");
-        } catch (Exception e) {
-            getLogger().at(Level.SEVERE).log("Failed to register /warp: " + e.getMessage());
-        }
-        try {
-            getCommandRegistry().registerCommand(new HytaleWarpAdminCommand(warpService));
-            getLogger().at(Level.INFO).log("Registered /warpadmin command");
-        } catch (Exception e) {
-            getLogger().at(Level.SEVERE).log("Failed to register /warpadmin: " + e.getMessage());
-        }
-        try {
-            getCommandRegistry().registerCommand(new HytaleWarpSetPermCommand(warpService));
-            getLogger().at(Level.INFO).log("Registered /warpsetperm command");
-        } catch (Exception e) {
-            getLogger().at(Level.SEVERE).log("Failed to register /warpsetperm: " + e.getMessage());
-        }
-        try {
-            getCommandRegistry().registerCommand(new HytaleWarpSetDescCommand(warpService));
-            getLogger().at(Level.INFO).log("Registered /warpsetdesc command");
-        } catch (Exception e) {
-            getLogger().at(Level.SEVERE).log("Failed to register /warpsetdesc: " + e.getMessage());
+        if (config.warps.enabled) {
+            try {
+                getCommandRegistry().registerCommand(new HytaleWarpCommand(warpService, backService));
+                getCommandRegistry().registerCommand(new HytaleWarpAdminCommand(warpService));
+                getCommandRegistry().registerCommand(new HytaleWarpSetPermCommand(warpService));
+                getCommandRegistry().registerCommand(new HytaleWarpSetDescCommand(warpService));
+                registeredCommands.append("/warp, /warpadmin, /warpsetperm, /warpsetdesc, ");
+            } catch (Exception e) {
+                getLogger().at(Level.SEVERE).log("Failed to register warp commands: " + e.getMessage());
+            }
         }
         
-        // Admin commands (OP only)
-        getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
+        // Sleep command
+        if (config.sleep.enabled) {
+            getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
+            registeredCommands.append("/sleeppercent, ");
+        }
+        
+        // Admin commands (always register - admin only)
         getCommandRegistry().registerCommand(new HytaleReloadCommand());
         getCommandRegistry().registerCommand(new HytaleAliasCommand());
+        registeredCommands.append("/eliteessentials, /alias, ");
         
-        // New commands
-        getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager));
-        getCommandRegistry().registerCommand(new HytaleHealCommand(configManager, cooldownService));
-        getCommandRegistry().registerCommand(new HytaleMsgCommand(messageService, configManager));
-        getCommandRegistry().registerCommand(new HytaleReplyCommand(messageService, configManager));
-        getCommandRegistry().registerCommand(new HytaleTopCommand(backService, configManager));
-        flyCommand = new HytaleFlyCommand(configManager);
-        getCommandRegistry().registerCommand(flyCommand);
-        getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
-        getCommandRegistry().registerCommand(new HytaleKitCommand(kitService, configManager));
-        getCommandRegistry().registerCommand(new HytaleMotdCommand(configManager, motdStorage));
-        getCommandRegistry().registerCommand(new HytaleRulesCommand(configManager, rulesStorage));
-        getCommandRegistry().registerCommand(new HytaleBroadcastCommand(configManager));
-        getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
-        getCommandRegistry().registerCommand(new HytaleListCommand(configManager));
-        getCommandRegistry().registerCommand(new HytaleDiscordCommand(configManager, discordStorage));
+        // God command
+        if (config.god.enabled) {
+            getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager));
+            registeredCommands.append("/god, ");
+        }
+        
+        // Heal command
+        if (config.heal.enabled) {
+            getCommandRegistry().registerCommand(new HytaleHealCommand(configManager, cooldownService));
+            registeredCommands.append("/heal, ");
+        }
+        
+        // Messaging commands
+        if (config.msg.enabled) {
+            getCommandRegistry().registerCommand(new HytaleMsgCommand(messageService, configManager));
+            getCommandRegistry().registerCommand(new HytaleReplyCommand(messageService, configManager));
+            registeredCommands.append("/msg, /reply, ");
+        }
+        
+        // Top command
+        if (config.top.enabled) {
+            getCommandRegistry().registerCommand(new HytaleTopCommand(backService, configManager));
+            registeredCommands.append("/top, ");
+        }
+        
+        // Fly commands
+        if (config.fly.enabled) {
+            flyCommand = new HytaleFlyCommand(configManager);
+            getCommandRegistry().registerCommand(flyCommand);
+            getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
+            registeredCommands.append("/fly, /flyspeed, ");
+        }
+        
+        // Kit command
+        if (config.kits.enabled) {
+            getCommandRegistry().registerCommand(new HytaleKitCommand(kitService, configManager));
+            registeredCommands.append("/kit, ");
+        }
+        
+        // MOTD command
+        if (config.motd.enabled) {
+            getCommandRegistry().registerCommand(new HytaleMotdCommand(configManager, motdStorage));
+            registeredCommands.append("/motd, ");
+        }
+        
+        // Rules command
+        if (config.rules.enabled) {
+            getCommandRegistry().registerCommand(new HytaleRulesCommand(configManager, rulesStorage));
+            registeredCommands.append("/rules, ");
+        }
+        
+        // Broadcast command
+        if (config.broadcast.enabled) {
+            getCommandRegistry().registerCommand(new HytaleBroadcastCommand(configManager));
+            registeredCommands.append("/broadcast, ");
+        }
+        
+        // Clear inventory command
+        if (config.clearInv.enabled) {
+            getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
+            registeredCommands.append("/clearinv, ");
+        }
+        
+        // List command
+        if (config.list.enabled) {
+            getCommandRegistry().registerCommand(new HytaleListCommand(configManager));
+            registeredCommands.append("/list, ");
+        }
+        
+        // Discord command
+        if (config.discord.enabled) {
+            getCommandRegistry().registerCommand(new HytaleDiscordCommand(configManager, discordStorage));
+            registeredCommands.append("/discord, ");
+        }
         
         // Economy commands
-        getCommandRegistry().registerCommand(new HytaleWalletCommand(configManager, playerService));
-        getCommandRegistry().registerCommand(new HytalePayCommand(configManager, playerService));
-        getCommandRegistry().registerCommand(new HytaleBaltopCommand(configManager, playerService));
-        getCommandRegistry().registerCommand(new HytaleEcoCommand(configManager, playerService));
+        if (config.economy.enabled) {
+            getCommandRegistry().registerCommand(new HytaleWalletCommand(configManager, playerService));
+            getCommandRegistry().registerCommand(new HytalePayCommand(configManager, playerService));
+            getCommandRegistry().registerCommand(new HytaleBaltopCommand(configManager, playerService));
+            getCommandRegistry().registerCommand(new HytaleEcoCommand(configManager, playerService));
+            registeredCommands.append("/wallet, /pay, /baltop, /eco, ");
+        }
         
-        // Player info commands
+        // Player info commands (always register - useful utility)
         getCommandRegistry().registerCommand(new HytaleSeenCommand(configManager, playerService));
+        registeredCommands.append("/seen, ");
         
-        // Help command
+        // Help command (always register)
         getCommandRegistry().registerCommand(new HytaleHelpCommand());
+        registeredCommands.append("/eehelp");
         
-        getLogger().at(Level.INFO).log("Commands registered: /home, /sethome, /delhome, /homes, /back, /rtp, /tpa, /tpahere, /tpaccept, /tpdeny, /tphere, /spawn, /setspawn, /warp, /warpadmin, /warpsetperm, /warpsetdesc, /sleeppercent, /eliteessentials, /god, /heal, /msg, /reply, /top, /fly, /flyspeed, /kit, /motd, /rules, /broadcast, /clearinv, /list, /discord, /wallet, /pay, /baltop, /eco, /seen, /eehelp");
+        getLogger().at(Level.INFO).log("Commands registered: " + registeredCommands.toString());
     }
 
     public static EliteEssentials getInstance() {
@@ -521,6 +615,10 @@ public class EliteEssentials extends JavaPlugin {
         return costService;
     }
     
+    public PlayTimeRewardService getPlayTimeRewardService() {
+        return playTimeRewardService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -568,6 +666,11 @@ public class EliteEssentials extends JavaPlugin {
         // Reload player cache
         if (playerService != null) {
             playerService.reload();
+        }
+        
+        // Reload playtime rewards
+        if (playTimeRewardService != null) {
+            playTimeRewardService.reload();
         }
         
         getLogger().at(Level.INFO).log("Configuration reloaded.");

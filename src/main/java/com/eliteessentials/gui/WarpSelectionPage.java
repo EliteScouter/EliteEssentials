@@ -101,7 +101,7 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
             // Show permission status for admins
             boolean isAdmin = perms.isAdmin(playerId);
             if (isAdmin && warp.isOpOnly()) {
-                commandBuilder.set(selector + " #WarpStatus.Text", "[OP Only]");
+                commandBuilder.set(selector + " #WarpStatus.Text", configManager.getMessage("guiWarpStatusOpOnly"));
             } else {
                 commandBuilder.set(selector + " #WarpStatus.Text", "");
             }

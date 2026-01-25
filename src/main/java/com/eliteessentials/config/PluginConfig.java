@@ -309,6 +309,16 @@ public class PluginConfig {
         messages.put("deathByPoison", "{player} was poisoned");
         messages.put("deathByWither", "{player} withered away");
         messages.put("deathGeneric", "{player} died");
+        
+        // ==================== GUI LABELS ====================
+        messages.put("guiKitStatusLocked", "[Locked]");
+        messages.put("guiKitStatusClaimed", "Claimed");
+        messages.put("guiKitStatusReady", "Ready");
+        messages.put("guiWarpStatusOpOnly", "[OP Only]");
+        
+        // ==================== PLAYTIME REWARDS ====================
+        messages.put("playTimeRewardReceived", "&a[Reward] &fYou received: &e{reward}");
+        messages.put("playTimeMilestoneBroadcast", "&6[Milestone] &f{player} &7reached &e{reward} &7({time} playtime)!");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -759,5 +769,51 @@ public class PluginConfig {
         
         /** Number of players to show in /baltop */
         public int baltopLimit = 10;
+    }
+    
+    // ==================== PLAYTIME REWARDS ====================
+    
+    public PlayTimeRewardsConfig playTimeRewards = new PlayTimeRewardsConfig();
+    
+    public static class PlayTimeRewardsConfig {
+        /**
+         * Enable/disable the playtime rewards system.
+         * Rewards are configured in playtime_rewards.json
+         */
+        public boolean enabled = false;
+        
+        /**
+         * How often to check for rewards (in minutes).
+         * Lower values = more responsive but more CPU usage.
+         * Recommended: 1-5 minutes.
+         */
+        public int checkIntervalMinutes = 1;
+        
+        /**
+         * Show a message when a player receives a reward.
+         */
+        public boolean showRewardMessage = true;
+        
+        /**
+         * Broadcast milestone rewards to all players.
+         */
+        public boolean broadcastMilestones = true;
+        
+        /**
+         * Only count playtime accumulated AFTER this system was first enabled.
+         * When true: Players only earn rewards for time played after enabling.
+         * When false: Players get catch-up rewards for all historical playtime.
+         * 
+         * IMPORTANT: Set this to true before enabling rewards on an existing server
+         * to prevent players with lots of playtime from getting flooded with rewards.
+         */
+        public boolean onlyCountNewPlaytime = true;
+        
+        /**
+         * Timestamp (epoch millis) when the reward system was first enabled.
+         * This is set automatically when the system starts for the first time.
+         * Do not modify manually unless you know what you're doing.
+         */
+        public long enabledTimestamp = 0;
     }
 }

@@ -117,6 +117,19 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - Command costs - charge players for using teleport commands
 - Full API for other mods to integrate (`com.eliteessentials.api.EconomyAPI`)
 
+### PlayTime Rewards
+- **Repeatable Rewards** - Trigger every X minutes of playtime (e.g., hourly bonus)
+- **Milestone Rewards** - One-time rewards at specific playtime thresholds (e.g., 100 hours = VIP)
+- **LuckPerms Integration** - Execute LuckPerms commands directly via API:
+  - `lp user {player} group set/add/remove <group>` - Manage player groups
+  - `lp user {player} permission set/unset <permission>` - Manage permissions
+  - `lp user {player} promote/demote <track>` - Promote/demote on tracks
+- **Economy Integration** - Grant currency rewards with `eco add {player} <amount>`
+- **Custom Messages** - Configurable messages per reward
+- **onlyCountNewPlaytime** - Option to only count playtime after system was enabled
+- Rewards defined in `playtime_rewards.json`
+- Works without LuckPerms - LP commands are skipped with a warning if not installed
+
 ## Configuration
 
 All settings are fully configurable via `mods/EliteEssentials/config.json`:

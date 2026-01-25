@@ -407,7 +407,6 @@ public class LuckPermsIntegration {
             
             // If user not in cache, try to load it synchronously (blocking, but necessary for chat)
             if (user == null) {
-                logger.info("[LuckPerms] User not in cache, attempting to load: " + playerId);
                 try {
                     Method loadUserMethod = userManager.getClass().getMethod("loadUser", java.util.UUID.class);
                     Object completableFuture = loadUserMethod.invoke(userManager, playerId);
@@ -415,7 +414,6 @@ public class LuckPermsIntegration {
                     // Wait for user to load (with timeout)
                     Method joinMethod = completableFuture.getClass().getMethod("join");
                     user = joinMethod.invoke(completableFuture);
-                    logger.info("[LuckPerms] User loaded successfully");
                 } catch (Exception loadEx) {
                     logger.warning("[LuckPerms] Failed to load user: " + loadEx.getMessage());
                     return groups;
@@ -460,12 +458,600 @@ public class LuckPermsIntegration {
                 }
             }
             
-            logger.info("[LuckPerms] Retrieved " + groups.size() + " groups for player: " + groups);
-            
         } catch (Exception e) {
             logger.warning("[LuckPerms] Error getting groups: " + e.getMessage());
         }
         
         return groups;
+    }
+    
+    // ==================== LUCKPERMS MODIFICATION METHODS ====================
+    
+    /**
+     * Set a player's primary group (removes all other groups and sets this one).
+     * Equivalent to: /lp user <player> parent set <group>
+     * 
+     * @param playerId Player UUID
+     * @param groupName Group to set
+     * @return true if successful
+     */
+    public static boolean setGroup(java.util.UUID playerId, String groupName) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for setGroup");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Create InheritanceNode for the new group
+            Class<?> inheritanceNodeClass = Class.forName("net.luckperms.api.node.types.InheritanceNode");
+            Method builderMethod = inheritanceNodeClass.getMethod("builder", String.class);
+            Object nodeBuilder = builderMethod.invoke(null, groupName);
+            Method buildMethod = nodeBuilder.getClass().getMethod("build");
+            Object newGroupNode = buildMethod.invoke(nodeBuilder);
+            
+            // Get user's data
+            Method dataMethod = user.getClass().getMethod("data");
+            Object userData = dataMethod.invoke(user);
+            
+            // Clear existing group nodes - find and use the clear method with setAccessible
+            Class<?> nodeClass = Class.forName("net.luckperms.api.node.Node");
+            
+            // Try to clear by NodeType first
+            try {
+                Class<?> nodeTypeClass = Class.forName("net.luckperms.api.node.NodeType");
+                java.lang.reflect.Field inheritanceField = nodeTypeClass.getField("INHERITANCE");
+                Object inheritanceType = inheritanceField.get(null);
+                
+                Method clearMethod = findMethodByParamType(userData.getClass(), "clear", nodeTypeClass);
+                if (clearMethod != null) {
+                    clearMethod.setAccessible(true);
+                    clearMethod.invoke(userData, inheritanceType);
+                }
+            } catch (Exception clearEx) {
+                // Fallback: remove existing group nodes manually
+                Method getNodesMethod = user.getClass().getMethod("getNodes");
+                Object nodesCollection = getNodesMethod.invoke(user);
+                if (nodesCollection instanceof java.util.Collection) {
+                    Method removeMethod = findMethodByParamType(userData.getClass(), "remove", nodeClass);
+                    if (removeMethod != null) {
+                        removeMethod.setAccessible(true);
+                        for (Object node : new ArrayList<>((java.util.Collection<?>) nodesCollection)) {
+                            Method getKeyMethod = node.getClass().getMethod("getKey");
+                            String key = (String) getKeyMethod.invoke(node);
+                            if (key.startsWith("group.")) {
+                                removeMethod.invoke(userData, node);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Add the new group node
+            Method addMethod = findMethodByParamType(userData.getClass(), "add", nodeClass);
+            if (addMethod != null) {
+                addMethod.setAccessible(true);
+                addMethod.invoke(userData, newGroupNode);
+            }
+            
+            // Save the user
+            Class<?> userClass = Class.forName("net.luckperms.api.model.user.User");
+            Method saveUserMethod = findMethodByParamType(userManager.getClass(), "saveUser", userClass);
+            if (saveUserMethod != null) {
+                saveUserMethod.setAccessible(true);
+                Object saveFuture = saveUserMethod.invoke(userManager, user);
+                Method joinMethod = saveFuture.getClass().getMethod("join");
+                joinMethod.invoke(saveFuture);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error setting group: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Add a player to a group (keeps existing groups).
+     * Equivalent to: /lp user <player> parent add <group>
+     * 
+     * @param playerId Player UUID
+     * @param groupName Group to add
+     * @return true if successful
+     */
+    public static boolean addGroup(java.util.UUID playerId, String groupName) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for addGroup");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Create InheritanceNode for the group
+            Class<?> inheritanceNodeClass = Class.forName("net.luckperms.api.node.types.InheritanceNode");
+            Method builderMethod = inheritanceNodeClass.getMethod("builder", String.class);
+            Object nodeBuilder = builderMethod.invoke(null, groupName);
+            Method buildMethod = nodeBuilder.getClass().getMethod("build");
+            Object newGroupNode = buildMethod.invoke(nodeBuilder);
+            
+            // Add to user's data
+            Class<?> nodeClass = Class.forName("net.luckperms.api.node.Node");
+            Method dataMethod = user.getClass().getMethod("data");
+            Object userData = dataMethod.invoke(user);
+            Method addMethod = findMethodByParamType(userData.getClass(), "add", nodeClass);
+            if (addMethod != null) {
+                addMethod.setAccessible(true);
+                addMethod.invoke(userData, newGroupNode);
+            }
+            
+            // Save the user
+            Class<?> userClass = Class.forName("net.luckperms.api.model.user.User");
+            Method saveUserMethod = findMethodByParamType(userManager.getClass(), "saveUser", userClass);
+            if (saveUserMethod != null) {
+                saveUserMethod.setAccessible(true);
+                Object saveFuture = saveUserMethod.invoke(userManager, user);
+                Method joinMethod = saveFuture.getClass().getMethod("join");
+                joinMethod.invoke(saveFuture);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error adding group: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Remove a player from a group.
+     * Equivalent to: /lp user <player> parent remove <group>
+     * 
+     * @param playerId Player UUID
+     * @param groupName Group to remove
+     * @return true if successful
+     */
+    public static boolean removeGroup(java.util.UUID playerId, String groupName) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for removeGroup");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Create InheritanceNode for the group to remove
+            Class<?> inheritanceNodeClass = Class.forName("net.luckperms.api.node.types.InheritanceNode");
+            Method builderMethod = inheritanceNodeClass.getMethod("builder", String.class);
+            Object nodeBuilder = builderMethod.invoke(null, groupName);
+            Method buildMethod = nodeBuilder.getClass().getMethod("build");
+            Object groupNode = buildMethod.invoke(nodeBuilder);
+            
+            // Remove from user's data
+            Class<?> nodeClass = Class.forName("net.luckperms.api.node.Node");
+            Method dataMethod = user.getClass().getMethod("data");
+            Object userData = dataMethod.invoke(user);
+            Method removeMethod = findMethodByParamType(userData.getClass(), "remove", nodeClass);
+            if (removeMethod != null) {
+                removeMethod.setAccessible(true);
+                removeMethod.invoke(userData, groupNode);
+            }
+            
+            // Save the user
+            Class<?> userClass = Class.forName("net.luckperms.api.model.user.User");
+            Method saveUserMethod = findMethodByParamType(userManager.getClass(), "saveUser", userClass);
+            if (saveUserMethod != null) {
+                saveUserMethod.setAccessible(true);
+                Object saveFuture = saveUserMethod.invoke(userManager, user);
+                Method joinMethod = saveFuture.getClass().getMethod("join");
+                joinMethod.invoke(saveFuture);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error removing group: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Set a permission for a player.
+     * Equivalent to: /lp user <player> permission set <permission> [true/false]
+     * 
+     * @param playerId Player UUID
+     * @param permission Permission node
+     * @param value true to grant, false to deny
+     * @return true if successful
+     */
+    public static boolean setPermission(java.util.UUID playerId, String permission, boolean value) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for setPermission");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Create PermissionNode
+            Class<?> permissionNodeClass = Class.forName("net.luckperms.api.node.types.PermissionNode");
+            Method builderMethod = permissionNodeClass.getMethod("builder", String.class);
+            Object nodeBuilder = builderMethod.invoke(null, permission);
+            
+            // Set value (true/false)
+            Method valueMethod = nodeBuilder.getClass().getMethod("value", boolean.class);
+            nodeBuilder = valueMethod.invoke(nodeBuilder, value);
+            
+            Method buildMethod = nodeBuilder.getClass().getMethod("build");
+            Object permNode = buildMethod.invoke(nodeBuilder);
+            
+            // Add to user's data
+            Class<?> nodeClass = Class.forName("net.luckperms.api.node.Node");
+            Method dataMethod = user.getClass().getMethod("data");
+            Object userData = dataMethod.invoke(user);
+            Method addMethod = findMethodByParamType(userData.getClass(), "add", nodeClass);
+            if (addMethod != null) {
+                addMethod.setAccessible(true);
+                addMethod.invoke(userData, permNode);
+            }
+            
+            // Save the user
+            Class<?> userClass = Class.forName("net.luckperms.api.model.user.User");
+            Method saveUserMethod = findMethodByParamType(userManager.getClass(), "saveUser", userClass);
+            if (saveUserMethod != null) {
+                saveUserMethod.setAccessible(true);
+                Object saveFuture = saveUserMethod.invoke(userManager, user);
+                Method joinMethod = saveFuture.getClass().getMethod("join");
+                joinMethod.invoke(saveFuture);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error setting permission: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Remove a permission from a player.
+     * Equivalent to: /lp user <player> permission unset <permission>
+     * 
+     * @param playerId Player UUID
+     * @param permission Permission node to remove
+     * @return true if successful
+     */
+    public static boolean unsetPermission(java.util.UUID playerId, String permission) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for unsetPermission");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Create PermissionNode to remove
+            Class<?> permissionNodeClass = Class.forName("net.luckperms.api.node.types.PermissionNode");
+            Method builderMethod = permissionNodeClass.getMethod("builder", String.class);
+            Object nodeBuilder = builderMethod.invoke(null, permission);
+            Method buildMethod = nodeBuilder.getClass().getMethod("build");
+            Object permNode = buildMethod.invoke(nodeBuilder);
+            
+            // Remove from user's data
+            Class<?> nodeClass = Class.forName("net.luckperms.api.node.Node");
+            Method dataMethod = user.getClass().getMethod("data");
+            Object userData = dataMethod.invoke(user);
+            Method removeMethod = findMethodByParamType(userData.getClass(), "remove", nodeClass);
+            if (removeMethod != null) {
+                removeMethod.setAccessible(true);
+                removeMethod.invoke(userData, permNode);
+            }
+            
+            // Save the user
+            Class<?> userClass = Class.forName("net.luckperms.api.model.user.User");
+            Method saveUserMethod = findMethodByParamType(userManager.getClass(), "saveUser", userClass);
+            if (saveUserMethod != null) {
+                saveUserMethod.setAccessible(true);
+                Object saveFuture = saveUserMethod.invoke(userManager, user);
+                Method joinMethod = saveFuture.getClass().getMethod("join");
+                joinMethod.invoke(saveFuture);
+            }
+            
+            return true;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error unsetting permission: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Helper method to get LuckPerms API objects for a player.
+     * @return [luckPerms, userManager, user] or null if failed
+     */
+    private static Object[] getLuckPermsObjects(java.util.UUID playerId) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Class<?> providerClass = Class.forName("net.luckperms.api.LuckPermsProvider");
+            Method getMethod = providerClass.getMethod("get");
+            Object luckPerms = getMethod.invoke(null);
+            
+            if (luckPerms == null) {
+                return null;
+            }
+            
+            // Get UserManager
+            Method getUserManagerMethod = luckPerms.getClass().getMethod("getUserManager");
+            Object userManager = getUserManagerMethod.invoke(luckPerms);
+            
+            // Try to get user from cache first
+            Method getUserMethod = userManager.getClass().getMethod("getUser", java.util.UUID.class);
+            Object user = getUserMethod.invoke(userManager, playerId);
+            
+            // If user not in cache, load it
+            if (user == null) {
+                Method loadUserMethod = userManager.getClass().getMethod("loadUser", java.util.UUID.class);
+                Object completableFuture = loadUserMethod.invoke(userManager, playerId);
+                Method joinMethod = completableFuture.getClass().getMethod("join");
+                user = joinMethod.invoke(completableFuture);
+            }
+            
+            if (user == null) {
+                return null;
+            }
+            
+            return new Object[] { luckPerms, userManager, user };
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error getting LP objects: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Find and invoke a method, making it accessible if needed.
+     */
+    private static Object invokeMethod(Object target, String methodName, Class<?>[] paramTypes, Object... args) throws Exception {
+        Method method = null;
+        
+        // Try public methods first
+        try {
+            method = target.getClass().getMethod(methodName, paramTypes);
+        } catch (NoSuchMethodException e) {
+            // Try declared methods (including private)
+            method = target.getClass().getDeclaredMethod(methodName, paramTypes);
+        }
+        
+        method.setAccessible(true);
+        return method.invoke(target, args);
+    }
+    
+    /**
+     * Find a method by name with a specific parameter type name.
+     */
+    private static Method findMethod(Class<?> clazz, String name, String paramTypeName) {
+        for (Method method : clazz.getMethods()) {
+            if (method.getName().equals(name)) {
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 1 && params[0].getName().equals(paramTypeName)) {
+                    return method;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find a method by name with a specific parameter type class.
+     */
+    private static Method findMethodByParamType(Class<?> clazz, String name, Class<?> paramType) {
+        // Check all methods including inherited
+        for (Method method : clazz.getMethods()) {
+            if (method.getName().equals(name)) {
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 1 && params[0].isAssignableFrom(paramType)) {
+                    return method;
+                }
+            }
+        }
+        // Also check declared methods
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.getName().equals(name)) {
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length == 1 && params[0].isAssignableFrom(paramType)) {
+                    return method;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Promote a player along a track.
+     * Equivalent to: /lp user <player> promote <track>
+     * 
+     * @param playerId Player UUID
+     * @param trackName Track to promote along
+     * @return true if successful
+     */
+    public static boolean promote(java.util.UUID playerId, String trackName) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for promote");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Get TrackManager
+            Method getTrackManagerMethod = luckPerms.getClass().getMethod("getTrackManager");
+            Object trackManager = getTrackManagerMethod.invoke(luckPerms);
+            
+            // Get the track
+            Method getTrackMethod = trackManager.getClass().getMethod("getTrack", String.class);
+            Object track = getTrackMethod.invoke(trackManager, trackName);
+            
+            if (track == null) {
+                logger.warning("[LuckPerms] Track not found: " + trackName);
+                return false;
+            }
+            
+            // Get track groups
+            Method getGroupsMethod = track.getClass().getMethod("getGroups");
+            @SuppressWarnings("unchecked")
+            List<String> trackGroups = (List<String>) getGroupsMethod.invoke(track);
+            
+            if (trackGroups == null || trackGroups.isEmpty()) {
+                logger.warning("[LuckPerms] Track has no groups: " + trackName);
+                return false;
+            }
+            
+            // Get user's current primary group
+            Method getPrimaryGroupMethod = user.getClass().getMethod("getPrimaryGroup");
+            String currentGroup = (String) getPrimaryGroupMethod.invoke(user);
+            
+            // Find current position in track
+            int currentIndex = trackGroups.indexOf(currentGroup);
+            
+            // Determine next group
+            String nextGroup;
+            if (currentIndex == -1) {
+                // Not on track, add to first group
+                nextGroup = trackGroups.get(0);
+            } else if (currentIndex >= trackGroups.size() - 1) {
+                // Already at top of track
+                return true;
+            } else {
+                // Promote to next group
+                nextGroup = trackGroups.get(currentIndex + 1);
+            }
+            
+            // Remove current group if on track, add next group
+            if (currentIndex >= 0) {
+                removeGroup(playerId, currentGroup);
+            }
+            boolean result = addGroup(playerId, nextGroup);
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error promoting: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Demote a player along a track.
+     * Equivalent to: /lp user <player> demote <track>
+     * 
+     * @param playerId Player UUID
+     * @param trackName Track to demote along
+     * @return true if successful
+     */
+    public static boolean demote(java.util.UUID playerId, String trackName) {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        
+        try {
+            Object[] lpObjects = getLuckPermsObjects(playerId);
+            if (lpObjects == null) {
+                logger.warning("[LuckPerms] Could not get LuckPerms objects for demote");
+                return false;
+            }
+            
+            Object luckPerms = lpObjects[0];
+            Object userManager = lpObjects[1];
+            Object user = lpObjects[2];
+            
+            // Get TrackManager
+            Method getTrackManagerMethod = luckPerms.getClass().getMethod("getTrackManager");
+            Object trackManager = getTrackManagerMethod.invoke(luckPerms);
+            
+            // Get the track
+            Method getTrackMethod = trackManager.getClass().getMethod("getTrack", String.class);
+            Object track = getTrackMethod.invoke(trackManager, trackName);
+            
+            if (track == null) {
+                logger.warning("[LuckPerms] Track not found: " + trackName);
+                return false;
+            }
+            
+            // Get track groups
+            Method getGroupsMethod = track.getClass().getMethod("getGroups");
+            @SuppressWarnings("unchecked")
+            List<String> trackGroups = (List<String>) getGroupsMethod.invoke(track);
+            
+            if (trackGroups == null || trackGroups.isEmpty()) {
+                logger.warning("[LuckPerms] Track has no groups: " + trackName);
+                return false;
+            }
+            
+            // Get user's current primary group
+            Method getPrimaryGroupMethod = user.getClass().getMethod("getPrimaryGroup");
+            String currentGroup = (String) getPrimaryGroupMethod.invoke(user);
+            
+            // Find current position in track
+            int currentIndex = trackGroups.indexOf(currentGroup);
+            
+            if (currentIndex == -1) {
+                // Not on track
+                return false;
+            } else if (currentIndex == 0) {
+                // Already at bottom of track
+                return true;
+            }
+            
+            // Demote to previous group
+            String prevGroup = trackGroups.get(currentIndex - 1);
+            
+            // Remove current group, add previous group
+            removeGroup(playerId, currentGroup);
+            boolean result = addGroup(playerId, prevGroup);
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.warning("[LuckPerms] Error demoting: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }
