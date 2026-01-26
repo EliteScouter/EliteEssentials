@@ -317,4 +317,46 @@ public class MessageFormatter {
             this.italic = italic;
         }
     }
+    
+    /**
+     * Converts text with color codes to a plain string, stripping all formatting.
+     * Used for translation overrides where color codes may not be supported.
+     * 
+     * @param text Text with color codes (& prefix)
+     * @return Plain text without color codes
+     */
+    @Nonnull
+    public static String toRawString(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            // Check for color code prefix (& or §)
+            if ((c == '&' || c == '§') && i + 1 < text.length()) {
+                char next = text.charAt(i + 1);
+                // Check for hex color: &#RRGGBB (8 chars total)
+                if (next == '#' && i + 7 < text.length()) {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        i += 8; // Skip &#RRGGBB
+                        continue;
+                    }
+                }
+                // Check for simple color code: &X (2 chars)
+                char code = Character.toLowerCase(next);
+                if (COLOR_MAP.containsKey(code) || code == 'r' || code == 'l' || code == 'o' 
+                        || code == 'k' || code == 'm' || code == 'n') {
+                    i += 2; // Skip &X
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return result.toString();
+    }
 }

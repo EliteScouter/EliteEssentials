@@ -17,6 +17,7 @@ import com.eliteessentials.services.DamageTrackingService;
 import com.eliteessentials.services.DataMigrationService;
 import com.eliteessentials.services.DeathTrackingService;
 import com.eliteessentials.services.GodService;
+import com.eliteessentials.services.GroupChatService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.services.MessageService;
@@ -26,6 +27,7 @@ import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.SleepService;
 import com.eliteessentials.services.SpawnProtectionService;
 import com.eliteessentials.services.TpaService;
+import com.eliteessentials.services.VanishService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.storage.DiscordStorage;
@@ -78,6 +80,8 @@ public class EliteEssentials extends JavaPlugin {
     private DamageTrackingService damageTrackingService;
     private DeathTrackingService deathTrackingService;
     private GodService godService;
+    private VanishService vanishService;
+    private GroupChatService groupChatService;
     private MessageService messageService;
     private KitService kitService;
     private SpawnProtectionService spawnProtectionService;
@@ -167,6 +171,8 @@ public class EliteEssentials extends JavaPlugin {
         rtpService = new RtpService(configManager);
         sleepService = new SleepService(configManager);
         godService = new GodService();
+        vanishService = new VanishService(configManager);
+        groupChatService = new GroupChatService(this.dataFolder, configManager);
         messageService = new MessageService();
         kitService = new KitService(this.dataFolder);
         kitService.setPlayerFileStorage(playerFileStorage);
@@ -204,6 +210,7 @@ public class EliteEssentials extends JavaPlugin {
         // Register join/quit listener for join/quit messages, first join, and MOTD
         joinQuitListener = new JoinQuitListener(configManager, motdStorage, playerService);
         joinQuitListener.setPlayerFileStorage(playerFileStorage);
+        joinQuitListener.setVanishService(vanishService);
         joinQuitListener.registerEvents(getEventRegistry());
         getLogger().at(Level.INFO).log("Join/Quit listener registered.");
         
@@ -419,12 +426,35 @@ public class EliteEssentials extends JavaPlugin {
         // Admin commands (always register - admin only)
         getCommandRegistry().registerCommand(new HytaleReloadCommand());
         getCommandRegistry().registerCommand(new HytaleAliasCommand());
-        registeredCommands.append("/eliteessentials, /alias, ");
+        getCommandRegistry().registerCommand(new HytaleMigrationCommand());
+        registeredCommands.append("/eliteessentials, /alias, /eemigration, ");
         
         // God command
         if (config.god.enabled) {
             getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager));
             registeredCommands.append("/god, ");
+        }
+        
+        // Vanish command
+        if (config.vanish.enabled) {
+            getCommandRegistry().registerCommand(new HytaleVanishCommand(configManager, vanishService));
+            registeredCommands.append("/vanish, ");
+        }
+        
+        // Group chat command
+        if (config.groupChat.enabled) {
+            getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager));
+            registeredCommands.append("/gc, ");
+        }
+        
+        // Send message command (admin - works from console)
+        getCommandRegistry().registerCommand(new HytaleSendMessageCommand(configManager, groupChatService));
+        registeredCommands.append("/sendmessage, ");
+        
+        // Repair command
+        if (config.repair.enabled) {
+            getCommandRegistry().registerCommand(new HytaleRepairCommand(configManager));
+            registeredCommands.append("/repair, ");
         }
         
         // Heal command
@@ -560,6 +590,10 @@ public class EliteEssentials extends JavaPlugin {
         return godService;
     }
     
+    public GroupChatService getGroupChatService() {
+        return groupChatService;
+    }
+    
     public MessageService getMessageService() {
         return messageService;
     }
@@ -616,6 +650,14 @@ public class EliteEssentials extends JavaPlugin {
         return dataFolder;
     }
     
+    public File getDataFolder() {
+        return dataFolder;
+    }
+    
+    public WarpStorage getWarpStorage() {
+        return warpStorage;
+    }
+    
     /**
      * Reload the plugin configuration.
      * Called by /eliteessentials reload command.
@@ -654,6 +696,11 @@ public class EliteEssentials extends JavaPlugin {
         // Reload aliases (note: deleted aliases won't be removed until restart)
         if (aliasService != null && configManager.getConfig().aliases.enabled) {
             aliasService.reload();
+        }
+        
+        // Reload group chat configuration
+        if (groupChatService != null) {
+            groupChatService.reload();
         }
         
         // Reload player file storage index

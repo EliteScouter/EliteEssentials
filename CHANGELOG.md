@@ -4,28 +4,87 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ## [1.1.2] - 2026-01-25
 
+> <span style="color: rgb(224, 62, 45);"><strong>BACKUP WARNING</strong>: This version includes automatic data migrations that restructure how player data is stored. Before upgrading:</span>
+> 
+> 1. <span style="color: rgb(45, 194, 107);"><strong>Back up your entire `mods/EliteEssentials/` folder</strong></span>
+> 2. <span style="color: rgb(45, 194, 107);">Migration runs automatically on first startup and moves old files to `mods/EliteEssentials/backup/migration_{timestamp}/`</span>
+> 3. <span style="color: rgb(45, 194, 107);">If you need to downgrade to a previous version, you must restore files from that backup folder since 1.1.2 uses a different data structure</span>
+> 4. <span style="color: rgb(45, 194, 107);">Migration has been tested and works reliably, but always have a backup just in case</span>
+
+### Added
+
+**EssentialsCore Migration** - Migration tool for EssentialsCore plugin data
+* Migrates homes, warps, spawn, and kits from EssentialsCore format
+* Run with `/eemigration essentialscore`
+* One-time migration with backup of original files
+* Preserves existing data (skips duplicates)
+
+**Hyssentials Migration** - Migration from Hyssentials plugin data
+* Migrates homes and warps from Hyssentials format
+* Run with `/eemigration hyssentials`
+* Preserves existing data (skips duplicates)
+
+**Admin RTP Command** - `/rtp <player> [world]` - RTP other players from console or in-game
+* `/rtp <player>` - RTP player in their current world
+* `/rtp <player> <world>` - RTP player to a specific world (cross-world teleport)
+* Can be executed from server console for automation (e.g., portal NPCs)
+* Admin RTP bypasses warmup and cooldown
+* Useful for portal automation: NPC executes `/rtp {player} explore` to send player to random location in explore world
+* Permission: `eliteessentials.admin.rtp`
+
+**Group Chat Command** - `/gc [group] <message>` (aliases: `/groupchat`, `/gchat`) - Private chat with your LuckPerms group
+* Players can chat privately with members of their group
+* Detects which LuckPerms groups a player belongs to
+* Group chat channels must be configured in `groupchat.json` (groups must match your LuckPerms group names)
+* If player belongs to multiple configured groups, specify which group: `/gc admin Hello team!`
+* If player belongs to one configured group, just type: `/gc Hello everyone!`
+* Default groups: admin, moderator, staff, vip (add/remove to match your LuckPerms setup)
+* Requires LuckPerms for group detection
+* Permission: `eliteessentials.command.misc.groupchat`
+
+**Send Message Command** - `/sendmessage` (alias: `/sm`) - Send formatted messages from console or in-game
+* `/sendmessage player <name> <message>` - Send to a specific player
+* `/sendmessage group <group> <message>` - Send to all players in a LuckPerms group
+* `/sendmessage all <message>` - Send to all online players
+* Supports full chat formatting: color codes (`&0-f`), hex colors (`&#RRGGBB`), bold/italic
+* Supports placeholders: `{player}`, `{server}`, `{world}`, `{playercount}`
+* Can be executed from server console for automation/scripts
+* Permission: `eliteessentials.admin.sendmessage`
+
+**Vanish Command Enhancements** - True invisibility with full stealth features
+* Players are now hidden from the Server Players list (tab list)
+* Players are hidden from the world map
+* Fake join/leave messages broadcast when vanishing/unvanishing
+* Config options: `hideFromList`, `hideFromMap`, `mimicJoinLeave`
+* Messages: `vanishFakeLeave`, `vanishFakeJoin`
+
+**Repair Command** - `/repair` and `/repair all` (alias: `/fix`)
+* Repairs item in hand or all items in inventory
+* Admin command with separate permission for "all" option
+* Permissions: `eliteessentials.misc.repair`, `eliteessentials.misc.repair.all`
+
 ### Changed
 
-- **Per-Player Data Storage**: Migrated from monolithic JSON files to individual player files for better scalability
-  - Player data now stored in `data/players/{uuid}.json` instead of large shared files
-  - Each player file contains: homes, back history, kit claims, kit cooldowns, playtime claims, wallet, play time, first join, last seen
-  - Name-to-UUID index maintained in `data/player_index.json` for offline player lookups
-  - Lazy loading: player data only loaded when needed, cached while online
-  - Automatic save on player disconnect and periodic dirty-check saves
-  - **Automatic Migration**: On first startup after update, old data files are automatically migrated
-    - Migrates: `homes.json`, `players.json`, `back_locations.json`, `kit_claims.json`, `playtime_claims.json`, `first_join.json`
-    - Old files moved to `backup/migration_{timestamp}/` folder after successful migration
-    - Migration is one-time and fully automatic - no manual steps required
-  - Server-wide data remains in separate files: `kits.json`, `warps.json`, `spawn.json`, `motd.json`, `rules.json`, `discord.json`, `aliases.json`, `autobroadcast.json`, `playtime_rewards.json`
+**Per-Player Data Storage** - Migrated from monolithic JSON files to individual player files for better scalability
+* Player data now stored in `data/players/{uuid}.json` instead of large shared files
+* Each player file contains: homes, back history, kit claims, kit cooldowns, playtime claims, wallet, play time, first join, last seen
+* Name-to-UUID index maintained in `data/player_index.json` for offline player lookups
+* Lazy loading: player data only loaded when needed, cached while online
+* Automatic save on player disconnect and periodic dirty-check saves
+* **Automatic Migration**: On first startup after update, old data files are automatically migrated
+  * Migrates: `homes.json`, `players.json`, `back_locations.json`, `kit_claims.json`, `playtime_claims.json`, `first_join.json`
+  * Old files moved to `backup/migration_{timestamp}/` folder after successful migration
+  * Migration is one-time and fully automatic - no manual steps required
+* Server-wide data remains in separate files: `kits.json`, `warps.json`, `spawn.json`, `motd.json`, `rules.json`, `discord.json`, `aliases.json`, `autobroadcast.json`, `playtime_rewards.json`
 
 ### Technical Improvements
 
-- New `PlayerFile` model consolidates all per-player data into a single class
-- New `PlayerFileStorage` handles file I/O with caching and thread-safe operations
-- New `DataMigrationService` handles one-time migration from old format
-- Updated services to use new storage: `HomeService`, `BackService`, `KitService`, `PlayerService`, `PlayTimeRewardService`
-- Better memory efficiency for servers with many players (only online players cached)
-- Improved data integrity with immediate saves after changes
+* New `PlayerFile` model consolidates all per-player data into a single class
+* New `PlayerFileStorage` handles file I/O with caching and thread-safe operations
+* New `DataMigrationService` handles one-time migration from old format
+* Updated services to use new storage: `HomeService`, `BackService`, `KitService`, `PlayerService`, `PlayTimeRewardService`
+* Better memory efficiency for servers with many players (only online players cached)
+* Improved data integrity with immediate saves after changes
 
 ## [1.1.1] - 2026-01-25
 

@@ -10,6 +10,8 @@ import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.event.EventRegistry;
+import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -21,7 +23,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,11 +49,17 @@ public class JoinQuitListener {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     
+    // Translation keys for default Hytale join/leave messages
+    // By overriding these, we can replace the default messages with our own
+    private static final String TRANSLATION_KEY_JOINED_WORLD = "server.general.playerJoinedWorld";
+    private static final String TRANSLATION_KEY_LEFT_WORLD = "server.general.playerLeftWorld";
+    
     private final ConfigManager configManager;
     private final MotdStorage motdStorage;
     private final PlayerService playerService;
     private final ScheduledExecutorService scheduler;
     private PlayerFileStorage playerFileStorage;
+    private com.eliteessentials.services.VanishService vanishService;
     
     // Track players currently on the server to differentiate world changes from joins/quits
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
@@ -76,6 +86,13 @@ public class JoinQuitListener {
      */
     public void setPlayerFileStorage(PlayerFileStorage storage) {
         this.playerFileStorage = storage;
+    }
+    
+    /**
+     * Set the vanish service (called after initialization).
+     */
+    public void setVanishService(com.eliteessentials.services.VanishService service) {
+        this.vanishService = service;
     }
     
     /**
@@ -235,6 +252,12 @@ public class JoinQuitListener {
                 return;
             }
             
+            // Override default Hytale join/leave translations with our custom messages
+            // This replaces the built-in "player has joined/left world" with our configured messages
+            if (config.joinMsg.suppressDefaultMessages) {
+                sendTranslationOverrides(playerRef);
+            }
+            
             // Track as online - this is a real server join
             onlinePlayers.add(playerId);
             // Clear any world change flag
@@ -246,6 +269,13 @@ public class JoinQuitListener {
             
             // Update player cache
             playerService.onPlayerJoin(playerId, playerName);
+            
+            // Hide vanished players from this joining player
+            if (vanishService != null) {
+                vanishService.onPlayerJoin(playerRef);
+                // Also set up map filter to hide vanished players from the map
+                vanishService.onPlayerReady(store, ref);
+            }
             
             // Notify playtime reward service
             PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();
@@ -330,6 +360,11 @@ public class JoinQuitListener {
         
         // Update player cache (last seen, play time)
         playerService.onPlayerQuit(playerId);
+        
+        // Clean up vanish state
+        if (vanishService != null) {
+            vanishService.onPlayerLeave(playerId);
+        }
         
         // Broadcast quit message if enabled
         PluginConfig config = configManager.getConfig();
@@ -459,6 +494,60 @@ public class JoinQuitListener {
         } catch (InterruptedException e) {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
+        }
+    }
+    
+    /**
+     * Send translation overrides to a player to blank out default Hytale join/leave messages.
+     * This uses the UpdateTranslations packet to override the client's translation strings
+     * with empty strings, effectively hiding the built-in messages.
+     * 
+     * Our custom join/quit messages are sent separately via broadcastMessage() which
+     * supports color codes and formatting.
+     * 
+     * Note: This results in a blank line in chat, but allows us to use colored messages.
+     */
+    private void sendTranslationOverrides(PlayerRef playerRef) {
+        if (playerRef == null) return;
+        
+        try {
+            Map<String, String> overrides = new HashMap<>();
+            
+            // Blank out the default messages - we send our own colored messages separately
+            overrides.put(TRANSLATION_KEY_JOINED_WORLD, "");
+            overrides.put(TRANSLATION_KEY_LEFT_WORLD, "");
+            
+            UpdateTranslations packet = new UpdateTranslations(UpdateType.AddOrUpdate, overrides);
+            playerRef.getPacketHandler().write(packet);
+            
+            if (configManager.isDebugEnabled()) {
+                logger.info("Sent translation overrides to " + playerRef.getUsername() 
+                        + " - blanked join/leave messages");
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to send translation overrides: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Send translation overrides to all online players.
+     * Called on reload to update all players with new message formats.
+     */
+    public void sendTranslationOverridesToAll() {
+        PluginConfig config = configManager.getConfig();
+        if (!config.joinMsg.suppressDefaultMessages) {
+            return;
+        }
+        
+        try {
+            Universe universe = Universe.get();
+            if (universe != null) {
+                for (PlayerRef player : universe.getPlayers()) {
+                    sendTranslationOverrides(player);
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to send translation overrides to all players: " + e.getMessage());
         }
     }
 }

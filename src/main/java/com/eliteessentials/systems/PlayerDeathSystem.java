@@ -72,12 +72,12 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
                 HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
-                float yaw = 0f, pitch = 0f;
+                float yaw = 0f;
                 if (headRotation != null) {
                     Vector3f rotation = headRotation.getRotation();
-                    yaw = rotation.getYaw();
-                    pitch = rotation.getPitch();
+                    yaw = rotation.y;
                 }
+                // NOTE: pitch is intentionally set to 0 to avoid player tilt on teleport
                 
                 try {
                     EntityStore entityStore = store.getExternalData();
@@ -86,7 +86,8 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
                     }
                 } catch (Exception e) { }
                 
-                Location deathLocation = new Location(worldName, pos.getX(), pos.getY(), pos.getZ(), yaw, pitch);
+                // NOTE: pitch is 0 to avoid player tilt on teleport
+                Location deathLocation = new Location(worldName, pos.getX(), pos.getY(), pos.getZ(), yaw, 0f);
                 backService.pushDeathLocation(playerId, deathLocation);
             }
             

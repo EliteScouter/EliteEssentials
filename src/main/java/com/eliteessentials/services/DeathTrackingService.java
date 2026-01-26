@@ -218,7 +218,8 @@ public class DeathTrackingService {
             Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
             
             String worldName = "world";
-            return new Location(worldName, pos.getX(), pos.getY(), pos.getZ(), rotation.x, rotation.y);
+            // NOTE: pitch is 0 to avoid player tilt on teleport, only preserve yaw (rotation.y)
+            return new Location(worldName, pos.getX(), pos.getY(), pos.getZ(), rotation.y, 0f);
         } catch (Exception e) {
             return null;
         }

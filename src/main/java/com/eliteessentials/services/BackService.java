@@ -38,11 +38,21 @@ public class BackService {
         if (location == null || playerId == null) return;
         
         PlayerFile playerFile = storage.getPlayer(playerId);
-        if (playerFile == null) return;
+        if (playerFile == null) {
+            if (configManager.isDebugEnabled()) {
+                logger.info("[BackService] Could not find player file for " + playerId + ", cannot save back location");
+            }
+            return;
+        }
         
         playerFile.pushBackLocation(location, maxHistory);
         storage.saveAndMarkDirty(playerId);
-        logger.fine("Recorded location for " + playerId + ": " + location);
+        
+        if (configManager.isDebugEnabled()) {
+            logger.info("[BackService] Saved back location for " + playerId + ": " + 
+                String.format("%.1f, %.1f, %.1f (history size: %d)", 
+                    location.getX(), location.getY(), location.getZ(), playerFile.getBackHistorySize()));
+        }
     }
 
     /**

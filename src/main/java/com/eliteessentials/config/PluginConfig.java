@@ -38,6 +38,9 @@ public class PluginConfig {
     public HealConfig heal = new HealConfig();
     public MsgConfig msg = new MsgConfig();
     public FlyConfig fly = new FlyConfig();
+    public VanishConfig vanish = new VanishConfig();
+    public GroupChatConfig groupChat = new GroupChatConfig();
+    public RepairConfig repair = new RepairConfig();
     public TopConfig top = new TopConfig();
     public KitsConfig kits = new KitsConfig();
     public SpawnProtectionConfig spawnProtection = new SpawnProtectionConfig();
@@ -170,6 +173,7 @@ public class PluginConfig {
         messages.put("rtpSearching", "&eSearching for a safe location...");
         messages.put("rtpPreparing", "&ePreparing random teleport... Stand still for &a{seconds} &eseconds!");
         messages.put("rtpTeleported", "&aTeleported to &7{location}&a.");
+        messages.put("rtpTeleportedWorld", "&aTeleported to &7{location} &ain world &b{world}&a.");
         messages.put("rtpFailed", "&cCould not find a safe location after &e{attempts} &cattempts. Try again.");
         messages.put("rtpCouldNotDeterminePosition", "&cCould not determine your position.");
         
@@ -202,6 +206,27 @@ public class PluginConfig {
         messages.put("flySpeedReset", "&aFly speed reset to default.");
         messages.put("flySpeedInvalid", "&cInvalid speed value. Use a number &7(10-100) &cor &e'reset'&c.");
         messages.put("flySpeedOutOfRange", "&cSpeed must be between &e10 &cand &e100&c, or use &e'reset'&c.");
+        
+        // ==================== VANISH ====================
+        messages.put("vanishEnabled", "&aYou are now vanished. Other players cannot see you.");
+        messages.put("vanishDisabled", "&cYou are now visible to other players.");
+        messages.put("vanishReminder", "&7You are currently vanished.");
+        messages.put("vanishFakeLeave", "&e{player} &7left the server.");
+        messages.put("vanishFakeJoin", "&e{player} &7joined the server.");
+        
+        // ==================== GROUP CHAT ====================
+        messages.put("groupChatNoAccess", "&cYou don't have access to any group chats.");
+        messages.put("groupChatUsage", "&cUsage: &e/gc <message>");
+        messages.put("groupChatUsageGroup", "&cUsage: &e/gc {group} <message>");
+        messages.put("groupChatUsageMultiple", "&cUsage: &e/gc [group] <message> &7- Groups: {groups}");
+        
+        // ==================== REPAIR ====================
+        messages.put("repairSuccess", "&aRepaired the item in your hand.");
+        messages.put("repairAllSuccess", "&aRepaired &e{count} &aitems.");
+        messages.put("repairNoItem", "&cYou are not holding an item.");
+        messages.put("repairNotDamaged", "&cThis item is not damaged.");
+        messages.put("repairNothingToRepair", "&cNo items need repair.");
+        messages.put("repairNoPermissionAll", "&cYou don't have permission to repair all items.");
         
         // ==================== TOP ====================
         messages.put("topTeleported", "&aTeleported to the top!");
@@ -548,6 +573,39 @@ public class PluginConfig {
     
     public static class FlyConfig {
         /** Enable/disable the /fly command */
+        public boolean enabled = true;
+    }
+
+    // ==================== VANISH ====================
+    
+    public static class VanishConfig {
+        /** Enable/disable the /vanish command */
+        public boolean enabled = true;
+        
+        /** Hide vanished players from the Server Players list (tab list) */
+        public boolean hideFromList = true;
+        
+        /** Hide vanished players from the world map */
+        public boolean hideFromMap = true;
+        
+        /** Send fake join/leave messages when vanishing/unvanishing */
+        public boolean mimicJoinLeave = true;
+    }
+
+    // ==================== GROUP CHAT ====================
+    
+    public static class GroupChatConfig {
+        /** 
+         * Enable/disable group chat feature.
+         * Requires LuckPerms for group detection.
+         */
+        public boolean enabled = true;
+    }
+
+    // ==================== REPAIR ====================
+    
+    public static class RepairConfig {
+        /** Enable/disable the /repair command */
         public boolean enabled = true;
     }
 

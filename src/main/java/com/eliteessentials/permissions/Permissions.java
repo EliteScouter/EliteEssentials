@@ -117,6 +117,10 @@ public final class Permissions {
     public static final String DISCORD = MISC_CATEGORY + ".discord";
     public static final String SEEN = MISC_CATEGORY + ".seen";
     public static final String EEHELP = MISC_CATEGORY + ".eehelp";
+    public static final String VANISH = MISC_CATEGORY + ".vanish";
+    public static final String REPAIR = MISC_CATEGORY + ".repair";
+    public static final String REPAIR_ALL = MISC_CATEGORY + ".repair.all";
+    public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
 
     // ==================== KIT CATEGORY ====================
     // eliteessentials.command.kit.*
@@ -149,6 +153,8 @@ public final class Permissions {
     public static final String ADMIN = ADMIN_BASE + ".*";
     public static final String ADMIN_RELOAD = ADMIN_BASE + ".reload";
     public static final String ADMIN_ALIAS = ADMIN_BASE + ".alias";
+    public static final String ADMIN_SENDMESSAGE = ADMIN_BASE + ".sendmessage";
+    public static final String ADMIN_RTP = ADMIN_BASE + ".rtp";
 
     // ==================== ECONOMY CATEGORY ====================
     // eliteessentials.command.economy.*

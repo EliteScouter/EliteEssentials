@@ -4,6 +4,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.WarmupService;
@@ -19,12 +20,14 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -40,21 +43,23 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
 /**
- * Command: /rtp
- * Teleports the player to a random location within the configured range.
+ * Command: /rtp [player] [world]
+ * Teleports a player to a random location within the configured range.
+ * 
+ * Usage:
+ * - /rtp                    - RTP yourself in current world
+ * - /rtp <player>           - Admin: RTP player in their current world
+ * - /rtp <player> <world>   - Admin: RTP player to a specific world
+ * 
+ * Can be executed from console for automation (e.g., portal NPCs).
  * 
  * Permissions:
- * - eliteessentials.command.rtp - Use /rtp command
+ * - eliteessentials.command.rtp - Use /rtp command (self)
+ * - eliteessentials.admin.rtp - RTP other players / use from console
  * - eliteessentials.bypass.warmup.rtp - Skip warmup
  * - eliteessentials.bypass.cooldown.rtp - Skip cooldown
- * 
- * NOTE: This class uses reflection to call WorldChunk.getFluidId() because:
- * 1. The method exists but isn't exposed in the public API interface
- * 2. Direct fluid detection is essential for safe teleport location validation
- * 3. No alternative API method exists for checking water/lava at coordinates
- * If the Hytale API exposes getFluidId() directly in the future, this should be refactored.
  */
-public class HytaleRtpCommand extends AbstractPlayerCommand {
+public class HytaleRtpCommand extends CommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -72,7 +77,7 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         this.configManager = configManager;
         this.warmupService = warmupService;
         
-        // Permission check handled in execute() via CommandPermissionUtil
+        setAllowsExtraArguments(true);
     }
 
     @Override
@@ -81,10 +86,63 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
-                          @Nonnull PlayerRef player, @Nonnull World world) {
-        UUID playerId = player.getUuid();
+    protected void executeSync(@Nonnull CommandContext ctx) {
         PluginConfig.RtpConfig rtpConfig = configManager.getConfig().rtp;
+        
+        // Parse arguments: /rtp [player] [world]
+        String rawInput = ctx.getInputString();
+        String[] parts = rawInput.split("\\s+");
+        
+        String targetPlayerName = null;
+        String targetWorldName = null;
+        
+        if (parts.length >= 2) {
+            targetPlayerName = parts[1];
+        }
+        if (parts.length >= 3) {
+            targetWorldName = parts[2];
+        }
+        
+        // Determine if this is a self-RTP or admin RTP
+        boolean isSelfRtp = (targetPlayerName == null);
+        boolean isAdminRtp = !isSelfRtp;
+        
+        // Get the sender info
+        Object sender = ctx.sender();
+        boolean isConsoleSender = !(sender instanceof PlayerRef);
+        
+        // If console is running without a target, show usage
+        if (isConsoleSender && isSelfRtp) {
+            ctx.sendMessage(Message.raw("Usage: /rtp <player> [world]").color("#FF5555"));
+            return;
+        }
+        
+        // Permission check for admin RTP
+        if (isAdminRtp) {
+            // For console, always allow. For players, check admin permission
+            if (!isConsoleSender) {
+                PlayerRef senderPlayer = (PlayerRef) sender;
+                if (!PermissionService.get().canUseAdminCommand(senderPlayer.getUuid(), Permissions.ADMIN_RTP, true)) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                    return;
+                }
+            }
+        }
+        
+        // Find the target player
+        PlayerRef targetPlayer;
+        if (isSelfRtp) {
+            targetPlayer = (PlayerRef) sender;
+        } else {
+            targetPlayer = findOnlinePlayer(targetPlayerName);
+            if (targetPlayer == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNotFound", "player", targetPlayerName), "#FF5555"));
+                return;
+            }
+        }
+        
+        UUID playerId = targetPlayer.getUuid();
         
         // Register player for death tracking
         com.eliteessentials.EliteEssentials plugin = com.eliteessentials.EliteEssentials.getInstance();
@@ -92,25 +150,87 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             plugin.getDeathTrackingService().trackPlayer(playerId);
         }
         
-        // Check permission and enabled state with cost
-        if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.RTP, 
-                rtpConfig.enabled, "rtp", rtpConfig.cost)) {
-            return;
+        // Permission check for self-RTP (with cost)
+        if (isSelfRtp) {
+            if (!CommandPermissionUtil.canExecuteWithCost(ctx, targetPlayer, Permissions.RTP, 
+                    rtpConfig.enabled, "rtp", rtpConfig.cost)) {
+                return;
+            }
         }
         
-        // Check if player already has a warmup in progress
-        if (warmupService.hasActiveWarmup(playerId)) {
+        // Find the target world
+        World targetWorld;
+        if (targetWorldName != null) {
+            // Admin specified a world
+            targetWorld = findWorld(targetWorldName);
+            if (targetWorld == null) {
+                ctx.sendMessage(Message.raw("World '" + targetWorldName + "' not found.").color("#FF5555"));
+                return;
+            }
+        } else {
+            // Use player's current world
+            targetWorld = findPlayerWorld(targetPlayer);
+            if (targetWorld == null) {
+                ctx.sendMessage(Message.raw("Could not determine player's world.").color("#FF5555"));
+                return;
+            }
+        }
+        
+        // Check if this is a cross-world RTP (player is in different world than target)
+        World playerCurrentWorld = findPlayerWorld(targetPlayer);
+        boolean isCrossWorld = playerCurrentWorld == null || !playerCurrentWorld.getName().equals(targetWorld.getName());
+        
+        // Execute RTP on the target world's thread
+        final World finalTargetWorld = targetWorld;
+        final boolean finalIsAdminRtp = isAdminRtp;
+        final boolean finalIsCrossWorld = isCrossWorld;
+        final World finalPlayerCurrentWorld = playerCurrentWorld;
+        
+        targetWorld.execute(() -> {
+            if (finalIsCrossWorld) {
+                // Cross-world RTP - search for location then teleport from player's current world
+                performCrossWorldRtp(ctx, targetPlayer, playerId, finalTargetWorld, rtpConfig, finalIsAdminRtp);
+            } else {
+                // Same-world RTP
+                executeRtpOnWorld(ctx, targetPlayer, playerId, finalTargetWorld, rtpConfig, finalIsAdminRtp);
+            }
+        });
+    }
+    
+    /**
+     * Execute RTP logic on the target world's thread.
+     * Only called when player is already in the target world.
+     */
+    private void executeRtpOnWorld(CommandContext ctx, PlayerRef player, UUID playerId, 
+                                    World world, PluginConfig.RtpConfig rtpConfig, boolean isAdminRtp) {
+        
+        // Check if player already has a warmup in progress (skip for admin RTP)
+        if (!isAdminRtp && warmupService.hasActiveWarmup(playerId)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("teleportInProgress"), "#FF5555"));
             return;
         }
         
-        // Check cooldown (with bypass check)
-        if (!CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
+        // Check cooldown (skip for admin RTP)
+        if (!isAdminRtp && !CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
             int cooldownRemaining = rtpService.getCooldownRemaining(playerId);
             if (cooldownRemaining > 0) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
                 return;
             }
+        }
+        
+        // Get player's store and ref - player should be in this world
+        Ref<EntityStore> ref = player.getReference();
+        
+        if (ref == null || !ref.isValid()) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpCouldNotDeterminePosition"), "#FF5555"));
+            return;
+        }
+        
+        Store<EntityStore> store = ref.getStore();
+        if (store == null) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpCouldNotDeterminePosition"), "#FF5555"));
+            return;
         }
 
         // Get player's current position for /back
@@ -135,12 +255,12 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             rotation.x, rotation.y
         );
 
-        // Get effective warmup (check bypass permission)
-        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, rtpConfig.warmupSeconds);
+        // Get effective warmup (skip for admin RTP)
+        int warmupSeconds = isAdminRtp ? 0 : CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, rtpConfig.warmupSeconds);
         
         if (configManager.isDebugEnabled()) {
             logger.info("[RTP] Config warmup: " + rtpConfig.warmupSeconds + ", effective: " + warmupSeconds + 
-                       ", min: " + rtpConfig.minRange + ", max: " + rtpConfig.maxRange);
+                       ", min: " + rtpConfig.minRange + ", max: " + rtpConfig.maxRange + ", isAdmin: " + isAdminRtp);
         }
         
         // If warmup is configured, do warmup FIRST, then find location
@@ -149,32 +269,45 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             
             // Create action that runs AFTER warmup completes
             Runnable afterWarmup = () -> {
-                // Now search and teleport
-                findAndTeleport(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig);
+                findAndTeleport(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig, isAdminRtp);
             };
             
-            // Pass current position and world context for movement checking
             warmupService.startWarmup(player, currentPos, warmupSeconds, afterWarmup, COMMAND_NAME, world, store, ref);
         } else {
             // No warmup, search and teleport immediately
-            ctx.sendMessage(MessageFormatter.formatWithFallback("Searching for a safe location...", "#AAAAAA"));
-            findAndTeleport(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig);
+            if (!isAdminRtp) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback("Searching for a safe location...", "#AAAAAA"));
+            }
+            findAndTeleport(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig, isAdminRtp);
         }
     }
+    
+    /**
+     * Perform cross-world RTP when player is not in the target world.
+     */
+    private void performCrossWorldRtp(CommandContext ctx, PlayerRef player, UUID playerId, 
+                                       World targetWorld, PluginConfig.RtpConfig rtpConfig, boolean isAdminRtp) {
+        double centerX = 1.0;
+        double centerZ = 1.0;
+        
+        // Search for safe location and teleport
+        tryNextLocationCrossWorld(ctx, player, targetWorld, playerId, centerX, centerZ, rtpConfig, 0, isAdminRtp);
+    }
+
     
     private void findAndTeleport(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                                   PlayerRef player, World world, UUID playerId, 
                                   double centerX, double centerZ, Location currentLoc,
-                                  PluginConfig.RtpConfig rtpConfig) {
+                                  PluginConfig.RtpConfig rtpConfig, boolean isAdminRtp) {
         
         // Start the async search
-        tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig, 0);
+        tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, currentLoc, rtpConfig, 0, isAdminRtp);
     }
     
     private void tryNextLocation(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                                   PlayerRef player, World world, UUID playerId, 
                                   double centerX, double centerZ, Location currentLoc,
-                                  PluginConfig.RtpConfig rtpConfig, int attempt) {
+                                  PluginConfig.RtpConfig rtpConfig, int attempt, boolean isAdminRtp) {
         
         int maxAttempts = rtpConfig.maxAttempts;
         boolean debug = configManager.isDebugEnabled();
@@ -217,11 +350,9 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             if (debug) {
                 logger.info("[RTP] Chunk already loaded, processing immediately");
             }
-            // Already loaded - process immediately
             processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                        currentLoc, rtpConfig, attempt, targetX, targetZ, chunk);
+                        currentLoc, rtpConfig, attempt, targetX, targetZ, chunk, isAdminRtp);
         } else {
-            // Chunk not loaded - load it async and wait for it to be fully ready
             if (debug) {
                 logger.info("[RTP] Chunk not loaded, loading asynchronously...");
             }
@@ -235,19 +366,66 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                     if (debug) {
                         logger.info("[RTP] Failed to load chunk: " + (error != null ? error.getMessage() : "null"));
                     }
-                    // Try next location on game thread
                     world.execute(() -> {
                         tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                                       currentLoc, rtpConfig, currentAttempt + 1);
+                                       currentLoc, rtpConfig, currentAttempt + 1, isAdminRtp);
                     });
                 } else {
                     if (debug) {
                         logger.info("[RTP] Chunk loaded successfully");
                     }
-                    // Chunk loaded - process on game thread
                     world.execute(() -> {
                         processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                                    currentLoc, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk);
+                                    currentLoc, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk, isAdminRtp);
+                    });
+                }
+            });
+        }
+    }
+    
+    /**
+     * Cross-world version of tryNextLocation - doesn't require store/ref.
+     */
+    private void tryNextLocationCrossWorld(CommandContext ctx, PlayerRef player, World world, UUID playerId, 
+                                            double centerX, double centerZ, PluginConfig.RtpConfig rtpConfig, 
+                                            int attempt, boolean isAdminRtp) {
+        
+        int maxAttempts = rtpConfig.maxAttempts;
+        boolean debug = configManager.isDebugEnabled();
+        
+        if (attempt >= maxAttempts) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpFailed", "attempts", String.valueOf(maxAttempts)), "#FF5555"));
+            return;
+        }
+        
+        Random random = new Random();
+        double angle = random.nextDouble() * 2 * Math.PI;
+        double distance = rtpConfig.minRange + random.nextDouble() * (rtpConfig.maxRange - rtpConfig.minRange);
+        double targetX = centerX + Math.cos(angle) * distance;
+        double targetZ = centerZ + Math.sin(angle) * distance;
+        
+        long chunkIndex = ChunkUtil.indexChunkFromBlock(targetX, targetZ);
+        
+        WorldChunk chunk = world.getChunkIfLoaded(chunkIndex);
+        if (chunk == null) {
+            chunk = world.getChunkIfInMemory(chunkIndex);
+        }
+        
+        if (chunk != null) {
+            processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, attempt, targetX, targetZ, chunk, isAdminRtp);
+        } else {
+            final int currentAttempt = attempt;
+            final double finalTargetX = targetX;
+            final double finalTargetZ = targetZ;
+            
+            world.getChunkAsync(chunkIndex).whenComplete((loadedChunk, error) -> {
+                if (error != null || loadedChunk == null) {
+                    world.execute(() -> {
+                        tryNextLocationCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, currentAttempt + 1, isAdminRtp);
+                    });
+                } else {
+                    world.execute(() -> {
+                        processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk, isAdminRtp);
                     });
                 }
             });
@@ -258,12 +436,11 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                                PlayerRef player, World world, UUID playerId,
                                double centerX, double centerZ, Location currentLoc,
                                PluginConfig.RtpConfig rtpConfig, int attempt,
-                               double targetX, double targetZ, WorldChunk chunk) {
+                               double targetX, double targetZ, WorldChunk chunk, boolean isAdminRtp) {
         boolean debug = configManager.isDebugEnabled();
         int blockX = MathUtil.floor(targetX);
         int blockZ = MathUtil.floor(targetZ);
         
-        // Find the actual highest solid block (like /top command does)
         Integer groundY = findHighestSolidBlock(chunk, blockX, blockZ, rtpConfig.minSurfaceY);
         
         if (groundY == null) {
@@ -272,53 +449,59 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
             }
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpSearching"), "#AAAAAA"));
             tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                           currentLoc, rtpConfig, attempt + 1);
+                           currentLoc, rtpConfig, attempt + 1, isAdminRtp);
             return;
         }
         
-        if (debug) {
-            logger.info("[RTP] Found solid ground at Y=" + groundY);
-        }
-        
-        // Teleport 1 block above the ground (player's feet at groundY + 1)
         double teleportY = groundY + 1;
         
-        if (debug) {
-            logger.info("[RTP] Final teleport Y: " + teleportY);
-            
-            // DEBUG: Inspect blocks at and around the teleport location
-            debugBlocksAtLocation(chunk, blockX, (int) teleportY, blockZ);
-        }
-        
-        // SAFETY CHECK: Verify location is safe (no water/lava)
         if (!isSafeLocation(chunk, blockX, (int) teleportY, blockZ, debug)) {
             if (debug) {
                 logger.info("[RTP] Location rejected - unsafe (water/lava detected)");
             }
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpSearching"), "#AAAAAA"));
-            
-            // Try next location
             tryNextLocation(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                           currentLoc, rtpConfig, attempt + 1);
+                           currentLoc, rtpConfig, attempt + 1, isAdminRtp);
             return;
         }
         
-        if (debug) {
-            logger.info("[RTP] Location verified as safe");
-        }
-        
-        executeTeleport(ctx, store, ref, world, playerId, currentLoc, rtpConfig, 
-                       targetX, teleportY, targetZ);
+        executeTeleport(ctx, store, ref, world, playerId, currentLoc, rtpConfig, targetX, teleportY, targetZ, isAdminRtp);
     }
     
-    /**
-     * Finds the highest solid block at the given X/Z position.
-     * Scans from top to bottom like the /top command.
-     * 
-     * @return Y coordinate of highest solid block, or null if none found
-     */
+    private void processChunkCrossWorld(CommandContext ctx, PlayerRef player, World world, UUID playerId,
+                                         double centerX, double centerZ, PluginConfig.RtpConfig rtpConfig, 
+                                         int attempt, double targetX, double targetZ, WorldChunk chunk, boolean isAdminRtp) {
+        boolean debug = configManager.isDebugEnabled();
+        int blockX = MathUtil.floor(targetX);
+        int blockZ = MathUtil.floor(targetZ);
+        
+        Integer groundY = findHighestSolidBlock(chunk, blockX, blockZ, rtpConfig.minSurfaceY);
+        
+        if (groundY == null) {
+            if (debug) {
+                logger.info("[RTP] No solid ground found at (" + blockX + ", " + blockZ + "), trying next location");
+            }
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpSearching"), "#AAAAAA"));
+            tryNextLocationCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, attempt + 1, isAdminRtp);
+            return;
+        }
+        
+        double teleportY = groundY + 1;
+        
+        if (!isSafeLocation(chunk, blockX, (int) teleportY, blockZ, debug)) {
+            if (debug) {
+                logger.info("[RTP] Location rejected - unsafe (water/lava detected)");
+            }
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpSearching"), "#AAAAAA"));
+            tryNextLocationCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, attempt + 1, isAdminRtp);
+            return;
+        }
+        
+        executeCrossWorldTeleport(ctx, player, world, playerId, rtpConfig, targetX, teleportY, targetZ, isAdminRtp);
+    }
+
+    
     private Integer findHighestSolidBlock(WorldChunk chunk, int x, int z, int minY) {
-        // Start from a reasonable max height and scan down
         for (int y = 255; y >= minY; y--) {
             try {
                 BlockType blockType = chunk.getBlockType(x, y, z);
@@ -326,29 +509,17 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                     return y;
                 }
             } catch (Exception e) {
-                // Continue scanning if we hit an error
+                // Continue scanning
             }
         }
         return null;
     }
     
-    /**
-     * Check if a location is safe for teleportation (no water/lava).
-     * Uses the chunk's getFluidId method to detect fluids.
-     * 
-     * FluidId 0 = No fluid (safe)
-     * FluidId 6 = Lava (unsafe)
-     * FluidId 7 = Water (unsafe)
-     * 
-     * @return true if safe, false if unsafe (has water/lava)
-     */
     private boolean isSafeLocation(WorldChunk chunk, int x, int y, int z, boolean debug) {
         try {
-            // Use reflection to call getFluidId
             Method getFluidIdMethod = chunk.getClass().getMethod("getFluidId", int.class, int.class, int.class);
             
-            // Check a wider vertical range to catch lava above water, etc.
-            // Check from 2 blocks below to 3 blocks above the teleport point
+            // Check vertical range
             for (int yOffset = -2; yOffset <= 3; yOffset++) {
                 int checkY = y + yOffset;
                 if (checkY < 0 || checkY >= 256) continue;
@@ -356,22 +527,17 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                 Object fluidIdObj = getFluidIdMethod.invoke(chunk, x, checkY, z);
                 if (fluidIdObj instanceof Integer) {
                     int fluidId = (Integer) fluidIdObj;
-                    
-                    // FluidId 0 = no fluid (safe)
-                    // FluidId 6 = lava (unsafe)
-                    // FluidId 7 = water (unsafe)
                     if (fluidId == 6 || fluidId == 7) {
                         if (debug) {
                             String fluidType = (fluidId == 6) ? "LAVA" : "WATER";
-                            logger.info("[RTP-SAFETY] " + fluidType + " detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset + " (" + checkY + "): FluidId=" + fluidId);
+                            logger.info("[RTP-SAFETY] " + fluidType + " detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset);
                         }
-                        return false; // Unsafe - has lava or water in the area
+                        return false;
                     }
                 }
             }
             
-            // Also check horizontally adjacent blocks at the teleport level
-            // This catches pools/lakes next to the spawn point
+            // Check adjacent blocks
             int[][] offsets = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
             for (int[] offset : offsets) {
                 int checkX = x + offset[0];
@@ -381,246 +547,25 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
                 if (fluidIdObj instanceof Integer) {
                     int fluidId = (Integer) fluidIdObj;
                     if (fluidId == 6 || fluidId == 7) {
-                        if (debug) {
-                            String fluidType = (fluidId == 6) ? "LAVA" : "WATER";
-                            logger.info("[RTP-SAFETY] " + fluidType + " detected adjacent: FluidId=" + fluidId);
-                        }
-                        return false; // Unsafe - fluid right next to spawn
+                        return false;
                     }
                 }
             }
             
-            return true; // Safe - no dangerous fluids detected
-            
-        } catch (Exception e) {
-            if (debug) {
-                logger.warning("[RTP-SAFETY] Could not check fluids (assuming safe): " + e.getMessage());
-            }
-            // If we can't check fluids, assume safe (fallback to old behavior)
             return true;
-        }
-    }
-    
-    /**
-     * Debug helper to inspect blocks at a location.
-     * This helps us discover BlockMaterial values for water, lava, and other blocks.
-     */
-    private void debugBlocksAtLocation(WorldChunk chunk, int worldX, int worldY, int worldZ) {
-        logger.info("[RTP-DEBUG] ========== Block Analysis at (" + worldX + ", " + worldY + ", " + worldZ + ") ==========");
-        
-        // Get the height map value for comparison
-        int localX = worldX & 15;
-        int localZ = worldZ & 15;
-        try {
-            short heightMapY = chunk.getHeight(localX, localZ);
-            logger.info("[RTP-DEBUG] Height map says surface is at Y=" + heightMapY);
         } catch (Exception e) {
-            logger.info("[RTP-DEBUG] Could not read height map: " + e.getMessage());
+            return true; // Assume safe if can't check
         }
-        
-        // Check blocks in a vertical column (wider range to catch surface)
-        for (int yOffset = -5; yOffset <= 5; yOffset++) {
-            int checkY = worldY + yOffset;
-            if (checkY < 0 || checkY >= 256) continue;
-            
-            try {
-                BlockType blockType = chunk.getBlockType(worldX, checkY, worldZ);
-                
-                String position = "Y" + (yOffset >= 0 ? "+" : "") + yOffset + " (" + checkY + ")";
-                
-                if (blockType == null) {
-                    logger.info("[RTP-DEBUG] " + position + ": NULL (air or unloaded)");
-                } else {
-                    // Get all available information about the block
-                    String blockInfo = position + ": ";
-                    
-                    // Try to get block ID/name
-                    try {
-                        String id = blockType.getId();
-                        blockInfo += "ID='" + id + "' ";
-                        
-                        // Flag water/lava specifically
-                        if (id.toLowerCase().contains("water")) {
-                            blockInfo += "[WATER!] ";
-                        }
-                        if (id.toLowerCase().contains("lava")) {
-                            blockInfo += "[LAVA!] ";
-                        }
-                    } catch (Exception e) {
-                        blockInfo += "ID=<error> ";
-                    }
-                    
-                    // Get material type
-                    try {
-                        BlockMaterial material = blockType.getMaterial();
-                        blockInfo += "Material=" + material;
-                        
-                        // Check if it's solid (we know this works from /top command)
-                        if (material == BlockMaterial.Solid) {
-                            blockInfo += " [SOLID]";
-                        } else if (material == BlockMaterial.Empty) {
-                            blockInfo += " [EMPTY/AIR]";
-                        } else {
-                            blockInfo += " [" + material.name() + "]";
-                        }
-                    } catch (Exception e) {
-                        blockInfo += "Material=<error>";
-                    }
-                    
-                    // Try to check if it's a fluid using other methods
-                    try {
-                        // Check class name for clues
-                        String className = blockType.getClass().getSimpleName();
-                        if (className.toLowerCase().contains("fluid") || 
-                            className.toLowerCase().contains("water") || 
-                            className.toLowerCase().contains("lava")) {
-                            blockInfo += " Class=" + className + " [FLUID CLASS!]";
-                        }
-                    } catch (Exception e) {
-                        // Ignore
-                    }
-                    
-                    logger.info("[RTP-DEBUG] " + blockInfo);
-                }
-            } catch (Exception e) {
-                logger.info("[RTP-DEBUG] Y" + (yOffset >= 0 ? "+" : "") + yOffset + ": ERROR - " + e.getMessage());
-            }
-        }
-        
-        // Check the actual surface level from height map
-        try {
-            short surfaceY = chunk.getHeight(localX, localZ);
-            logger.info("[RTP-DEBUG] --- Checking surface level (Y=" + surfaceY + ") ---");
-            
-            for (int yOffset = -2; yOffset <= 2; yOffset++) {
-                int checkY = surfaceY + yOffset;
-                if (checkY < 0 || checkY >= 256) continue;
-                
-                BlockType blockType = chunk.getBlockType(worldX, checkY, worldZ);
-                if (blockType != null) {
-                    String id = blockType.getId();
-                    String material = blockType.getMaterial().toString();
-                    logger.info("[RTP-DEBUG] Surface" + (yOffset >= 0 ? "+" : "") + yOffset + " (" + checkY + "): ID='" + id + "' Material=" + material);
-                }
-            }
-        } catch (Exception e) {
-            logger.info("[RTP-DEBUG] Could not check surface level: " + e.getMessage());
-        }
-        
-        // Also check horizontally for nearby fluids
-        logger.info("[RTP-DEBUG] --- Checking adjacent blocks (horizontal at Y=" + worldY + ") ---");
-        int[][] offsets = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-        String[] directions = {"East", "West", "South", "North"};
-        
-        for (int i = 0; i < offsets.length; i++) {
-            int checkX = worldX + offsets[i][0];
-            int checkZ = worldZ + offsets[i][1];
-            
-            try {
-                BlockType blockType = chunk.getBlockType(checkX, worldY, checkZ);
-                if (blockType != null) {
-                    String id = "unknown";
-                    String material = "unknown";
-                    
-                    try {
-                        id = blockType.getId();
-                    } catch (Exception e) {
-                        // Ignore
-                    }
-                    
-                    try {
-                        material = blockType.getMaterial().toString();
-                    } catch (Exception e) {
-                        // Ignore
-                    }
-                    
-                    String flag = "";
-                    if (id.toLowerCase().contains("water")) flag = " [WATER!]";
-                    if (id.toLowerCase().contains("lava")) flag = " [LAVA!]";
-                    
-                    logger.info("[RTP-DEBUG] " + directions[i] + ": ID='" + id + "' Material=" + material + flag);
-                }
-            } catch (Exception e) {
-                // Ignore - might be outside chunk bounds
-            }
-        }
-        
-        // Try to check fluid section if it exists
-        logger.info("[RTP-DEBUG] --- Attempting to check fluid data ---");
-        try {
-            // This is exploratory - we don't know if these methods exist
-            logger.info("[RTP-DEBUG] Chunk class: " + chunk.getClass().getName());
-            
-            // Look for fluid-related methods
-            Method[] methods = chunk.getClass().getMethods();
-            logger.info("[RTP-DEBUG] Looking for fluid-related methods...");
-            for (Method method : methods) {
-                String methodName = method.getName().toLowerCase();
-                if (methodName.contains("fluid") || methodName.contains("water") || methodName.contains("lava")) {
-                    logger.info("[RTP-DEBUG] Found method: " + method.getName() + " returns " + method.getReturnType().getSimpleName());
-                }
-            }
-            
-            // Try to call getFluidId - this is the key method!
-            try {
-                Method getFluidIdMethod = chunk.getClass().getMethod("getFluidId", int.class, int.class, int.class);
-                Object fluidIdResult = getFluidIdMethod.invoke(chunk, worldX, worldY, worldZ);
-                logger.info("[RTP-DEBUG] getFluidId(" + worldX + ", " + worldY + ", " + worldZ + ") = " + fluidIdResult);
-                
-                // Also check the surface level
-                short surfaceY = chunk.getHeight(localX, localZ);
-                Object surfaceFluidId = getFluidIdMethod.invoke(chunk, worldX, (int)surfaceY, worldZ);
-                logger.info("[RTP-DEBUG] getFluidId at surface (Y=" + surfaceY + ") = " + surfaceFluidId);
-                
-                // Check a few blocks around the teleport Y
-                for (int yOffset = -2; yOffset <= 2; yOffset++) {
-                    int checkY = worldY + yOffset;
-                    if (checkY >= 0 && checkY < 256) {
-                        Object fluidId = getFluidIdMethod.invoke(chunk, worldX, checkY, worldZ);
-                        if (fluidId != null && !fluidId.equals(0)) {
-                            logger.info("[RTP-DEBUG] FLUID DETECTED at Y" + (yOffset >= 0 ? "+" : "") + yOffset + " (" + checkY + "): FluidId=" + fluidId);
-                        }
-                    }
-                }
-            } catch (NoSuchMethodException e) {
-                logger.info("[RTP-DEBUG] No getFluidId(x,y,z) method found");
-            } catch (Exception e) {
-                logger.info("[RTP-DEBUG] Error calling getFluidId: " + e.getMessage());
-            }
-            
-            // Try to call getFluidLevel
-            try {
-                Method getFluidLevelMethod = chunk.getClass().getMethod("getFluidLevel", int.class, int.class, int.class);
-                Object fluidLevelResult = getFluidLevelMethod.invoke(chunk, worldX, worldY, worldZ);
-                logger.info("[RTP-DEBUG] getFluidLevel(" + worldX + ", " + worldY + ", " + worldZ + ") = " + fluidLevelResult);
-            } catch (NoSuchMethodException e) {
-                logger.info("[RTP-DEBUG] No getFluidLevel(x,y,z) method found");
-            } catch (Exception e) {
-                logger.info("[RTP-DEBUG] Error calling getFluidLevel: " + e.getMessage());
-            }
-            
-        } catch (Exception e) {
-            logger.info("[RTP-DEBUG] Could not inspect chunk class: " + e.getMessage());
-        }
-        
-        logger.info("[RTP-DEBUG] ========================================");
     }
     
     private void executeTeleport(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                                   World world, UUID playerId, Location currentLoc,
                                   PluginConfig.RtpConfig rtpConfig,
-                                  double teleportX, double teleportY, double teleportZ) {
+                                  double teleportX, double teleportY, double teleportZ, boolean isAdminRtp) {
         boolean debug = configManager.isDebugEnabled();
         
         if (debug) {
-            logger.info("[RTP] ========== EXECUTING TELEPORT ==========");
             logger.info("[RTP] Teleporting to: " + String.format("%.1f, %.1f, %.1f", teleportX, teleportY, teleportZ));
-            logger.info("[RTP] From: " + String.format("%.1f, %.1f, %.1f", currentLoc.getX(), currentLoc.getY(), currentLoc.getZ()));
-            double distance = Math.sqrt(
-                Math.pow(teleportX - currentLoc.getX(), 2) + 
-                Math.pow(teleportZ - currentLoc.getZ(), 2)
-            );
-            logger.info("[RTP] Distance traveled: " + String.format("%.1f", distance) + " blocks");
         }
         
         // Save location for /back
@@ -628,33 +573,23 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         
         int invulnerabilitySeconds = rtpConfig.invulnerabilitySeconds;
         
-        // Create teleport - use putComponent to avoid "already exists" error
         // Get current yaw to preserve horizontal facing direction
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
         float currentYaw = headRotation != null ? headRotation.getRotation().y : 0;
         
         Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
-        // Always use pitch=0 to keep player upright
         Teleport teleport = new Teleport(targetPos, new Vector3f(0, currentYaw, 0));
         store.putComponent(ref, Teleport.getComponentType(), teleport);
         
         if (invulnerabilitySeconds > 0) {
-            // Use putComponent instead of addComponent to handle case where component already exists
             store.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-            
-            if (debug) {
-                logger.info("[RTP] Applied " + invulnerabilitySeconds + "s invulnerability");
-            }
             
             scheduler.schedule(() -> {
                 world.execute(() -> {
                     try {
                         store.removeComponent(ref, Invulnerable.getComponentType());
-                        if (debug) {
-                            logger.info("[RTP] Removed invulnerability");
-                        }
                     } catch (Exception e) {
-                        // Ignore - component might already be removed or player disconnected
+                        // Ignore
                     }
                 });
             }, invulnerabilitySeconds, TimeUnit.SECONDS);
@@ -663,11 +598,116 @@ public class HytaleRtpCommand extends AbstractPlayerCommand {
         String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpTeleported", "location", location), "#55FF55"));
         
-        rtpService.setCooldown(playerId);
+        // Only set cooldown for self-RTP
+        if (!isAdminRtp) {
+            rtpService.setCooldown(playerId);
+        }
+    }
+    
+    private void executeCrossWorldTeleport(CommandContext ctx, PlayerRef player, World targetWorld, UUID playerId,
+                                            PluginConfig.RtpConfig rtpConfig,
+                                            double teleportX, double teleportY, double teleportZ, boolean isAdminRtp) {
+        boolean debug = configManager.isDebugEnabled();
         
         if (debug) {
-            logger.info("[RTP] Teleport complete, cooldown set");
-            logger.info("[RTP] ========================================");
+            logger.info("[RTP] Cross-world teleport to " + targetWorld.getName() + " at " + 
+                       String.format("%.1f, %.1f, %.1f", teleportX, teleportY, teleportZ));
         }
+        
+        // Find player's current world - we need to execute on THAT thread
+        World currentWorld = findPlayerWorld(player);
+        if (currentWorld == null) {
+            ctx.sendMessage(Message.raw("Could not find player's current world.").color("#FF5555"));
+            return;
+        }
+        
+        // Execute on player's current world thread to access their store/ref
+        currentWorld.execute(() -> {
+            // Get player's store and ref directly from PlayerRef
+            Ref<EntityStore> ref = player.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(Message.raw("Could not find player entity.").color("#FF5555"));
+                return;
+            }
+            
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(Message.raw("Could not find player store.").color("#FF5555"));
+                return;
+            }
+            
+            // Save current location for /back
+            TransformComponent transform = (TransformComponent) store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform != null) {
+                Vector3d currentPos = transform.getPosition();
+                HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
+                Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+                Location currentLoc = new Location(
+                    currentWorld.getName(),
+                    currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+                    rotation.x, rotation.y
+                );
+                backService.pushLocation(playerId, currentLoc);
+            }
+            
+            // Teleport to target world
+            Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
+            Teleport teleport = new Teleport(targetWorld, targetPos, new Vector3f(0, 0, 0));
+            store.putComponent(ref, Teleport.getComponentType(), teleport);
+            
+            String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
+            String worldName = targetWorld.getName();
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("rtpTeleportedWorld", "location", location, "world", worldName), "#55FF55"));
+            
+            if (!isAdminRtp) {
+                rtpService.setCooldown(playerId);
+            }
+        });
+    }
+    
+    /**
+     * Find an online player by name (case-insensitive).
+     */
+    private PlayerRef findOnlinePlayer(String name) {
+        Universe universe = Universe.get();
+        if (universe == null) return null;
+        
+        for (PlayerRef p : universe.getPlayers()) {
+            if (p.getUsername().equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find a world by name (case-insensitive).
+     */
+    private World findWorld(String name) {
+        Universe universe = Universe.get();
+        if (universe == null) return null;
+        
+        for (var entry : universe.getWorlds().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(name)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find which world a player is currently in.
+     */
+    private World findPlayerWorld(PlayerRef player) {
+        Universe universe = Universe.get();
+        if (universe == null) return null;
+        
+        for (var entry : universe.getWorlds().entrySet()) {
+            if (entry.getValue().getPlayerRefs().contains(player)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 }

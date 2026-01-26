@@ -293,6 +293,7 @@ public class LuckPermsIntegration {
         perms.add(Permissions.DISCORD);
         perms.add(Permissions.SEEN);
         perms.add(Permissions.EEHELP);
+        perms.add(Permissions.GROUP_CHAT);
         perms.add("eliteessentials.command.misc.*");
         
         // Kit commands
@@ -333,6 +334,8 @@ public class LuckPermsIntegration {
         perms.add(Permissions.ADMIN);
         perms.add(Permissions.ADMIN_RELOAD);
         perms.add(Permissions.ADMIN_ALIAS);
+        perms.add(Permissions.ADMIN_SENDMESSAGE);
+        perms.add(Permissions.ADMIN_RTP);
         
         return perms;
     }
