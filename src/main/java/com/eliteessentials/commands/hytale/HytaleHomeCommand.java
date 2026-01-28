@@ -9,6 +9,7 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.WarmupService;
+import com.eliteessentials.gui.HomeSelectionPage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -20,6 +21,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -70,6 +72,18 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOME, config.homes.enabled)) {
+            return;
+        }
+        Set<String> homes = homeService.getHomeNames(player.getUuid());
+        if (homes.size() > 1) {
+            Player playerEntity = store.getComponent(ref, Player.getComponentType());
+            if (playerEntity == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback("&cCould not open homes menu.", "#FF5555"));
+                return;
+            }
+            ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+            HomeSelectionPage page = new HomeSelectionPage(player, homeService, backService, configManager, world);
+            playerEntity.getPageManager().openCustomPage(ref, store, page);
             return;
         }
         goHome(ctx, store, ref, player, world, "home", homeService, backService);

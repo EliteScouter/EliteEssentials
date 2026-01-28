@@ -1,47 +1,58 @@
 $C = "../Common.ui";
 
-Group #WarpRow {
-  LayoutMode: Top;
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 70);
   Background: $C.@InputBoxBackground;
-  Padding: (Top: 10, Bottom: 10, Left: 15, Right: 15);
-  Anchor: (Bottom: 8);
+  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
 
-  Group {
-    LayoutMode: Left;
-    Anchor: (Height: 26);
+  Group #WarpInfo {
+    LayoutMode: Top;
+    FlexWeight: 1;
+    Anchor: (Left: 0, Right: 10);
 
-    Button #TeleportButton {
-      FlexWeight: 1;
-      Style: ButtonStyle(
-        Sounds: $C.@ButtonSounds
-      );
+    Group {
+      LayoutMode: Top;
+      Anchor: (Height: 44, Top: 6);
 
-      Group {
-        LayoutMode: Left;
+      Label #WarpName {
+        Style: (
+          FontSize: 18,
+          RenderBold: true,
+          TextColor: #55FFFF,
+          HorizontalAlignment: Start
+        );
+      }
 
-        Label #WarpName {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #55FFFF,
-            VerticalAlignment: Center
-          );
-          Padding: (Right: 10);
-        }
+      Label #WarpDescription {
+        Style: (
+          FontSize: 11,
+          TextColor: #AAAAAA,
+          HorizontalAlignment: Start
+        );
+      }
 
-        Label #WarpDescription {
-          Style: (
-            FontSize: 13,
-            TextColor: #AAAAAA,
-            VerticalAlignment: Center
-          );
-        }
+      Label #WarpStatus {
+        Style: (
+          FontSize: 10,
+          TextColor: #FF5555,
+          HorizontalAlignment: Start
+        );
       }
     }
+  }
 
-    $C.@CancelTextButton #DeleteButton {
-      Anchor: (Width: 40, Height: 26);
-      Text: "X";
+  Group #WarpActions {
+    LayoutMode: Right;
+    Anchor: (Right: 0, Width: 180);
+
+    Group #DeleteButtonSlot {
+      Anchor: (Width: 40, Height: 44, Right: 8);
+    }
+
+    $C.@TextButton #WarpButton {
+      @Anchor = (Width: 120, Height: 44);
+      Text: "Warp";
     }
   }
 }

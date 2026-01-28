@@ -1,0 +1,40 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+  $C.@Container {
+    Anchor: (Width: 580, Height: 420);
+
+    #Title {
+      Group {
+        $C.@Title #PageTitle {
+          @Text = "TPA";
+        }
+
+        $C.@HeaderSearch {}
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+
+      Group #PlayerList {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Padding: (Left: 4);
+
+        Group #PlayerCards {
+          LayoutMode: Top;
+        }
+      }
+
+      Group #Pagination {
+        LayoutMode: Left;
+        Anchor: (Top: 10, Left: 0, Right: 0);
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

@@ -1,56 +1,51 @@
 $C = "../Common.ui";
 
-Group #HomeRow {
-  LayoutMode: Top;
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 70);
   Background: $C.@InputBoxBackground;
-  Padding: (Top: 10, Bottom: 10, Left: 15, Right: 15);
-  Anchor: (Bottom: 8);
+  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
 
-  Group {
-    LayoutMode: Left;
-    Anchor: (Height: 26);
+  Group #HomeInfo {
+    LayoutMode: Top;
+    FlexWeight: 1;
+    Anchor: (Left: 0, Right: 10);
 
-    Button #TeleportButton {
-      FlexWeight: 1;
-      Style: ButtonStyle(
-        Sounds: $C.@ButtonSounds
-      );
+    Group #HomeText {
+      LayoutMode: Top;
+      Anchor: (Height: 44, Top: 6);
 
-      Group {
-        LayoutMode: Left;
+      Label #HomeName {
+        Style: (
+          FontSize: 18,
+          RenderBold: true,
+          TextColor: #55FF55,
+          HorizontalAlignment: Start
+        );
+      }
 
-        Label #HomeName {
-          Style: (
-            FontSize: 16,
-            RenderBold: true,
-            TextColor: #55FF55,
-            VerticalAlignment: Center
-          );
-          Padding: (Right: 15);
-        }
-
-        Label #HomeWorld {
-          Style: (
-            FontSize: 12,
-            TextColor: #93844c,
-            VerticalAlignment: Center
-          );
-          Padding: (Right: 15);
-        }
-
-        Label #HomeCoords {
-          Style: (
-            FontSize: 12,
-            TextColor: #AAAAAA,
-            VerticalAlignment: Center
-          );
-        }
+      Label #HomeWorld {
+        Style: (
+          FontSize: 11,
+          TextColor: #AAAAAA,
+          HorizontalAlignment: Start
+        );
       }
     }
+  }
 
-    $C.@CancelTextButton #DeleteButton {
-      Anchor: (Width: 40, Height: 26);
-      Text: "X";
+  Group #HomeActions {
+    LayoutMode: Right;
+    Anchor: (Right: 0, Width: 210);
+
+    $C.@SecondaryTextButton #HomeEditButton {
+      @Anchor = (Width: 90, Right: 8);
+      Text: "Edit";
+    }
+
+    $C.@TextButton #HomeTeleportButton {
+      @Anchor = (Width: 110, Right: 8);
+      Text: "Go";
     }
   }
 }

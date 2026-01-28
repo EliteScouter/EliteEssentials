@@ -35,7 +35,8 @@ public class HomeService {
         SUCCESS,
         HOME_NOT_FOUND,
         LIMIT_REACHED,
-        INVALID_NAME
+        INVALID_NAME,
+        NAME_TAKEN
     }
 
     /**
@@ -113,6 +114,46 @@ public class HomeService {
         storage.saveAndMarkDirty(playerId);
         
         logger.info("Player " + playerId + " deleted home '" + name + "'");
+        return Result.SUCCESS;
+    }
+
+    /**
+     * Rename a home for a player.
+     */
+    public Result renameHome(UUID playerId, String oldName, String newName) {
+        if (oldName == null || oldName.isBlank() || newName == null || newName.isBlank()) {
+            return Result.INVALID_NAME;
+        }
+
+        PlayerFile playerFile = storage.getPlayer(playerId);
+        if (playerFile == null) {
+            return Result.HOME_NOT_FOUND;
+        }
+
+        String oldKey = oldName.toLowerCase().trim();
+        String newKey = newName.toLowerCase().trim();
+
+        Optional<Home> homeOpt = playerFile.getHome(oldKey);
+        if (homeOpt.isEmpty()) {
+            return Result.HOME_NOT_FOUND;
+        }
+
+        if (!oldKey.equals(newKey) && playerFile.hasHome(newKey)) {
+            return Result.NAME_TAKEN;
+        }
+
+        if (oldKey.equals(newKey)) {
+            return Result.SUCCESS;
+        }
+
+        Home home = homeOpt.get();
+        home.setName(newKey);
+        playerFile.deleteHome(oldKey);
+        playerFile.setHome(home);
+
+        storage.saveAndMarkDirty(playerId);
+
+        logger.info("Player " + playerId + " renamed home '" + oldKey + "' to '" + newKey + "'");
         return Result.SUCCESS;
     }
 

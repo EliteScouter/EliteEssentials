@@ -1,0 +1,30 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 70);
+  Background: $C.@InputBoxBackground;
+  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
+
+  Label #PlayerName {
+    Style: (
+      FontSize: 18,
+      RenderBold: true,
+      TextColor: #bfe3ff,
+      HorizontalAlignment: Start,
+      VerticalAlignment: Center
+    );
+    FlexWeight: 1;
+    Anchor: (Left: 0, Right: 10, Top: 0, Bottom: 0);
+  }
+
+  Group #PlayerActions {
+    LayoutMode: Right;
+    Anchor: (Right: 0, Width: 140);
+
+    $C.@TextButton #PlayerActionButton {
+      @Anchor = (Width: 140);
+      Text: "TPA";
+    }
+  }
+}

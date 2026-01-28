@@ -22,6 +22,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -50,6 +51,8 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "home";
+    private static final String ACTION_TELEPORT = "Teleport";
+    private static final String ACTION_EDIT = "Edit";
     
     private final HomeService homeService;
     private final BackService backService;
@@ -71,59 +74,35 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         commandBuilder.append("Pages/EliteEssentials_HomePage.ui");
 
         UUID playerId = playerRef.getUuid();
-        
-        // Get all homes for the player
+
         Map<String, Home> homes = homeService.getHomes(playerId);
-        List<Home> homeList = new ArrayList<>(homes.values());
-        homeList.sort(Comparator.comparing(Home::getName));
-        
-        // Set dynamic title with count
         int maxHomes = configManager.getConfig().homes.maxHomes;
-        String title = configManager.getMessage("guiHomesTitle", 
-            "count", String.valueOf(homeList.size()), 
+        String title = configManager.getMessage("guiHomesTitle",
+            "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
         commandBuilder.set("#TitleLabel.Text", title);
 
-        if (homeList.isEmpty()) {
-            return;
-        }
-
-        // Build home entries
-        for (int i = 0; i < homeList.size(); i++) {
-            Home home = homeList.get(i);
-            String selector = "#HomeCards[" + i + "]";
-
-            commandBuilder.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
-            commandBuilder.set(selector + " #HomeName.Text", home.getName());
-            
-            // Show coordinates
-            String coords = String.format("%.0f, %.0f, %.0f", 
-                home.getLocation().getX(), 
-                home.getLocation().getY(), 
-                home.getLocation().getZ());
-            commandBuilder.set(selector + " #HomeCoords.Text", coords);
-            
-            // Show world name
-            commandBuilder.set(selector + " #HomeWorld.Text", home.getLocation().getWorld());
-
-            // Bind teleport button (the whole row except delete)
-            eventBuilder.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #TeleportButton",
-                EventData.of("Home", "T:" + home.getName())
-            );
-            
-            // Bind delete button
-            eventBuilder.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #DeleteButton",
-                EventData.of("Home", "D:" + home.getName())
-            );
-        }
+        buildHomeList(commandBuilder, eventBuilder);
     }
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, HomePageData data) {
+        if (data.action == null || data.action.isEmpty()) {
+            return;
+        }
+
+        if (ACTION_EDIT.equals(data.action)) {
+            if (data.home == null || data.home.isEmpty()) {
+                return;
+            }
+            openEditPage(ref, store, data.home);
+            return;
+        }
+
+        if (!ACTION_TELEPORT.equals(data.action)) {
+            return;
+        }
+
         if (data.home == null || data.home.isEmpty()) {
             return;
         }
@@ -274,8 +253,8 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         // Update title with new count
         Map<String, Home> homes = homeService.getHomes(playerId);
         int maxHomes = configManager.getConfig().homes.maxHomes;
-        String title = configManager.getMessage("guiHomesTitle", 
-            "count", String.valueOf(homes.size()), 
+        String title = configManager.getMessage("guiHomesTitle",
+            "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
         cmd.set("#TitleLabel.Text", title);
         
@@ -291,28 +270,87 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
 
             cmd.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
             cmd.set(selector + " #HomeName.Text", home.getName());
-            
-            String coords = String.format("%.0f, %.0f, %.0f", 
-                home.getLocation().getX(), 
-                home.getLocation().getY(), 
+
+            String coords = String.format("%.0f, %.0f, %.0f",
+                home.getLocation().getX(),
+                home.getLocation().getY(),
                 home.getLocation().getZ());
-            cmd.set(selector + " #HomeCoords.Text", coords);
-            cmd.set(selector + " #HomeWorld.Text", home.getLocation().getWorld());
+            cmd.set(selector + " #HomeWorld.Text", "World: " + home.getLocation().getWorld() + " at " + coords);
 
             events.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                selector + " #TeleportButton",
-                EventData.of("Home", "T:" + home.getName())
+                selector + " #HomeTeleportButton",
+                new EventData()
+                    .append("Action", ACTION_TELEPORT)
+                    .append("Home", home.getName()),
+                false
             );
             
             events.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                selector + " #DeleteButton",
-                EventData.of("Home", "D:" + home.getName())
+                selector + " #HomeEditButton",
+                new EventData()
+                    .append("Action", ACTION_EDIT)
+                    .append("Home", home.getName()),
+                false
             );
+
         }
         
         this.sendUpdate(cmd, events, false);
+    }
+
+    private void openEditPage(Ref<EntityStore> ref, Store<EntityStore> store, String homeName) {
+        Player playerEntity = store.getComponent(ref, Player.getComponentType());
+        if (playerEntity == null) {
+            sendMessage(configManager.getMessage("homeEditOpenFailed"), "#FF5555");
+            return;
+        }
+        playerEntity.getPageManager().clearCustomPageAcknowledgements();
+        HomeEditPage page = new HomeEditPage(playerRef, homeService, backService, configManager, world, homeName);
+        playerEntity.getPageManager().openCustomPage(ref, store, page);
+    }
+
+    private void buildHomeList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        Map<String, Home> homes = homeService.getHomes(playerRef.getUuid());
+        List<Home> homeList = new ArrayList<>(homes.values());
+        homeList.sort(Comparator.comparing(Home::getName));
+
+        if (homeList.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < homeList.size(); i++) {
+            Home home = homeList.get(i);
+            String selector = "#HomeCards[" + i + "]";
+
+            commandBuilder.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
+            commandBuilder.set(selector + " #HomeName.Text", home.getName());
+
+            String coords = String.format("%.0f, %.0f, %.0f",
+                home.getLocation().getX(),
+                home.getLocation().getY(),
+                home.getLocation().getZ());
+            commandBuilder.set(selector + " #HomeWorld.Text", "World: " + home.getLocation().getWorld() + " at " + coords);
+
+            eventBuilder.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #HomeTeleportButton",
+                new EventData()
+                    .append("Action", ACTION_TELEPORT)
+                    .append("Home", home.getName()),
+                false
+            );
+            eventBuilder.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #HomeEditButton",
+                new EventData()
+                    .append("Action", ACTION_EDIT)
+                    .append("Home", home.getName()),
+                false
+            );
+
+        }
     }
 
     private void sendMessage(String message, String color) {
@@ -326,12 +364,19 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         public static final BuilderCodec<HomePageData> CODEC = BuilderCodec.builder(HomePageData.class, HomePageData::new)
                 .append(new KeyedCodec<>("Home", Codec.STRING), (data, s) -> data.home = s, data -> data.home)
                 .add()
+                .append(new KeyedCodec<>("Action", Codec.STRING), (data, s) -> data.action = s, data -> data.action)
+                .add()
                 .build();
 
         private String home;
+        private String action;
 
         public String getHome() {
             return home;
+        }
+        
+        public String getAction() {
+            return action;
         }
     }
 }

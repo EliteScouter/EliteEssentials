@@ -4,21 +4,26 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.TpaService;
+import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.eliteessentials.gui.TpaSelectionPage;
 
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
@@ -34,13 +39,11 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
     private static final String COMMAND_NAME = "tpa";
     
     private final TpaService tpaService;
-    private final RequiredArg<String> targetArg;
 
     public HytaleTpaCommand(TpaService tpaService) {
         super(COMMAND_NAME, "Request to teleport to a player");
         this.tpaService = tpaService;
-        // Use STRING instead of PLAYER_REF to show custom error message
-        this.targetArg = withRequiredArg("player", "Target player", ArgTypes.STRING);
+        addUsageVariant(new TpaWithTargetCommand(tpaService));
     }
 
     @Override
@@ -54,35 +57,69 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
         // Only check affordability - cost will be charged when teleport actually happens in /tpaccept
-        if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA, 
+        if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA,
                 config.tpa.enabled, "tpa", config.tpa.cost)) {
             return;
         }
-        
-        String targetName = ctx.get(targetArg);
-        
-        // Find target player by name
-        PlayerRef target = findPlayer(targetName);
-        
+        Player playerEntity = store.getComponent(ref, Player.getComponentType());
+        if (playerEntity == null) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("tpaOpenFailed"), "#FF5555"));
+            return;
+        }
+        TpaSelectionPage page = new TpaSelectionPage(player, TpaSelectionPage.Mode.TPA, tpaService, configManager);
+        playerEntity.getPageManager().openCustomPage(ref, store, page);
+    }
+    
+    /**
+     * Find a player by name (case-insensitive).
+     */
+    private PlayerRef findPlayer(String name, PlayerRef requester) {
+        VanishService vanishService = EliteEssentials.getInstance().getVanishService();
+        boolean canSeeVanished = canSeeVanishedPlayers(requester);
+        List<PlayerRef> players = Universe.get().getPlayers();
+        for (PlayerRef p : players) {
+            if (p.getUsername().equalsIgnoreCase(name)) {
+                if (vanishService != null && vanishService.isVanished(p.getUuid()) && !canSeeVanished) {
+                    return null;
+                }
+                return p;
+            }
+        }
+        return null;
+    }
+
+    private boolean canSeeVanishedPlayers(PlayerRef requester) {
+        UUID playerId = requester.getUuid();
+        PermissionService perms = PermissionService.get();
+        return perms.isAdmin(playerId) || perms.hasPermission(playerId, Permissions.VANISH);
+    }
+
+    private void sendRequest(@Nonnull CommandContext ctx, @Nonnull PlayerRef player, @Nonnull String targetName) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        PluginConfig config = configManager.getConfig();
+        if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA,
+                config.tpa.enabled, COMMAND_NAME, config.tpa.cost)) {
+            return;
+        }
+
+        PlayerRef target = findPlayer(targetName, player);
         if (target == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
             return;
         }
-        
-        // Create teleport request
+
         TpaService.Result result = tpaService.createRequest(
             player.getUuid(),
             player.getUsername(),
             target.getUuid(),
             target.getUsername()
         );
-        
+
         switch (result) {
             case REQUEST_SENT -> {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequestSent", "player", target.getUsername()), "#55FF55"));
-                
-                // Send notification to target player with instructions
                 target.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequestReceived", "player", player.getUsername()), "#FFFF55"));
                 target.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequestInstructions"), "#AAAAAA"));
             }
@@ -91,17 +128,27 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
             default -> ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequestFailed"), "#FF5555"));
         }
     }
-    
+
     /**
-     * Find a player by name (case-insensitive).
+     * Variant: /tpa <player>
      */
-    private PlayerRef findPlayer(String name) {
-        List<PlayerRef> players = Universe.get().getPlayers();
-        for (PlayerRef p : players) {
-            if (p.getUsername().equalsIgnoreCase(name)) {
-                return p;
-            }
+    private class TpaWithTargetCommand extends AbstractPlayerCommand {
+        private final RequiredArg<String> targetArg;
+
+        TpaWithTargetCommand(TpaService tpaService) {
+            super(COMMAND_NAME);
+            this.targetArg = withRequiredArg("player", "Target player", ArgTypes.STRING);
         }
-        return null;
+
+        @Override
+        protected boolean canGeneratePermission() {
+            return false;
+        }
+
+        @Override
+        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+                              @Nonnull PlayerRef player, @Nonnull World world) {
+            sendRequest(ctx, player, ctx.get(targetArg));
+        }
     }
 }

@@ -69,38 +69,46 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
             // Add kit entry UI element
             commandBuilder.append("#KitCards", "Pages/EliteEssentials_KitEntry.ui");
             
-            // Set kit name with gradient effect
-            commandBuilder.set(selector + " #KitName.Text", kit.getDisplayName());
-            
-            // Set description
-            commandBuilder.set(selector + " #KitDescription.Text", kit.getDescription());
-
             // Check kit-specific permission
             String kitPermission = Permissions.kitAccess(kit.getId());
             boolean hasPermission = PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) ||
                                    PermissionService.get().isAdmin(playerId);
+            boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
 
             String statusText;
+            boolean canClaim = true;
             
             if (!hasPermission) {
                 statusText = configManager.getMessage("guiKitStatusLocked");
+                canClaim = false;
             } else if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
                 statusText = configManager.getMessage("guiKitStatusClaimed");
+                canClaim = false;
             } else {
                 long remainingCooldown = kitService.getRemainingCooldown(playerId, kit.getId());
                 if (remainingCooldown > 0) {
                     statusText = formatCooldown(remainingCooldown);
+                    if (!canBypassCooldown) {
+                        canClaim = false;
+                    }
                 } else {
                     statusText = configManager.getMessage("guiKitStatusReady");
                 }
             }
             
-            commandBuilder.set(selector + " #KitStatus.Text", statusText);
+            // Set kit name with status in the same line
+            commandBuilder.set(selector + " #KitName.Text", kit.getDisplayName() + " (" + statusText + ")");
+
+            // Set description
+            commandBuilder.set(selector + " #KitDescription.Text", kit.getDescription());
+
+            commandBuilder.set(selector + " #KitStatus.Text", "");
+            commandBuilder.set(selector + " #KitClaimButton.Disabled", !canClaim);
 
             // Bind click event
             eventBuilder.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                selector,
+                selector + " #KitClaimButton",
                 EventData.of("Kit", kit.getId())
             );
         }

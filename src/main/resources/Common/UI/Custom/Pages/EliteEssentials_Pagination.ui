@@ -1,0 +1,32 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0);
+  FlexWeight: 1;
+
+  Group { FlexWeight: 1; }
+
+  $C.@SmallSecondaryTextButton #PrevButton {
+    @Anchor = (Width: 90, Height: 28, Right: 10);
+    Text: "Prev";
+  }
+
+  Label #PageLabel {
+    Style: (
+      FontSize: 12,
+      RenderUppercase: true,
+      TextColor: #96a9be,
+      VerticalAlignment: Center
+    );
+    Anchor: (Right: 10);
+    Text: "Page ? / ?";
+  }
+
+  $C.@SmallSecondaryTextButton #NextButton {
+    @Anchor = (Width: 90, Height: 28);
+    Text: "Next";
+  }
+
+  Group { FlexWeight: 1; }
+}

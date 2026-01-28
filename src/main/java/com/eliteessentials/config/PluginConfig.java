@@ -106,6 +106,7 @@ public class PluginConfig {
         messages.put("tpaDeniedRequester", "&c{player} denied your teleport request.");
         messages.put("tpaCouldNotFindRequester", "&cCould not find requester.");
         messages.put("tpaCouldNotGetRequesterPosition", "&cCould not get requester's position.");
+        messages.put("tpaOpenFailed", "&cCould not open the teleport menu.");
         
         // ==================== TPAHERE ====================
         messages.put("tpahereRequestSent", "&aTeleport request sent to &f{player}&a. They will teleport to you if they accept.");
@@ -131,6 +132,10 @@ public class PluginConfig {
         messages.put("homeSetFailed", "&cFailed to set home.");
         messages.put("homeDeleted", "&aHome &e'{name}' &ahas been deleted.");
         messages.put("homeDeleteFailed", "&cFailed to delete home.");
+        messages.put("homeRenamed", "&aHome renamed to &e'{name}'&a.");
+        messages.put("homeRenameFailed", "&cFailed to rename home.");
+        messages.put("homeNameTaken", "&cA home named &e'{name}' &calready exists.");
+        messages.put("homeEditOpenFailed", "&cCould not open home editor.");
         messages.put("cannotSetHomeInInstance", "&cYou cannot set a home in a temporary instance world!");
         
         // ==================== WARPS ====================

@@ -1,0 +1,91 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@Container {
+    Anchor: (Width: 580, Height: 300);
+
+    #Title {
+      Group {
+        Label #TitleText {
+          Anchor: (Height: 28);
+          Style: (...$C.@TitleStyle, HorizontalAlignment: Center);
+          Text: "Edit Home";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Full: 16);
+
+      Group {
+        LayoutMode: Top;
+        Anchor: (Bottom: 8);
+
+        Label {
+          Anchor: (Bottom: 6);
+          Style: $C.@SubtitleStyle;
+          Text: "Home Name";
+        }
+
+        $C.@TextField #HomeNameInput {
+          @Anchor = (Height: 38);
+          PlaceholderText: "Enter a new name";
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 44, Bottom: 10);
+
+        Group { FlexWeight: 1; }
+
+        $C.@SecondaryTextButton #CancelButton {
+          @Anchor = (Width: 130, Right: 8);
+          Text: "Cancel";
+        }
+
+        $C.@TextButton #DoneButton {
+          @Anchor = (Width: 130);
+          Text: "Rename";
+        }
+      }
+
+      $C.@ContentSeparator {
+        @Anchor = (Bottom: 10);
+      }
+
+      Group {
+        LayoutMode: Top;
+        Anchor: (Bottom: 0);
+
+        Label {
+          Anchor: (Bottom: 2);
+          Style: $C.@SubtitleStyle;
+          Text: "Danger Zone";
+        }
+
+        Label {
+          Anchor: (Bottom: 6);
+          Style: (
+            FontSize: 11,
+            TextColor: #7f93a6
+          );
+          Text: "Do you want to delete this home?";
+        }
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 44);
+
+          $C.@CancelTextButton #DeleteButton {
+            @Anchor = (Width: 140);
+            Text: "Delete";
+          }
+        }
+      }
+    }
+  }
+}
