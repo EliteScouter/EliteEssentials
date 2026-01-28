@@ -7,8 +7,20 @@ $C.@PageOverlay {
 
     #Title {
       Group {
-        $C.@Title {
-          @Text = "Your Homes";
+        Anchor: (Height: 50);
+
+        Label #TitleLabel {
+          Style: (
+            FontSize: 24,
+            LetterSpacing: 2,
+            RenderUppercase: true,
+            RenderBold: true,
+            TextColor: #ccb588,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center
+          );
+          Padding: (Top: 3);
+          Text: "Your Homes";
         }
       }
     }

@@ -6,6 +6,7 @@ import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.Warp;
 import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.CostService;
@@ -43,111 +44,163 @@ import java.util.logging.Logger;
 
 /**
  * EliteEssentials Warp Selection GUI.
- * Displays all accessible warps for the player to click and teleport to.
- * Uses the same warmup/cooldown/cost logic as the /warp command.
+ * Shows NAME - Description with optional delete button for admins.
  */
 public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage.WarpPageData> {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "warp";
+    private static final String DELETE_BUTTON_DEFAULT = "X";
+    private static final String DELETE_BUTTON_CONFIRM = "?";
+    private static final String ACTION_TELEPORT = "teleport";
+    private static final String ACTION_DELETE = "delete";
+    private static final String ACTION_CANCEL_DELETE = "cancelDelete";
     
     private final WarpService warpService;
     private final BackService backService;
     private final ConfigManager configManager;
     private final World world;
+    private final boolean canDelete;
+    private final DeleteConfirmState deleteConfirmState =
+        new DeleteConfirmState(DELETE_BUTTON_DEFAULT, DELETE_BUTTON_CONFIRM, 250);
 
     public WarpSelectionPage(PlayerRef playerRef, WarpService warpService, BackService backService, 
-                             ConfigManager configManager, World world) {
+                             ConfigManager configManager, World world,
+                             Ref<EntityStore> ref, Store<EntityStore> store) {
         super(playerRef, CustomPageLifetime.CanDismiss, WarpPageData.CODEC);
         this.warpService = warpService;
         this.backService = backService;
         this.configManager = configManager;
         this.world = world;
+        
+        // Check if player can delete warps
+        PermissionService perms = PermissionService.get();
+        this.canDelete = perms.canUseAdminCommand(playerRef.getUuid(), Permissions.DELWARP, true);
     }
 
     @Override
     public void build(Ref<EntityStore> ref, UICommandBuilder commandBuilder,
                       UIEventBuilder eventBuilder, Store<EntityStore> store) {
         commandBuilder.append("Pages/EliteEssentials_WarpPage.ui");
+        
+        String title = configManager.getMessage("guiWarpsTitle");
+        commandBuilder.set("#TitleLabel.Text", title);
 
+        buildWarpList(commandBuilder, eventBuilder);
+    }
+    
+    private void buildWarpList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         UUID playerId = playerRef.getUuid();
         PermissionService perms = PermissionService.get();
         
-        // Get all warps the player can access
-        List<Warp> accessibleWarps = new ArrayList<>();
-        for (Warp warp : warpService.getAllWarps().values()) {
-            if (perms.canAccessWarp(playerId, warp.getName(), warp.getPermission())) {
-                accessibleWarps.add(warp);
-            }
-        }
-        accessibleWarps.sort(Comparator.comparing(Warp::getName));
+        List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
 
         if (accessibleWarps.isEmpty()) {
             return;
         }
 
-        // Build warp entries
         for (int i = 0; i < accessibleWarps.size(); i++) {
             Warp warp = accessibleWarps.get(i);
             String selector = "#WarpCards[" + i + "]";
 
-            commandBuilder.append("#WarpCards", "Pages/EliteEssentials_WarpEntry.ui");
+            // Use different UI file based on delete permission
+            if (canDelete) {
+                commandBuilder.append("#WarpCards", "Pages/EliteEssentials_WarpEntry.ui");
+                commandBuilder.append(selector + " #DeleteButtonSlot", "Pages/EliteEssentials_DeleteConfirm.ui");
+                commandBuilder.set(selector + " #DeleteButton.Text", getDeleteButtonText(warp.getName()));
+                eventBuilder.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    selector + " #DeleteButton",
+                    new EventData()
+                        .append("Action", ACTION_DELETE)
+                        .append("Warp", warp.getName()),
+                    false
+                );
+                eventBuilder.addEventBinding(
+                    CustomUIEventBindingType.MouseExited,
+                    selector + " #DeleteButton",
+                    new EventData()
+                        .append("Action", ACTION_CANCEL_DELETE)
+                        .append("Warp", warp.getName()),
+                    false
+                );
+            } else {
+                commandBuilder.append("#WarpCards", "Pages/EliteEssentials_WarpEntryNoDelete.ui");
+            }
+            
             commandBuilder.set(selector + " #WarpName.Text", warp.getName());
             
-            // Show description (or empty if none)
-            String description = warp.getDescription();
+            // Show description
+            String description = warp.getDescription() != null ? warp.getDescription() : "";
             commandBuilder.set(selector + " #WarpDescription.Text", description);
 
-            // Show permission status for admins
-            boolean isAdmin = perms.isAdmin(playerId);
-            if (isAdmin && warp.isOpOnly()) {
-                commandBuilder.set(selector + " #WarpStatus.Text", configManager.getMessage("guiWarpStatusOpOnly"));
-            } else {
-                commandBuilder.set(selector + " #WarpStatus.Text", "");
-            }
-
-            // Bind click event
+            // Bind teleport button
             eventBuilder.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 selector + " #WarpButton",
-                EventData.of("Warp", warp.getName())
+                new EventData()
+                    .append("Action", ACTION_TELEPORT)
+                    .append("Warp", warp.getName()),
+                false
             );
         }
     }
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, WarpPageData data) {
-        if (data.warp == null || data.warp.isEmpty()) {
+        if (data.action == null || data.action.isEmpty()) {
             return;
         }
 
         UUID playerId = playerRef.getUuid();
         PluginConfig config = configManager.getConfig();
         PermissionService perms = PermissionService.get();
+        String warpName = data.warp;
+
+        switch (data.action) {
+            case ACTION_DELETE -> {
+                if (!deleteConfirmState.request(warpName)) {
+                    updateDeleteButtons();
+                    return;
+                }
+                deleteConfirmState.clear();
+                handleDeleteWarp(playerId, warpName);
+                return;
+            }
+            case ACTION_CANCEL_DELETE -> {
+                if (deleteConfirmState.cancel(warpName)) {
+                    updateDeleteButtons();
+                }
+                return;
+            }
+            case ACTION_TELEPORT -> {
+                deleteConfirmState.clear();
+            }
+            default -> {
+                return;
+            }
+        }
         
-        Optional<Warp> warpOpt = warpService.getWarp(data.warp);
+        Optional<Warp> warpOpt = warpService.getWarp(warpName);
         
         if (warpOpt.isEmpty()) {
-            sendMessage(configManager.getMessage("warpNotFound", "name", data.warp), "#FF5555");
+            sendMessage(configManager.getMessage("warpNotFound", "name", warpName), "#FF5555");
             this.close();
             return;
         }
 
         Warp warp = warpOpt.get();
 
-        // Check permission
         if (!perms.canAccessWarp(playerId, warp.getName(), warp.getPermission())) {
             sendMessage(configManager.getMessage("warpNoPermission"), "#FF5555");
             this.close();
             return;
         }
 
-        // Close the GUI first
         this.close();
         
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         
-        // Check cooldown (with bypass check)
         if (!CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
             int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
             if (cooldownRemaining > 0) {
@@ -156,25 +209,23 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
             }
         }
         
-        // Check if player can afford (but don't charge yet)
         CostService costService = EliteEssentials.getInstance().getCostService();
         double cost = config.warps.cost;
         if (costService != null && cost > 0) {
-            if (!costService.canAfford(playerId, cost)) {
-                sendMessage(configManager.getMessage("notEnoughMoney", "cost", costService.formatCost(cost)), "#FF5555");
+            if (!costService.canAfford(playerId, "warp", cost)) {
+                double effectiveCost = costService.getEffectiveCost(playerId, "warp", cost);
+                sendMessage(configManager.getMessage("notEnoughMoney", "cost", costService.formatCost(effectiveCost)), "#FF5555");
                 return;
             }
         }
         
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
-        // Check if already warming up
         if (warmupService.hasActiveWarmup(playerId)) {
             sendMessage(configManager.getMessage("teleportInProgress"), "#FF5555");
             return;
         }
         
-        // Get current position for warmup and /back
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) {
             sendMessage(configManager.getMessage("couldNotGetPosition"), "#FF5555");
@@ -185,13 +236,12 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
         Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
         
-        Location currentLoc = new Location(
+        com.eliteessentials.model.Location currentLoc = new com.eliteessentials.model.Location(
             world.getName(),
             currentPos.getX(), currentPos.getY(), currentPos.getZ(),
-            rotation.y, rotation.x  // yaw=rotation.y, pitch=rotation.x
+            rotation.y, 0f
         );
         
-        // Get target world
         Location loc = warp.getLocation();
         World targetWorld = Universe.get().getWorld(loc.getWorld());
         if (targetWorld == null) {
@@ -203,7 +253,6 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         final double finalCost = cost;
         final int configCooldown = config.warps.cooldownSeconds;
         
-        // Define the teleport action
         Runnable doTeleport = () -> {
             backService.pushLocation(playerId, currentLoc);
             
@@ -214,19 +263,16 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
                 Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
-                // Charge cost after successful teleport
                 if (finalCostService != null && finalCost > 0) {
                     EliteEssentials.getInstance().getPlayerService().removeMoney(playerId, finalCost);
                 }
                 
-                // Set cooldown after successful teleport
                 cooldownService.setCooldown(COMMAND_NAME, playerId, configCooldown);
                 
                 sendMessage(configManager.getMessage("warpTeleported", "name", finalWarpName), "#55FF55");
             });
         };
 
-        // Get effective warmup (check bypass permission)
         int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.warps.warmupSeconds);
         
         if (warmupSeconds > 0) {
@@ -235,24 +281,144 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         
         warmupService.startWarmup(playerRef, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref, false);
     }
+    
+    private void handleDeleteWarp(UUID playerId, String warpName) {
+        PermissionService perms = PermissionService.get();
+        if (!perms.canUseAdminCommand(playerId, Permissions.DELWARP, true)) {
+            sendMessage(configManager.getMessage("noPermission"), "#FF5555");
+            return;
+        }
+        
+        Optional<Warp> warpOpt = warpService.getWarp(warpName);
+        if (warpOpt.isEmpty()) {
+            sendMessage(configManager.getMessage("warpNotFound", "name", warpName), "#FF5555");
+            return;
+        }
+        
+        boolean deleted = warpService.deleteWarp(warpName);
+        
+        if (deleted) {
+            sendMessage(configManager.getMessage("warpDeleted", "name", warpName), "#55FF55");
+            refreshWarpList();
+        } else {
+            sendMessage(configManager.getMessage("warpDeleteFailed"), "#FF5555");
+        }
+    }
+    
+    private void refreshWarpList() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        
+        cmd.set("#TitleLabel.Text", configManager.getMessage("guiWarpsTitle"));
+        cmd.clear("#WarpCards");
+        
+        UUID playerId = playerRef.getUuid();
+        PermissionService perms = PermissionService.get();
+        
+        List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
+        
+        for (int i = 0; i < accessibleWarps.size(); i++) {
+            Warp warp = accessibleWarps.get(i);
+            String selector = "#WarpCards[" + i + "]";
+
+            // Use different UI file based on delete permission
+            if (canDelete) {
+                cmd.append("#WarpCards", "Pages/EliteEssentials_WarpEntry.ui");
+                cmd.append(selector + " #DeleteButtonSlot", "Pages/EliteEssentials_DeleteConfirm.ui");
+                cmd.set(selector + " #DeleteButton.Text", getDeleteButtonText(warp.getName()));
+                events.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    selector + " #DeleteButton",
+                    new EventData()
+                        .append("Action", ACTION_DELETE)
+                        .append("Warp", warp.getName()),
+                    false
+                );
+                events.addEventBinding(
+                    CustomUIEventBindingType.MouseExited,
+                    selector + " #DeleteButton",
+                    new EventData()
+                        .append("Action", ACTION_CANCEL_DELETE)
+                        .append("Warp", warp.getName()),
+                    false
+                );
+            } else {
+                cmd.append("#WarpCards", "Pages/EliteEssentials_WarpEntryNoDelete.ui");
+            }
+            
+            cmd.set(selector + " #WarpName.Text", warp.getName());
+            
+            String description = warp.getDescription() != null ? warp.getDescription() : "";
+            cmd.set(selector + " #WarpDescription.Text", description);
+
+            events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #WarpButton",
+                new EventData()
+                    .append("Action", ACTION_TELEPORT)
+                    .append("Warp", warp.getName()),
+                false
+            );
+        }
+        
+        this.sendUpdate(cmd, events, false);
+    }
 
     private void sendMessage(String message, String color) {
         playerRef.sendMessage(MessageFormatter.formatWithFallback(message, color));
     }
 
-    /**
-     * Event data for warp selection.
-     */
+    private String getDeleteButtonText(String warpName) {
+        return deleteConfirmState.getLabel(warpName);
+    }
+
+    private List<Warp> getAccessibleWarps(UUID playerId, PermissionService perms) {
+        List<Warp> accessibleWarps = new ArrayList<>();
+        for (Warp warp : warpService.getAllWarps().values()) {
+            if (perms.canAccessWarp(playerId, warp.getName(), warp.getPermission())) {
+                accessibleWarps.add(warp);
+            }
+        }
+        accessibleWarps.sort(Comparator.comparing(Warp::getName));
+        return accessibleWarps;
+    }
+
+    private void updateDeleteButtons() {
+        if (!canDelete) {
+            return;
+        }
+
+        UICommandBuilder cmd = new UICommandBuilder();
+        UUID playerId = playerRef.getUuid();
+        PermissionService perms = PermissionService.get();
+        List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
+
+        for (int i = 0; i < accessibleWarps.size(); i++) {
+            Warp warp = accessibleWarps.get(i);
+            String selector = "#WarpCards[" + i + "] #DeleteButton.Text";
+            cmd.set(selector, getDeleteButtonText(warp.getName()));
+        }
+
+        sendUpdate(cmd, false);
+    }
+
     public static class WarpPageData {
         public static final BuilderCodec<WarpPageData> CODEC = BuilderCodec.builder(WarpPageData.class, WarpPageData::new)
                 .append(new KeyedCodec<>("Warp", Codec.STRING), (data, s) -> data.warp = s, data -> data.warp)
                 .add()
+                .append(new KeyedCodec<>("Action", Codec.STRING), (data, s) -> data.action = s, data -> data.action)
+                .add()
                 .build();
 
         private String warp;
+        private String action;
 
         public String getWarp() {
             return warp;
+        }
+
+        public String getAction() {
+            return action;
         }
     }
 }

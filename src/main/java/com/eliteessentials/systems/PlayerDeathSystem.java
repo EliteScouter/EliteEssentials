@@ -4,6 +4,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.DamageTrackingService;
+import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -107,7 +108,8 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
     }
     
     private void broadcastDeathMessage(Universe universe, String message) {
-        Message chatMessage = Message.raw(message).color("#FF5555");
+        // Use MessageFormatter to process color codes in death messages
+        Message chatMessage = MessageFormatter.formatWithFallback(message, "#FF5555");
         for (PlayerRef player : universe.getPlayers()) {
             try {
                 if (player != null && player.isValid()) {

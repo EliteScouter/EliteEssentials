@@ -179,6 +179,8 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     backService.pushLocation(request.getRequesterId(), requesterLoc);
                     Teleport teleport = new Teleport(world, targetPos, new Vector3f(0, targetYaw, 0));
                     requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
+                    // Charge cost AFTER successful teleport
+                    CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
                     requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
                 } else {
                     // Acceptor teleports to requester (TPAHERE)
@@ -186,14 +188,16 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     backService.pushLocation(playerId, targetLoc);
                     Teleport teleport = new Teleport(world, requesterPos, new Vector3f(0, reqRot.y, 0));
                     store.putComponent(ref, Teleport.getComponentType(), teleport);
+                    // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
+                    CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
                     requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
                 }
             });
         };
         
-        startWarmupAndTeleport(ctx, player, requester, requesterPos, request, configManager, config, 
-                               doTeleport, world, requesterStore, requesterRef);
+        startWarmupAndTeleport(ctx, player, requester, requesterPos, targetPos, request, configManager, config, 
+                               doTeleport, world, store, ref, requesterStore, requesterRef);
     }
     
     /**
@@ -259,6 +263,8 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                             if (!requesterRef.isValid()) return;
                             Teleport teleport = new Teleport(acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0));
                             requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
+                            // Charge cost AFTER successful teleport
+                            CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
                             requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
                         });
                     } else {
@@ -268,6 +274,8 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                             if (!ref.isValid()) return;
                             Teleport teleport = new Teleport(requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0));
                             store.putComponent(ref, Teleport.getComponentType(), teleport);
+                            // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
+                            CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
                             player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
                         });
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
@@ -277,37 +285,64 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                 // Send acceptance message
                 player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAccepted", "player", request.getRequesterName()), "#55FF55"));
                 
-                // Start warmup
-                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(request.getRequesterId(), "tpa", config.tpa.warmupSeconds);
+                // Determine who gets the warmup based on request type
+                // TPA: requester teleports, so warmup on requester
+                // TPAHERE: acceptor teleports, so warmup on acceptor
+                boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
+                UUID teleportingPlayerId = isTpaHere ? playerId : request.getRequesterId();
+                PlayerRef teleportingPlayer = isTpaHere ? player : requester;
+                Vector3d teleportingPlayerPos = isTpaHere ? targetPos : requesterPos;
+                World teleportingWorld = isTpaHere ? acceptorWorld : requesterWorld;
+                Store<EntityStore> teleportingStore = isTpaHere ? store : requesterStore;
+                Ref<EntityStore> teleportingRef = isTpaHere ? ref : requesterRef;
+                
+                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, "tpa", config.tpa.warmupSeconds);
                 WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
                 
-                if (warmupService.hasActiveWarmup(request.getRequesterId())) {
+                if (warmupService.hasActiveWarmup(teleportingPlayerId)) {
                     player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterInProgress"), "#FF5555"));
                     return;
                 }
                 
                 if (warmupSeconds > 0) {
-                    requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterWarmup", "player", player.getUsername(), "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
+                    teleportingPlayer.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("tpaRequesterWarmup", "player", 
+                            isTpaHere ? request.getRequesterName() : player.getUsername(), 
+                            "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
                 }
                 
-                warmupService.startWarmup(requester, requesterPos, warmupSeconds, doTeleport, "tpa", 
-                                          requesterWorld, requesterStore, requesterRef);
+                warmupService.startWarmup(teleportingPlayer, teleportingPlayerPos, warmupSeconds, doTeleport, "tpa", 
+                                          teleportingWorld, teleportingStore, teleportingRef);
             });
         });
     }
     
     /**
-     * Common warmup and teleport logic
+     * Common warmup and teleport logic.
+     * For TPA: warmup is on requester (they teleport to acceptor)
+     * For TPAHERE: warmup is on acceptor (they teleport to requester)
      */
     private void startWarmupAndTeleport(CommandContext ctx, PlayerRef player, PlayerRef requester,
-                                         Vector3d requesterPos, TpaRequest request,
+                                         Vector3d requesterPos, Vector3d acceptorPos, TpaRequest request,
                                          ConfigManager configManager, PluginConfig config,
                                          Runnable doTeleport, World world, 
+                                         Store<EntityStore> acceptorStore, Ref<EntityStore> acceptorRef,
                                          Store<EntityStore> requesterStore, Ref<EntityStore> requesterRef) {
-        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(request.getRequesterId(), "tpa", config.tpa.warmupSeconds);
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
-        if (warmupService.hasActiveWarmup(request.getRequesterId())) {
+        // Determine who gets the warmup based on request type
+        // TPA: requester teleports, so warmup on requester
+        // TPAHERE: acceptor teleports, so warmup on acceptor
+        boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
+        UUID teleportingPlayerId = isTpaHere ? player.getUuid() : request.getRequesterId();
+        PlayerRef teleportingPlayer = isTpaHere ? player : requester;
+        Vector3d teleportingPlayerPos = isTpaHere ? acceptorPos : requesterPos;
+        Store<EntityStore> teleportingStore = isTpaHere ? acceptorStore : requesterStore;
+        Ref<EntityStore> teleportingRef = isTpaHere ? acceptorRef : requesterRef;
+        
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, "tpa", config.tpa.warmupSeconds);
+        
+        if (warmupService.hasActiveWarmup(teleportingPlayerId)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterInProgress"), "#FF5555"));
             return;
         }
@@ -315,10 +350,14 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAccepted", "player", request.getRequesterName()), "#55FF55"));
         
         if (warmupSeconds > 0) {
-            requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterWarmup", "player", player.getUsername(), "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
+            // Notify the person who will be teleported about the warmup
+            teleportingPlayer.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("tpaRequesterWarmup", "player", 
+                    isTpaHere ? request.getRequesterName() : player.getUsername(), 
+                    "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
         }
         
-        warmupService.startWarmup(requester, requesterPos, warmupSeconds, doTeleport, "tpa", 
-                                   world, requesterStore, requesterRef);
+        warmupService.startWarmup(teleportingPlayer, teleportingPlayerPos, warmupSeconds, doTeleport, "tpa", 
+                                   world, teleportingStore, teleportingRef);
     }
 }

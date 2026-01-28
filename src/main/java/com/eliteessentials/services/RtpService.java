@@ -74,8 +74,12 @@ public class RtpService {
      * @return A random location (Y will need to be calculated for safe ground)
      */
     public Location generateRandomLocation(double centerX, double centerZ, String world) {
-        int minRange = configManager.getRtpMinRange();
-        int maxRange = configManager.getRtpMaxRange();
+        // Get world-specific range or default
+        var rtpConfig = configManager.getConfig().rtp;
+        var worldRange = rtpConfig.getRangeForWorld(world);
+        
+        int minRange = worldRange.minRange;
+        int maxRange = worldRange.maxRange;
         
         // Generate random distance and angle
         int distance = minRange + random.nextInt(maxRange - minRange + 1);

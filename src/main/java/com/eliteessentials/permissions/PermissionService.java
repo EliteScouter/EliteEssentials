@@ -280,6 +280,106 @@ public class PermissionService {
         return defaultCooldown;
     }
 
+    // ==================== GENERIC COMMAND COOLDOWN ====================
+
+    /**
+     * Get the cooldown for a command based on permissions.
+     * Supports: god, fly, repair, clearinv, top
+     * 
+     * Priority:
+     * 1. Bypass permission (returns 0)
+     * 2. Permission-based cooldown (<command>.cooldown.<seconds>)
+     * 3. Config default
+     * 
+     * @param playerId Player UUID
+     * @param commandName Command name (god, fly, repair, clearinv, top)
+     * @param defaultCooldown Default cooldown from config
+     * @return Effective cooldown in seconds
+     */
+    public int getCommandCooldown(UUID playerId, String commandName, int defaultCooldown) {
+        // Get bypass and cooldown prefix based on command
+        String bypassPermission;
+        java.util.function.IntFunction<String> cooldownPermissionFunc;
+        
+        switch (commandName.toLowerCase()) {
+            case "god":
+                bypassPermission = Permissions.GOD_BYPASS_COOLDOWN;
+                cooldownPermissionFunc = Permissions::godCooldown;
+                break;
+            case "fly":
+                bypassPermission = Permissions.FLY_BYPASS_COOLDOWN;
+                cooldownPermissionFunc = Permissions::flyCooldown;
+                break;
+            case "repair":
+                bypassPermission = Permissions.REPAIR_BYPASS_COOLDOWN;
+                cooldownPermissionFunc = Permissions::repairCooldown;
+                break;
+            case "clearinv":
+                bypassPermission = Permissions.CLEARINV_BYPASS_COOLDOWN;
+                cooldownPermissionFunc = Permissions::clearinvCooldown;
+                break;
+            case "top":
+                bypassPermission = Permissions.TOP_BYPASS_COOLDOWN;
+                cooldownPermissionFunc = Permissions::topCooldown;
+                break;
+            case "heal":
+                // Use existing heal method for consistency
+                return getHealCooldown(playerId);
+            default:
+                // Unknown command, return default
+                return defaultCooldown;
+        }
+        
+        // Check for bypass permission first
+        if (hasPermission(playerId, bypassPermission)) {
+            return 0;
+        }
+        
+        // Check for specific cooldown permissions (common values in seconds)
+        int[] commonCooldowns = {30, 60, 120, 180, 300, 600, 900, 1800, 3600};
+        
+        for (int cooldown : commonCooldowns) {
+            if (hasPermission(playerId, cooldownPermissionFunc.apply(cooldown))) {
+                return cooldown;
+            }
+        }
+        
+        // No specific cooldown permission found, return config default
+        return defaultCooldown;
+    }
+
+    // ==================== COMMAND COST ====================
+
+    /**
+     * Get the cost for a command based on permissions.
+     * Checks permissions like eliteessentials.cost.home.5, eliteessentials.cost.rtp.100, etc.
+     * Returns the lowest cost found (most favorable to player), or the config default if no permission is set.
+     * 
+     * Note: We check common cost values since Hytale's PermissionsModule doesn't expose
+     * a way to enumerate all permissions a user has. Server admins should use standard
+     * cost values (0, 1, 2, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000) for best compatibility.
+     * 
+     * @param playerId Player UUID
+     * @param commandName Command name (e.g., "home", "rtp", "warp", "spawn", "back", "tpa", "tpahere", "sethome")
+     * @param defaultCost Default cost from config (fallback if no permission set)
+     * @return The effective cost for this player
+     */
+    public double getCommandCost(UUID playerId, String commandName, double defaultCost) {
+        // Check for specific cost permissions (common values)
+        // We check from lowest to highest and return the first match
+        // This way groups with lower costs get priority (VIP pays less)
+        int[] commonCosts = {0, 1, 2, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000};
+        
+        for (int cost : commonCosts) {
+            if (hasPermission(playerId, Permissions.commandCost(commandName, cost))) {
+                return cost;
+            }
+        }
+        
+        // No specific cost permission found, return config default
+        return defaultCost;
+    }
+
     // ==================== WARP ACCESS ====================
 
     /**

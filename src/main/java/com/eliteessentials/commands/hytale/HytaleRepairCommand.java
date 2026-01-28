@@ -4,13 +4,12 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
-import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
@@ -27,19 +26,27 @@ import javax.annotation.Nonnull;
  * Command: /repair [all]
  * Repairs the item in hand, or all items in inventory if "all" is specified.
  * Admin command only.
+ * 
+ * Permissions:
+ * - eliteessentials.command.misc.repair - Use /repair command
+ * - eliteessentials.command.misc.repair.all - Use /repair all
+ * - eliteessentials.command.misc.repair.bypass.cooldown - Skip cooldown
+ * - eliteessentials.command.misc.repair.cooldown.<seconds> - Set specific cooldown
  */
 public class HytaleRepairCommand extends AbstractPlayerCommand {
 
     private static final String COMMAND_NAME = "repair";
     
     private final ConfigManager configManager;
-    private final OptionalArg<String> allFlag;
+    private final CooldownService cooldownService;
 
-    public HytaleRepairCommand(ConfigManager configManager) {
+    public HytaleRepairCommand(ConfigManager configManager, CooldownService cooldownService) {
         super(COMMAND_NAME, "Repair the item in your hand");
         this.configManager = configManager;
-        this.allFlag = withOptionalArg("all", "Repair all items in inventory", ArgTypes.STRING);
+        this.cooldownService = cooldownService;
         this.addAliases("fix");
+        // Allow extra arguments so we can parse "all" manually
+        setAllowsExtraArguments(true);
     }
 
     @Override
@@ -58,6 +65,19 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
             return;
         }
         
+        // Get effective cooldown from permissions
+        int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME, config.repair.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                return;
+            }
+        }
+        
         // Get player component
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
@@ -66,8 +86,10 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
             return;
         }
         
-        // Check if "all" flag is provided
-        boolean repairAll = allFlag.provided(ctx);
+        // Check if "all" argument is provided by parsing raw input
+        String rawInput = ctx.getInputString();
+        String[] parts = rawInput.trim().split("\\s+");
+        boolean repairAll = parts.length >= 2 && parts[1].equalsIgnoreCase("all");
         
         if (repairAll) {
             // Check permission for repair all
@@ -82,6 +104,11 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
             if (repairedCount > 0) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairAllSuccess", "count", String.valueOf(repairedCount)), "#55FF55"));
+                
+                // Set cooldown after successful repair
+                if (effectiveCooldown > 0) {
+                    cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
+                }
             } else {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairNothingToRepair"), "#FF5555"));
@@ -92,6 +119,11 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
             if (repaired) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairSuccess"), "#55FF55"));
+                
+                // Set cooldown after successful repair
+                if (effectiveCooldown > 0) {
+                    cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
+                }
             } else {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairNotDamaged"), "#FF5555"));

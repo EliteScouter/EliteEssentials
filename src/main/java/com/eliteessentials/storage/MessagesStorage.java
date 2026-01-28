@@ -21,7 +21,10 @@ import java.util.logging.Logger;
 public class MessagesStorage {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()  // Keep & as & instead of \u0026
+            .create();
     private static final Type MESSAGES_TYPE = new TypeToken<Map<String, String>>(){}.getType();
 
     private final File dataFolder;

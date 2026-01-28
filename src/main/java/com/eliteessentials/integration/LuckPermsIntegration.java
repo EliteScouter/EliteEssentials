@@ -294,7 +294,17 @@ public class LuckPermsIntegration {
         perms.add(Permissions.SEEN);
         perms.add(Permissions.EEHELP);
         perms.add(Permissions.GROUP_CHAT);
+        perms.add(Permissions.CHATS_LIST);
         perms.add("eliteessentials.command.misc.*");
+        
+        // Chat channel permissions (permission-based chats)
+        perms.add("eliteessentials.chat.*");
+        perms.add(Permissions.CHAT_COLOR);
+        perms.add(Permissions.CHAT_FORMAT);
+        // Common chat channel permissions
+        perms.add(Permissions.chatAccess("trade"));
+        perms.add(Permissions.chatAccess("help"));
+        perms.add(Permissions.chatAccess("global"));
         
         // Kit commands
         perms.add(Permissions.KIT);

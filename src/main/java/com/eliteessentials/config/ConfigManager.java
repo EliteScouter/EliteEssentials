@@ -24,7 +24,10 @@ import java.util.logging.Logger;
 public class ConfigManager {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()  // Keep & as & instead of \u0026
+            .create();
     
     private final File dataFolder;
     private PluginConfig config;

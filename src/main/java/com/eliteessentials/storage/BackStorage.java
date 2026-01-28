@@ -20,7 +20,10 @@ import java.util.logging.Logger;
 public class BackStorage {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
     private static final Type DATA_TYPE = new TypeToken<Map<UUID, List<Location>>>() {}.getType();
 
     private final File dataFolder;

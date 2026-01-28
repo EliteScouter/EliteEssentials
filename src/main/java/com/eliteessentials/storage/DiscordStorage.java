@@ -19,7 +19,10 @@ import java.util.logging.Logger;
 public class DiscordStorage {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
     
     private final File discordFile;
     private final Object fileLock = new Object();

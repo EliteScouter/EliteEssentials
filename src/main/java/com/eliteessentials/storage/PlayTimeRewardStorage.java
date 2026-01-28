@@ -21,7 +21,10 @@ import java.util.logging.Logger;
 public class PlayTimeRewardStorage {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
     
     private final File rewardsFile;
     private final File claimsFile;

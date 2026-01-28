@@ -359,4 +359,108 @@ public class MessageFormatter {
         }
         return result.toString();
     }
+    
+    /**
+     * Strips color codes from text while preserving formatting codes.
+     * Used when a player has format permission but not color permission.
+     * 
+     * @param text Text with color codes (& prefix)
+     * @return Text with color codes removed but formatting preserved
+     */
+    @Nonnull
+    public static String stripColors(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            // Check for color code prefix (& or §)
+            if ((c == '&' || c == '§') && i + 1 < text.length()) {
+                char next = text.charAt(i + 1);
+                // Check for hex color: &#RRGGBB (8 chars total) - strip these
+                if (next == '#' && i + 7 < text.length()) {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        i += 8; // Skip &#RRGGBB
+                        continue;
+                    }
+                }
+                // Check for simple color code: &0-9, &a-f - strip these
+                char code = Character.toLowerCase(next);
+                if (COLOR_MAP.containsKey(code)) {
+                    i += 2; // Skip &X (color)
+                    continue;
+                }
+                // Preserve formatting codes: &l, &o, &r, &k, &m, &n
+                if (code == 'r' || code == 'l' || code == 'o' || code == 'k' || code == 'm' || code == 'n') {
+                    result.append(c);
+                    result.append(next);
+                    i += 2;
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return result.toString();
+    }
+    
+    /**
+     * Strips formatting codes from text while preserving color codes.
+     * Used when a player has color permission but not format permission.
+     * 
+     * @param text Text with formatting codes (& prefix)
+     * @return Text with formatting codes removed but colors preserved
+     */
+    @Nonnull
+    public static String stripFormatting(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            // Check for color code prefix (& or §)
+            if ((c == '&' || c == '§') && i + 1 < text.length()) {
+                char next = text.charAt(i + 1);
+                // Preserve hex colors: &#RRGGBB
+                if (next == '#' && i + 7 < text.length()) {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        result.append(text, i, i + 8);
+                        i += 8;
+                        continue;
+                    }
+                }
+                char code = Character.toLowerCase(next);
+                // Preserve color codes: &0-9, &a-f
+                if (COLOR_MAP.containsKey(code)) {
+                    result.append(c);
+                    result.append(next);
+                    i += 2;
+                    continue;
+                }
+                // Strip formatting codes: &l, &o, &k, &m, &n (but keep &r as it resets colors too)
+                if (code == 'l' || code == 'o' || code == 'k' || code == 'm' || code == 'n') {
+                    i += 2; // Skip formatting code
+                    continue;
+                }
+                // Keep &r (reset) as it affects colors
+                if (code == 'r') {
+                    result.append(c);
+                    result.append(next);
+                    i += 2;
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return result.toString();
+    }
 }

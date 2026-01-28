@@ -112,6 +112,9 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
                 Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
+                // Charge cost AFTER successful teleport
+                CommandPermissionUtil.chargeCost(ctx, player, "back", config.back.cost);
+                
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
             });
         };

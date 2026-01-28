@@ -3,6 +3,7 @@ package com.eliteessentials.services;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.model.GroupChat;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -19,13 +20,16 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /**
- * Service for managing group-based private chat channels.
+ * Service for managing group-based and permission-based private chat channels.
  * 
- * Players can chat with others in their LuckPerms group using /gc [group] <message>.
- * If a player belongs to multiple groups, they can specify which group to chat in.
+ * Two types of chat channels:
+ * 1. Group-based (requiresGroup = true): Players in the LuckPerms group can chat
+ * 2. Permission-based (requiresGroup = false): Players with eliteessentials.chat.<name> can chat
  * 
- * Configuration is stored in groupchat.json and defines which groups have chat channels,
- * their display names, prefixes, and colors.
+ * Usage:
+ * - /gc [chat] <message> - Send to a chat channel
+ * - /g [chat] <message> - Alias for /gc
+ * - /chats - List available chat channels
  */
 public class GroupChatService {
     
@@ -57,7 +61,23 @@ public class GroupChatService {
                 List<GroupChat> loaded = gson.fromJson(reader, type);
                 if (loaded != null) {
                     groupChats = loaded;
-                    logger.info("Loaded " + groupChats.size() + " group chat configurations.");
+                    
+                    // Migration: ensure all chats have requiresGroup set
+                    // Existing configs without this field should default to true (group-based)
+                    boolean needsSave = false;
+                    for (GroupChat gc : groupChats) {
+                        if (gc.getRequiresGroupRaw() == null) {
+                            gc.setRequiresGroup(true);
+                            needsSave = true;
+                        }
+                    }
+                    
+                    if (needsSave) {
+                        logger.info("Migrating group chat config - adding requiresGroup field to existing chats.");
+                        save();
+                    }
+                    
+                    logger.info("Loaded " + groupChats.size() + " chat channel configurations.");
                 }
             } catch (Exception e) {
                 logger.severe("Failed to load group chat config: " + e.getMessage());
@@ -93,11 +113,14 @@ public class GroupChatService {
      */
     private void createDefaultConfig() {
         groupChats.clear();
+        // Group-based chats (require LuckPerms group membership)
         groupChats.add(GroupChat.adminGroup());
         groupChats.add(GroupChat.modGroup());
         groupChats.add(GroupChat.staffGroup());
         groupChats.add(GroupChat.vipGroup());
-        logger.info("Created default group chat configuration.");
+        // Permission-based chat (requires eliteessentials.chat.trade)
+        groupChats.add(GroupChat.tradeChat());
+        logger.info("Created default chat channel configuration.");
     }
     
     /**
@@ -115,11 +138,11 @@ public class GroupChatService {
     }
     
     /**
-     * Get a group chat by group name (case-insensitive).
+     * Get a group chat by name (case-insensitive).
      */
-    public GroupChat getGroupChat(String groupName) {
+    public GroupChat getGroupChat(String chatName) {
         for (GroupChat gc : groupChats) {
-            if (gc.getGroupName().equalsIgnoreCase(groupName)) {
+            if (gc.getGroupName().equalsIgnoreCase(chatName)) {
                 return gc;
             }
         }
@@ -127,41 +150,51 @@ public class GroupChatService {
     }
     
     /**
-     * Get all groups a player belongs to that have group chat enabled.
-     * Uses LuckPerms to determine group membership.
+     * Check if a player has access to a specific chat channel.
+     * 
+     * @param playerId Player UUID
+     * @param chat The chat channel to check
+     * @return true if player can use this chat
+     */
+    public boolean playerHasAccess(UUID playerId, GroupChat chat) {
+        if (!chat.isEnabled()) {
+            return false;
+        }
+        
+        if (chat.isPermissionBased()) {
+            // Permission-based chat: check eliteessentials.chat.<name>
+            return com.eliteessentials.permissions.PermissionService.get()
+                .hasPermission(playerId, Permissions.chatAccess(chat.getGroupName()));
+        } else {
+            // Group-based chat: check LuckPerms group membership
+            return playerBelongsToGroup(playerId, chat.getGroupName());
+        }
+    }
+    
+    /**
+     * Get all chats a player has access to.
+     * Includes both group-based chats (from LuckPerms groups) and permission-based chats.
      */
     public List<GroupChat> getPlayerGroupChats(UUID playerId) {
         List<GroupChat> result = new ArrayList<>();
         
-        if (!LuckPermsIntegration.isAvailable()) {
-            if (configManager.isDebugEnabled()) {
-                logger.info("LuckPerms not available for group chat.");
-            }
-            return result;
-        }
-        
-        List<String> playerGroups = LuckPermsIntegration.getGroups(playerId);
-        
-        if (configManager.isDebugEnabled()) {
-            logger.info("Player groups from LuckPerms: " + playerGroups);
-        }
-        
         for (GroupChat gc : groupChats) {
             if (!gc.isEnabled()) continue;
             
-            for (String playerGroup : playerGroups) {
-                if (playerGroup.equalsIgnoreCase(gc.getGroupName())) {
-                    result.add(gc);
-                    break;
-                }
+            if (playerHasAccess(playerId, gc)) {
+                result.add(gc);
             }
+        }
+        
+        if (configManager.isDebugEnabled()) {
+            logger.info("Player " + playerId + " has access to " + result.size() + " chat channels.");
         }
         
         return result;
     }
     
     /**
-     * Check if a player belongs to a specific group.
+     * Check if a player belongs to a specific LuckPerms group.
      */
     public boolean playerBelongsToGroup(UUID playerId, String groupName) {
         if (!LuckPermsIntegration.isAvailable()) {
@@ -178,16 +211,15 @@ public class GroupChatService {
     }
     
     /**
-     * Broadcast a message to all players in a specific group.
+     * Broadcast a message to all players who have access to a specific chat.
      * 
-     * @param groupChat The group chat configuration
+     * @param groupChat The chat channel configuration
      * @param sender The player sending the message
      * @param message The message content
      */
     public void broadcast(GroupChat groupChat, PlayerRef sender, String message) {
         // Build the formatted message
         // Format: [PREFIX] PlayerName: message
-        // Color needs & prefix for hex colors (e.g., #FF0000 -> &#FF0000)
         String colorCode = groupChat.getColor();
         if (colorCode != null && colorCode.startsWith("#") && !colorCode.startsWith("&#")) {
             colorCode = "&" + colorCode;
@@ -198,7 +230,7 @@ public class GroupChatService {
         
         Message formattedMessage = MessageFormatter.format(format);
         
-        // Find all players in this group
+        // Find all players with access to this chat
         List<PlayerRef> recipients = new ArrayList<>();
         Universe universe = Universe.get();
         
@@ -210,7 +242,7 @@ public class GroupChatService {
                 if (players != null) {
                     for (PlayerRef player : players) {
                         if (player != null && player.isValid()) {
-                            if (playerBelongsToGroup(player.getUuid(), groupChat.getGroupName())) {
+                            if (playerHasAccess(player.getUuid(), groupChat)) {
                                 recipients.add(player);
                             }
                         }
@@ -225,25 +257,25 @@ public class GroupChatService {
         }
         
         if (configManager.isDebugEnabled()) {
-            logger.info("Group chat [" + groupChat.getGroupName() + "] from " + 
+            logger.info("Chat [" + groupChat.getGroupName() + "] from " + 
                        sender.getUsername() + " sent to " + recipients.size() + " players.");
         }
     }
     
     /**
-     * Broadcast a message using the player's first available group.
+     * Broadcast a message using the player's first available chat.
      * 
      * @param sender The player sending the message
      * @param message The message content
-     * @return true if message was sent, false if player has no group chat access
+     * @return true if message was sent, false if player has no chat access
      */
     public boolean broadcast(PlayerRef sender, String message) {
-        List<GroupChat> playerGroups = getPlayerGroupChats(sender.getUuid());
-        if (playerGroups.isEmpty()) {
+        List<GroupChat> playerChats = getPlayerGroupChats(sender.getUuid());
+        if (playerChats.isEmpty()) {
             return false;
         }
         
-        broadcast(playerGroups.get(0), sender, message);
+        broadcast(playerChats.get(0), sender, message);
         return true;
     }
     

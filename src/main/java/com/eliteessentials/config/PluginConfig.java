@@ -55,6 +55,7 @@ public class PluginConfig {
     public AutoBroadcastConfig autoBroadcast = new AutoBroadcastConfig();
     public AliasConfig aliases = new AliasConfig();
     public EconomyConfig economy = new EconomyConfig();
+    public MailConfig mail = new MailConfig();
     
     // ==================== MESSAGES ====================
     
@@ -215,15 +216,21 @@ public class PluginConfig {
         // ==================== VANISH ====================
         messages.put("vanishEnabled", "&aYou are now vanished. Other players cannot see you.");
         messages.put("vanishDisabled", "&cYou are now visible to other players.");
-        messages.put("vanishReminder", "&7You are currently vanished.");
+        messages.put("vanishReminder", "&c&l>> YOU ARE STILL VANISHED <<");
         messages.put("vanishFakeLeave", "&e{player} &7left the server.");
         messages.put("vanishFakeJoin", "&e{player} &7joined the server.");
         
         // ==================== GROUP CHAT ====================
-        messages.put("groupChatNoAccess", "&cYou don't have access to any group chats.");
+        messages.put("groupChatNoAccess", "&cYou don't have access to any chat channels.");
         messages.put("groupChatUsage", "&cUsage: &e/gc <message>");
         messages.put("groupChatUsageGroup", "&cUsage: &e/gc {group} <message>");
-        messages.put("groupChatUsageMultiple", "&cUsage: &e/gc [group] <message> &7- Groups: {groups}");
+        messages.put("groupChatUsageMultiple", "&cUsage: &e/gc [chat] <message> &7- Chats: {groups}");
+        
+        // ==================== CHATS LIST ====================
+        messages.put("chatsNoAccess", "&cYou don't have access to any chat channels.");
+        messages.put("chatsHeader", "&b&l=== &fYour Chat Channels &7({count}) &b&l===");
+        messages.put("chatsEntry", "{color}{prefix} &f{name} &7- {displayName}");
+        messages.put("chatsFooter", "&7Use &a/gc [chat] <message> &7or &a/g [chat] <message> &7to chat.");
         
         // ==================== REPAIR ====================
         messages.put("repairSuccess", "&aRepaired the item in your hand.");
@@ -317,6 +324,34 @@ public class PluginConfig {
         messages.put("baltopYourBalance", "&7Your balance: &a{balance}");
         messages.put("baltopEmpty", "&cNo player data found.");
         
+        // ==================== MAIL ====================
+        messages.put("mailUsage", "&eUsage: &f/mail <send|read|list|clear|delete>");
+        messages.put("mailSendUsage", "&eUsage: &f/mail send <player> <message>");
+        messages.put("mailDeleteUsage", "&eUsage: &f/mail delete <number>");
+        messages.put("mailEmpty", "&7You have no mail.");
+        messages.put("mailSent", "&aMail sent to &f{player}&a.");
+        messages.put("mailReceived", "&aYou received new mail from &f{player}&a! Type &e/mail read &ato view.");
+        messages.put("mailSendSelf", "&cYou cannot send mail to yourself.");
+        messages.put("mailPlayerNotFound", "&cPlayer '&e{player}&c' has never joined this server.");
+        messages.put("mailOnCooldown", "&cPlease wait &e{seconds} &cseconds before sending mail to this player again.");
+        messages.put("mailRecipientFull", "&c{player}'s mailbox is full.");
+        messages.put("mailSendFailed", "&cFailed to send mail.");
+        messages.put("mailMessageTooLong", "&cMessage too long. Maximum &e{max} &ccharacters.");
+        messages.put("mailListHeader", "&b&l=== &fYour Mail &7({count} total, {unread} unread) &b&l===");
+        messages.put("mailListEntry", "{status}&f{number}. &7{date} &e{player}&7: &f{preview}");
+        messages.put("mailListMore", "&7...and {count} more. Use &e/mail read <number> &7to view.");
+        messages.put("mailListFooter", "&7Use &a/mail read [number] &7to read, &c/mail clear &7to delete all.");
+        messages.put("mailReadHeader", "&b&l=== &fMail {number}/{total} &b&l===");
+        messages.put("mailReadFrom", "&7From: &e{player} &7on &e{date}");
+        messages.put("mailReadContent", "&f{message}");
+        messages.put("mailNotFound", "&cMail not found.");
+        messages.put("mailInvalidNumber", "&cInvalid mail number.");
+        messages.put("mailCleared", "&aCleared &e{count} &amail messages.");
+        messages.put("mailClearedRead", "&aCleared &e{count} &aread mail messages.");
+        messages.put("mailDeleted", "&aMail deleted.");
+        messages.put("mailDeleteFailed", "&cFailed to delete mail.");
+        messages.put("mailNotifyLogin", "&aYou have &e{count} &aunread mail message(s). Type &e/mail &ato view.");
+        
         // ==================== SEEN ====================
         messages.put("seenOnline", "&a{player} &7is currently &aonline&7.");
         messages.put("seenLastSeen", "&f{player} &7was last seen &e{time}&7.");
@@ -341,6 +376,8 @@ public class PluginConfig {
         messages.put("deathGeneric", "{player} died");
         
         // ==================== GUI LABELS ====================
+        messages.put("guiHomesTitle", "Your Homes ({count}/{max})");
+        messages.put("guiWarpsTitle", "Server Warps");
         messages.put("guiKitStatusLocked", "[Locked]");
         messages.put("guiKitStatusClaimed", "Claimed");
         messages.put("guiKitStatusReady", "Ready");
@@ -357,11 +394,19 @@ public class PluginConfig {
         /** Enable/disable the /rtp command */
         public boolean enabled = true;
         
-        /** Minimum distance from player for random location */
+        /** Minimum distance from player for random location (default for all worlds) */
         public int minRange = 100;
         
-        /** Maximum distance from player for random location */
+        /** Maximum distance from player for random location (default for all worlds) */
         public int maxRange = 5000;
+        
+        /**
+         * Per-world RTP range configuration.
+         * Key = world name (case-sensitive), Value = WorldRtpRange with min/max for that world.
+         * If a world is not in this map, it uses the default minRange/maxRange above.
+         * Example: {"nether": {minRange: 50, maxRange: 2000}, "end": {minRange: 100, maxRange: 1000}}
+         */
+        public Map<String, WorldRtpRange> worldRanges = createDefaultWorldRanges();
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 30;
@@ -386,6 +431,47 @@ public class PluginConfig {
         
         /** Cost to use this command (0 = free, requires economy enabled) */
         public double cost = 0.0;
+        
+        private static Map<String, WorldRtpRange> createDefaultWorldRanges() {
+            Map<String, WorldRtpRange> ranges = new HashMap<>();
+            // Example configurations - server owners can customize these
+            // ranges.put("nether", new WorldRtpRange(50, 2000));
+            // ranges.put("end", new WorldRtpRange(100, 1000));
+            return ranges;
+        }
+        
+        /**
+         * Get the RTP range for a specific world.
+         * Returns world-specific range if configured, otherwise returns default range.
+         */
+        public WorldRtpRange getRangeForWorld(String worldName) {
+            WorldRtpRange worldRange = worldRanges.get(worldName);
+            if (worldRange != null) {
+                return worldRange;
+            }
+            // Return default range
+            return new WorldRtpRange(minRange, maxRange);
+        }
+    }
+    
+    /**
+     * Per-world RTP range configuration.
+     */
+    public static class WorldRtpRange {
+        /** Minimum distance for this world */
+        public int minRange;
+        
+        /** Maximum distance for this world */
+        public int maxRange;
+        
+        public WorldRtpRange() {
+            this(100, 5000);
+        }
+        
+        public WorldRtpRange(int minRange, int maxRange) {
+            this.minRange = minRange;
+            this.maxRange = maxRange;
+        }
     }
 
     // ==================== BACK ====================
@@ -481,6 +567,13 @@ public class PluginConfig {
         
         /** Cost to use this command (0 = free, requires economy enabled) */
         public double cost = 0.0;
+        
+        /**
+         * Teleport new players to /setspawn location on first join.
+         * When true: First-time players are teleported to the spawn point after joining.
+         * When false (default): Players spawn at the world's default spawn location.
+         */
+        public boolean teleportOnFirstJoin = true;
     }
 
     // ==================== WARPS ====================
@@ -552,6 +645,9 @@ public class PluginConfig {
     public static class GodConfig {
         /** Enable/disable the /god command */
         public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
     }
 
     // ==================== HEAL ====================
@@ -579,6 +675,9 @@ public class PluginConfig {
     public static class FlyConfig {
         /** Enable/disable the /fly command */
         public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
     }
 
     // ==================== VANISH ====================
@@ -595,6 +694,26 @@ public class PluginConfig {
         
         /** Send fake join/leave messages when vanishing/unvanishing */
         public boolean mimicJoinLeave = true;
+        
+        /** 
+         * Persist vanish state across server restarts/reconnects.
+         * When true: Players who disconnect while vanished will remain vanished when they rejoin.
+         * When false (default): Vanish resets on disconnect.
+         */
+        public boolean persistOnReconnect = true;
+        
+        /**
+         * Suppress real join/quit messages for vanished players.
+         * When true: No join message when a vanished player connects, no quit message when they disconnect.
+         * Works with persistOnReconnect to keep vanished players truly hidden.
+         */
+        public boolean suppressJoinQuitMessages = true;
+        
+        /**
+         * Show a reminder to vanished players when they rejoin.
+         * Only applies when persistOnReconnect is true.
+         */
+        public boolean showReminderOnJoin = true;
     }
 
     // ==================== GROUP CHAT ====================
@@ -612,6 +731,9 @@ public class PluginConfig {
     public static class RepairConfig {
         /** Enable/disable the /repair command */
         public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
     }
 
     // ==================== TOP ====================
@@ -619,6 +741,9 @@ public class PluginConfig {
     public static class TopConfig {
         /** Enable/disable the /top command */
         public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
         
         /** Cost to use this command (0 = free, requires economy enabled) */
         public double cost = 0.0;
@@ -717,6 +842,9 @@ public class PluginConfig {
     public static class ClearInvConfig {
         /** Enable/disable the /clearinv command */
         public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
     }
     
     // ==================== LIST (Online Players) ====================
@@ -734,6 +862,24 @@ public class PluginConfig {
     public static class ChatFormatConfig {
         /** Enable/disable group-based chat formatting */
         public boolean enabled = true;
+        
+        /**
+         * Allow regular players to use color codes in chat (&c, &#FF0000, etc).
+         * When true: Everyone can use colors in chat.
+         * When false: Only admins/OPs can use colors (recommended).
+         * 
+         * In advanced permission mode, players with eliteessentials.chat.color can also use colors.
+         */
+        public boolean allowPlayerColors = false;
+        
+        /**
+         * Allow regular players to use formatting codes in chat (&l bold, &o italic).
+         * When true: Everyone can use formatting in chat.
+         * When false: Only admins/OPs can use formatting.
+         * 
+         * In advanced permission mode, players with eliteessentials.chat.format can also use formatting.
+         */
+        public boolean allowPlayerFormatting = false;
         
         /** 
          * Chat format per group.
@@ -832,6 +978,51 @@ public class PluginConfig {
         
         /** Number of players to show in /baltop */
         public int baltopLimit = 10;
+        
+        // ==================== VAULTUNLOCKED INTEGRATION ====================
+        
+        /**
+         * Register EliteEssentials as a VaultUnlocked economy provider.
+         * When enabled, other plugins can use VaultUnlocked API to interact with our economy.
+         * Requires VaultUnlocked plugin to be installed.
+         */
+        public boolean vaultUnlockedProvider = true;
+        
+        /**
+         * Use an external economy plugin via VaultUnlocked instead of our internal economy.
+         * When enabled, /wallet, /pay, /baltop will use the external economy.
+         * Requires VaultUnlocked plugin and another economy plugin to be installed.
+         * 
+         * Note: If both vaultUnlockedProvider and useExternalEconomy are true,
+         * useExternalEconomy takes precedence (we consume, not provide).
+         */
+        public boolean useExternalEconomy = false;
+    }
+    
+    // ==================== MAIL ====================
+    
+    public static class MailConfig {
+        /** Enable/disable the mail system */
+        public boolean enabled = true;
+        
+        /** Maximum mail messages per player mailbox */
+        public int maxMailPerPlayer = 50;
+        
+        /** Maximum message length in characters */
+        public int maxMessageLength = 500;
+        
+        /** 
+         * Cooldown in seconds between sending mail to the SAME player.
+         * This prevents spam by limiting how often you can mail one person.
+         * Set to 0 to disable cooldown.
+         */
+        public int sendCooldownSeconds = 30;
+        
+        /** Show notification on login if player has unread mail */
+        public boolean notifyOnLogin = true;
+        
+        /** Delay in seconds before showing mail notification on login */
+        public int notifyDelaySeconds = 3;
     }
     
     // ==================== PLAYTIME REWARDS ====================

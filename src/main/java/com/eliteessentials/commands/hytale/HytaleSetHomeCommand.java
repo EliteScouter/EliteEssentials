@@ -108,7 +108,11 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         HomeService.Result result = homeService.setHome(playerId, homeName, location);
 
         switch (result) {
-            case SUCCESS -> ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeSet", "name", homeName), "#55FF55"));
+            case SUCCESS -> {
+                // Charge cost AFTER successful home set
+                CommandPermissionUtil.chargeCost(ctx, player, "sethome", config.homes.setHomeCost);
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeSet", "name", homeName), "#55FF55"));
+            }
             case LIMIT_REACHED -> {
                 int max = homeService.getMaxHomes(playerId);
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeLimitReached", "max", String.valueOf(max)), "#FF5555"));

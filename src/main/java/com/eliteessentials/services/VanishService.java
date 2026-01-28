@@ -2,6 +2,8 @@ package com.eliteessentials.services;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
+import com.eliteessentials.model.PlayerFile;
+import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -14,6 +16,7 @@ import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.ServerPlayerListPlayer;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,18 +26,44 @@ import java.util.logging.Logger;
  * Service for managing player vanish state.
  * Vanished players are invisible to other players, hidden from the map,
  * and hidden from the Server Players list.
+ * 
+ * Vanish state is persisted in each player's JSON file (players/{uuid}.json).
  */
 public class VanishService {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     
     private final ConfigManager configManager;
+    private PlayerFileStorage playerFileStorage;
     
-    // Track vanished players (in-memory only, resets on restart)
+    // Track currently vanished players (in-memory for quick lookups)
     private final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
+    
+    // Track player store/ref pairs for map filter updates
+    private final Map<UUID, PlayerStoreRef> playerStoreRefs = new ConcurrentHashMap<>();
+    
+    /**
+     * Helper class to store player's store and ref for map filter updates.
+     */
+    private static class PlayerStoreRef {
+        final Store<EntityStore> store;
+        final Ref<EntityStore> ref;
+        
+        PlayerStoreRef(Store<EntityStore> store, Ref<EntityStore> ref) {
+            this.store = store;
+            this.ref = ref;
+        }
+    }
     
     public VanishService(ConfigManager configManager) {
         this.configManager = configManager;
+    }
+    
+    /**
+     * Set the player file storage (called after initialization).
+     */
+    public void setPlayerFileStorage(PlayerFileStorage storage) {
+        this.playerFileStorage = storage;
     }
     
     /**
@@ -50,12 +79,28 @@ public class VanishService {
         
         PluginConfig config = configManager.getConfig();
         
+        // Persist to player file if enabled
+        if (config.vanish.persistOnReconnect && playerFileStorage != null) {
+            PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
+            if (playerFile != null) {
+                playerFile.setVanished(vanished);
+                playerFileStorage.saveAndMarkDirty(playerId);
+            }
+        }
+        
         // Update in-world visibility
         updateVisibilityForAll(playerId, vanished);
         
         // Update player list if enabled
         if (config.vanish.hideFromList) {
             updatePlayerListForAll(playerId, vanished);
+        }
+        
+        // Update map filters - NOTE: This currently only affects NEW players joining
+        // To properly hide already-tracked players from the map, need to find the 
+        // correct WorldMapTracker method. See updateMapFiltersForAll() comments.
+        if (config.vanish.hideFromMap) {
+            updateMapFiltersForAll();
         }
         
         // Send fake join/leave message if enabled
@@ -72,6 +117,16 @@ public class VanishService {
     }
     
     /**
+     * Check if a player has persisted vanish state (for reconnect handling).
+     */
+    public boolean hasPersistedVanish(UUID playerId) {
+        if (playerFileStorage == null) return false;
+        
+        PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
+        return playerFile != null && playerFile.isVanished();
+    }
+    
+    /**
      * Toggle a player's vanish state.
      * @param playerName The player's username (for fake messages)
      * @return true if now vanished, false if now visible
@@ -85,14 +140,42 @@ public class VanishService {
     /**
      * Called when a player joins the server.
      * Hides all vanished players from the joining player.
+     * Also restores vanish state if player was vanished before disconnect.
+     * @return true if the joining player is vanished (for suppressing join message)
      */
-    public void onPlayerJoin(PlayerRef joiningPlayer) {
-        if (joiningPlayer == null) return;
+    public boolean onPlayerJoin(PlayerRef joiningPlayer) {
+        if (joiningPlayer == null) return false;
         
+        UUID playerId = joiningPlayer.getUuid();
         PluginConfig config = configManager.getConfig();
+        
+        // Check if player should be restored to vanish state from their player file
+        boolean wasVanished = false;
+        if (config.vanish.persistOnReconnect && playerFileStorage != null) {
+            PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
+            if (playerFile != null && playerFile.isVanished()) {
+                // Restore vanish state (without fake messages - they're reconnecting)
+                vanishedPlayers.add(playerId);
+                wasVanished = true;
+                logger.info("Restored vanish state for " + joiningPlayer.getUsername() + " (was vanished before disconnect)");
+                
+                // Update visibility for all other players
+                updateVisibilityForAll(playerId, true);
+                
+                // Update player list
+                if (config.vanish.hideFromList) {
+                    updatePlayerListForAll(playerId, true);
+                }
+                
+                // Map visibility will be handled via filter in onPlayerReady when 
+                // other players have their map filters set up
+            }
+        }
         
         // Hide all vanished players from the joining player's view
         for (UUID vanishedId : vanishedPlayers) {
+            if (vanishedId.equals(playerId)) continue; // Don't hide from self
+            
             try {
                 // Hide in-world
                 joiningPlayer.getHiddenPlayersManager().hidePlayer(vanishedId);
@@ -106,6 +189,22 @@ public class VanishService {
                 logger.warning("Failed to hide vanished player from " + joiningPlayer.getUsername() + ": " + e.getMessage());
             }
         }
+        
+        return wasVanished;
+    }
+    
+    /**
+     * Send vanish reminder to a player who reconnected while vanished.
+     */
+    public void sendVanishReminder(PlayerRef playerRef) {
+        if (playerRef == null) return;
+        
+        PluginConfig config = configManager.getConfig();
+        if (!config.vanish.showReminderOnJoin) return;
+        
+        String message = configManager.getMessage("vanishReminder");
+        playerRef.sendMessage(MessageFormatter.format(message));
+        logger.fine("Sent vanish reminder to " + playerRef.getUsername());
     }
     
     /**
@@ -116,16 +215,28 @@ public class VanishService {
         if (store == null || ref == null || !ref.isValid()) return;
         
         PluginConfig config = configManager.getConfig();
-        if (!config.vanish.hideFromMap) return;
         
         try {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) return;
             
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef != null) {
+                // Store the player's store/ref for later map filter updates
+                playerStoreRefs.put(playerRef.getUuid(), new PlayerStoreRef(store, ref));
+            }
+            
+            if (!config.vanish.hideFromMap) return;
+            
             WorldMapTracker tracker = player.getWorldMapTracker();
             if (tracker != null) {
                 // Set filter to hide vanished players from this player's map
-                tracker.setPlayerMapFilter(playerRef -> !vanishedPlayers.contains(playerRef.getUuid()));
+                // Filter returns TRUE for players who should be SKIPPED/HIDDEN
+                // Filter returns FALSE for players who should be SHOWN
+                tracker.setPlayerMapFilter(pRef -> {
+                    // Return TRUE to HIDE vanished players, FALSE to show others
+                    return vanishedPlayers.contains(pRef.getUuid());
+                });
             }
         } catch (Exception e) {
             logger.warning("Failed to set map filter for player: " + e.getMessage());
@@ -134,10 +245,48 @@ public class VanishService {
     
     /**
      * Called when a player leaves the server.
-     * Removes them from vanish state.
+     * Removes them from active vanish tracking but preserves persisted state.
+     * @return true if the player was vanished (for suppressing quit message)
      */
-    public void onPlayerLeave(UUID playerId) {
-        vanishedPlayers.remove(playerId);
+    public boolean onPlayerLeave(UUID playerId) {
+        boolean wasVanished = vanishedPlayers.remove(playerId);
+        // Clean up stored ref
+        playerStoreRefs.remove(playerId);
+        // Note: We don't clear the vanished flag in PlayerFile here
+        // That's intentional - the player should remain vanished when they reconnect
+        return wasVanished;
+    }
+    
+    /**
+     * Update map filters for all online players.
+     * Called when vanish state changes to refresh player marker visibility.
+     * 
+     * The filter is checked every tick by PlayerIconMarkerProvider.update().
+     * Return TRUE to HIDE/skip a player, FALSE to SHOW them.
+     */
+    private void updateMapFiltersForAll() {
+        for (Map.Entry<UUID, PlayerStoreRef> entry : playerStoreRefs.entrySet()) {
+            PlayerStoreRef psr = entry.getValue();
+            if (psr.ref == null || !psr.ref.isValid()) {
+                continue;
+            }
+            
+            try {
+                Player player = psr.store.getComponent(psr.ref, Player.getComponentType());
+                if (player == null) continue;
+                
+                WorldMapTracker tracker = player.getWorldMapTracker();
+                if (tracker != null) {
+                    // Re-apply the filter with current vanished players set
+                    // TRUE = skip/hide, FALSE = show
+                    tracker.setPlayerMapFilter(playerRef -> {
+                        return vanishedPlayers.contains(playerRef.getUuid());
+                    });
+                }
+            } catch (Exception e) {
+                // Player may have disconnected, ignore
+            }
+        }
     }
     
     /**

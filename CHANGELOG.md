@@ -2,6 +2,122 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [1.1.4] - 2026-01-27
+
+### Added
+
+**Mail System** - Send and receive mail from other players, even when offline
+* `/mail send <player> <message>` - Send mail to any player (online or offline)
+* `/mail read [number]` - Read a specific mail or first unread
+* `/mail list` - List all mail with unread indicators
+* `/mail clear` - Clear all mail
+* `/mail clear read` - Clear only read mail
+* `/mail delete <number>` - Delete specific mail
+* Login notification when you have unread mail
+* Online recipients get instant notification when they receive new mail
+* Spam protection: Cooldown between sending mail to the same player (default: 30 seconds)
+* Mailbox limit prevents abuse (default: 50 messages per player)
+* Message length limit (default: 500 characters)
+* Mail stored in individual player JSON files (persists across restarts)
+* Permissions: `eliteessentials.command.mail.use`, `eliteessentials.command.mail.send`
+* Config options: `mail.enabled`, `maxMailPerPlayer`, `maxMessageLength`, `sendCooldownSeconds`, `notifyOnLogin`, `notifyDelaySeconds`
+
+**Permission-Based Command Costs** - Set different costs per group via LuckPerms
+* Permission format: `eliteessentials.cost.<command>.<amount>`
+* Supported commands: `home`, `sethome`, `spawn`, `warp`, `back`, `rtp`, `tpa`, `tpahere`
+* Lowest matching cost wins (VIP with `.cost.home.5` pays less than default with `.cost.home.10`)
+* Config cost remains the fallback when no permission is set
+* Common cost values: 0, 1, 2, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000
+* Example LuckPerms setup:
+  - `/lp group vip permission set eliteessentials.cost.home.5`
+  - `/lp group default permission set eliteessentials.cost.rtp.50`
+  - `/lp group premium permission set eliteessentials.cost.warp.0` (free warps)
+
+**Expanded Cooldown System** - Cooldowns for admin commands with permission-based overrides
+* New cooldown config options for: `/god`, `/fly`, `/repair`, `/clearinv`, `/top`
+* Each command now has `cooldownSeconds` in config (default: 0 = no cooldown)
+* Permission-based cooldown bypass: `eliteessentials.command.misc.<cmd>.bypass.cooldown`
+* Permission-based cooldown override: `eliteessentials.command.misc.<cmd>.cooldown.<seconds>`
+* Common cooldown values: 30, 60, 120, 180, 300, 600, 900, 1800, 3600 seconds
+* Works in both simple mode (uses config value) and advanced mode (permission overrides)
+* Example: Give VIPs shorter heal cooldown with `eliteessentials.command.misc.heal.cooldown.30`
+
+### Changed
+
+**Human-Readable JSON Files** - Config files now use `&` instead of `\u0026`
+* All JSON files (messages.json, motd.json, rules.json, etc.) now save color codes as `&c` instead of `\u0026c`
+* Makes editing config files much easier - no more unicode escapes
+* Existing files with unicode escapes still work (backwards compatible)
+* New saves will use the readable format
+
+### Fixed
+
+**Death Messages Color Codes** - Death messages now properly process color codes
+* Color codes like `&b`, `&8`, `&#RRGGBB` now work in death message configs
+* Previously color codes were displayed as literal text
+
+**Spawn System Overhaul** - `/setspawn` now works correctly across all scenarios
+* New players now spawn at the custom spawn location set via `/setspawn`
+* Cross-world spawn teleportation works properly (e.g., `/spawn` from explore world to main world)
+* Per-world spawns function correctly - each world respects its own spawn point
+* Respawn after death uses the correct world's spawn location
+
+**Vanish Command** - `/vanish` now works properly
+* Fixed vanish state not being applied correctly
+* Players are now properly hidden from other players when vanished
+
+**Repair All Command** - `/repair all` now works correctly
+* Fixed argument parsing - command now accepts `all` as a simple argument
+* Previously required `--all=value` format which was confusing
+
+## [1.1.3] - 2026-01-26
+
+### Added
+
+**Chat Color/Formatting Restrictions** - Control who can use color codes in chat
+* New config options in `chatFormat` section:
+  - `allowPlayerColors: false` - When false, only admins/OPs can use color codes like &c or &#FF0000
+  - `allowPlayerFormatting: false` - When false, only admins/OPs can use &l (bold), &o (italic), etc.
+* Players without permission will have color/format codes stripped from their messages
+* In advanced permission mode, grant `eliteessentials.chat.color` or `eliteessentials.chat.format` to allow specific players/groups
+* Defaults to restricted (false) - colors are admin-only out of the box
+
+**VaultUnlocked Integration** - Cross-plugin economy support via VaultUnlocked API
+* Register EliteEssentials as an economy provider for other plugins
+* Optionally use external economy plugins instead of internal economy
+* New config options in `economy` section:
+  - `vaultUnlockedProvider: true` - Register as economy provider (default: true)
+  - `useExternalEconomy: false` - Use external economy instead of internal (default: false)
+* When `vaultUnlockedProvider` is enabled:
+  - Other plugins using VaultUnlocked can access EliteEssentials wallets
+  - Supports: getBalance, deposit, withdraw, has, transfer
+* When `useExternalEconomy` is enabled:
+  - `/wallet`, `/pay`, `/baltop` use the external economy
+  - Command costs deduct from external economy
+  - EliteEssentials becomes a consumer instead of provider
+* Reflection-based integration allows building with JVM 21 while running on JVM 25+ servers
+* Graceful fallback: If VaultUnlocked not installed, uses internal economy silently
+
+### Changed
+
+**RTP Command Fix** - Fixed `/rtp` not working for regular players
+* Command sender can be either `PlayerRef` or `Player` depending on context
+* Now properly handles both sender types when detecting console vs player execution
+* Self-RTP (`/rtp` with no args) now works correctly for all players
+
+### Fixed
+
+**StarterKitEvent Thread Safety** - Fixed crash when starter kit event fires
+* `IllegalStateException: Assert not in thread!` error when new players join
+* Event callback now properly executes store operations on the WorldThread
+* Fixes server crash even when kits are disabled in config
+
+### Notes
+
+* VaultUnlocked 2.18.3 for Hytale requires JVM 25+ at runtime (your server runs this)
+* When using `useExternalEconomy`, set `vaultUnlockedProvider: false` to avoid conflicts
+* Compatible economy plugins: TheNewEconomy, EcoTale, DynastyEconomy, and others supporting VaultUnlocked
+
 ## [1.1.2] - 2026-01-25
 
 > <span style="color: rgb(224, 62, 45);"><strong>BACKUP WARNING</strong>: This version includes automatic data migrations that restructure how player data is stored. Before upgrading:</span>

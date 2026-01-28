@@ -3,6 +3,7 @@ package com.eliteessentials.listeners;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
@@ -69,6 +70,9 @@ public class ChatListener {
             logger.info("LuckPerms available: " + LuckPermsIntegration.isAvailable());
         }
         
+        // Process player message - strip color/format codes if they don't have permission
+        String processedMessage = processPlayerMessage(sender, originalMessage);
+        
         // Get the chat format for this player's group
         String format = getChatFormat(sender);
         
@@ -82,7 +86,7 @@ public class ChatListener {
         // Replace placeholders
         String formattedMessage = format
                 .replace("{player}", playerName)
-                .replace("{message}", originalMessage)
+                .replace("{message}", processedMessage)
                 .replace("{displayname}", playerName);
         
         if (configManager.isDebugEnabled()) {
@@ -98,6 +102,71 @@ public class ChatListener {
         if (configManager.isDebugEnabled()) {
             logger.info("Message broadcasted to all players");
         }
+    }
+    
+    /**
+     * Process player message, stripping color/format codes if they don't have permission.
+     * 
+     * @param sender The player sending the message
+     * @param message The original message
+     * @return The processed message with unauthorized codes stripped
+     */
+    private String processPlayerMessage(PlayerRef sender, String message) {
+        var config = configManager.getConfig().chatFormat;
+        
+        // Check if player can use colors
+        boolean canUseColors = config.allowPlayerColors || hasColorPermission(sender);
+        
+        // Check if player can use formatting
+        boolean canUseFormatting = config.allowPlayerFormatting || hasFormatPermission(sender);
+        
+        if (configManager.isDebugEnabled()) {
+            logger.info("Player " + sender.getUsername() + " - canUseColors: " + canUseColors + ", canUseFormatting: " + canUseFormatting);
+        }
+        
+        // If player has both permissions (or they're allowed), return original
+        if (canUseColors && canUseFormatting) {
+            return message;
+        }
+        
+        // If player has neither permission, strip everything
+        if (!canUseColors && !canUseFormatting) {
+            return MessageFormatter.toRawString(message);
+        }
+        
+        // Strip only what they don't have permission for
+        if (!canUseColors) {
+            message = MessageFormatter.stripColors(message);
+        }
+        if (!canUseFormatting) {
+            message = MessageFormatter.stripFormatting(message);
+        }
+        
+        return message;
+    }
+    
+    /**
+     * Check if player has permission to use color codes in chat.
+     */
+    private boolean hasColorPermission(PlayerRef player) {
+        // In simple mode, only OPs can use colors
+        if (!configManager.getConfig().advancedPermissions) {
+            return PermissionService.get().isAdmin(player.getUuid());
+        }
+        // In advanced mode, check specific permission
+        return PermissionService.get().hasPermission(player.getUuid(), Permissions.CHAT_COLOR);
+    }
+    
+    /**
+     * Check if player has permission to use formatting codes in chat.
+     */
+    private boolean hasFormatPermission(PlayerRef player) {
+        // In simple mode, only OPs can use formatting
+        if (!configManager.getConfig().advancedPermissions) {
+            return PermissionService.get().isAdmin(player.getUuid());
+        }
+        // In advanced mode, check specific permission
+        return PermissionService.get().hasPermission(player.getUuid(), Permissions.CHAT_FORMAT);
     }
     
     /**

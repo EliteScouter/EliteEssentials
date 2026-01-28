@@ -89,6 +89,11 @@ public class HytaleRtpCommand extends CommandBase {
     protected void executeSync(@Nonnull CommandContext ctx) {
         PluginConfig.RtpConfig rtpConfig = configManager.getConfig().rtp;
         
+        // Always log that we reached this point (helps diagnose if Hytale is intercepting)
+        if (configManager.isDebugEnabled()) {
+            logger.info("[RTP] Command executeSync reached");
+        }
+        
         // Parse arguments: /rtp [player] [world]
         String rawInput = ctx.getInputString();
         String[] parts = rawInput.split("\\s+");
@@ -107,22 +112,39 @@ public class HytaleRtpCommand extends CommandBase {
         boolean isSelfRtp = (targetPlayerName == null);
         boolean isAdminRtp = !isSelfRtp;
         
-        // Get the sender info
+        // Get the sender info - can be PlayerRef OR Player depending on context
         Object sender = ctx.sender();
-        boolean isConsoleSender = !(sender instanceof PlayerRef);
+        boolean isConsoleSender = !(sender instanceof PlayerRef) && !(sender instanceof Player);
+        
+        // Debug logging (can be removed after fix is confirmed)
+        if (configManager.isDebugEnabled()) {
+            logger.info("[RTP] Sender: " + (sender != null ? sender.getClass().getName() : "null") + 
+                       ", isConsole: " + isConsoleSender + ", isSelfRtp: " + isSelfRtp + 
+                       ", input: '" + rawInput + "'");
+        }
         
         // If console is running without a target, show usage
         if (isConsoleSender && isSelfRtp) {
-            ctx.sendMessage(Message.raw("Usage: /rtp <player> [world]").color("#FF5555"));
+            ctx.sendMessage(Message.raw("Console usage: /rtp <player> [world]").color("#FF5555"));
             return;
         }
+        
+        // Get PlayerRef from sender (handles both PlayerRef and Player types)
+        PlayerRef senderPlayerRef = null;
+        if (sender instanceof PlayerRef) {
+            senderPlayerRef = (PlayerRef) sender;
+        } else if (sender instanceof Player) {
+            senderPlayerRef = ((Player) sender).getPlayerRef();
+        }
+        
+        // If it's a player running /rtp with no args, that's fine - self RTP
+        // If it's a player running /rtp <player>, check admin permission
         
         // Permission check for admin RTP
         if (isAdminRtp) {
             // For console, always allow. For players, check admin permission
-            if (!isConsoleSender) {
-                PlayerRef senderPlayer = (PlayerRef) sender;
-                if (!PermissionService.get().canUseAdminCommand(senderPlayer.getUuid(), Permissions.ADMIN_RTP, true)) {
+            if (!isConsoleSender && senderPlayerRef != null) {
+                if (!PermissionService.get().canUseAdminCommand(senderPlayerRef.getUuid(), Permissions.ADMIN_RTP, true)) {
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
                     return;
                 }
@@ -132,7 +154,11 @@ public class HytaleRtpCommand extends CommandBase {
         // Find the target player
         PlayerRef targetPlayer;
         if (isSelfRtp) {
-            targetPlayer = (PlayerRef) sender;
+            targetPlayer = senderPlayerRef;
+            if (targetPlayer == null) {
+                ctx.sendMessage(Message.raw("Could not determine player.").color("#FF5555"));
+                return;
+            }
         } else {
             targetPlayer = findOnlinePlayer(targetPlayerName);
             if (targetPlayer == null) {
@@ -258,9 +284,12 @@ public class HytaleRtpCommand extends CommandBase {
         // Get effective warmup (skip for admin RTP)
         int warmupSeconds = isAdminRtp ? 0 : CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, rtpConfig.warmupSeconds);
         
+        // Get world-specific range
+        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        
         if (configManager.isDebugEnabled()) {
             logger.info("[RTP] Config warmup: " + rtpConfig.warmupSeconds + ", effective: " + warmupSeconds + 
-                       ", min: " + rtpConfig.minRange + ", max: " + rtpConfig.maxRange + ", isAdmin: " + isAdminRtp);
+                       ", min: " + worldRange.minRange + ", max: " + worldRange.maxRange + ", world: " + world.getName() + ", isAdmin: " + isAdminRtp);
         }
         
         // If warmup is configured, do warmup FIRST, then find location
@@ -320,14 +349,17 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
+        // Get world-specific range
+        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        
         if (attempt == 0 && debug) {
-            logger.info("[RTP] Starting search: minRange=" + rtpConfig.minRange + ", maxRange=" + rtpConfig.maxRange + 
-                       ", center=" + String.format("%.1f, %.1f", centerX, centerZ));
+            logger.info("[RTP] Starting search: minRange=" + worldRange.minRange + ", maxRange=" + worldRange.maxRange + 
+                       ", world=" + world.getName() + ", center=" + String.format("%.1f, %.1f", centerX, centerZ));
         }
         
         Random random = new Random();
         double angle = random.nextDouble() * 2 * Math.PI;
-        double distance = rtpConfig.minRange + random.nextDouble() * (rtpConfig.maxRange - rtpConfig.minRange);
+        double distance = worldRange.minRange + random.nextDouble() * (worldRange.maxRange - worldRange.minRange);
         double targetX = centerX + Math.cos(angle) * distance;
         double targetZ = centerZ + Math.sin(angle) * distance;
         
@@ -398,9 +430,12 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
+        // Get world-specific range
+        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        
         Random random = new Random();
         double angle = random.nextDouble() * 2 * Math.PI;
-        double distance = rtpConfig.minRange + random.nextDouble() * (rtpConfig.maxRange - rtpConfig.minRange);
+        double distance = worldRange.minRange + random.nextDouble() * (worldRange.maxRange - worldRange.minRange);
         double targetX = centerX + Math.cos(angle) * distance;
         double targetZ = centerZ + Math.sin(angle) * distance;
         
@@ -598,8 +633,13 @@ public class HytaleRtpCommand extends CommandBase {
         String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpTeleported", "location", location), "#55FF55"));
         
-        // Only set cooldown for self-RTP
+        // Only set cooldown and charge cost for self-RTP
         if (!isAdminRtp) {
+            // Charge cost AFTER successful teleport
+            PlayerRef player = findPlayerByUuid(playerId);
+            if (player != null) {
+                CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
+            }
             rtpService.setCooldown(playerId);
         }
     }
@@ -661,6 +701,8 @@ public class HytaleRtpCommand extends CommandBase {
                 configManager.getMessage("rtpTeleportedWorld", "location", location, "world", worldName), "#55FF55"));
             
             if (!isAdminRtp) {
+                // Charge cost AFTER successful teleport
+                CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
                 rtpService.setCooldown(playerId);
             }
         });
@@ -675,6 +717,21 @@ public class HytaleRtpCommand extends CommandBase {
         
         for (PlayerRef p : universe.getPlayers()) {
             if (p.getUsername().equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Find an online player by UUID.
+     */
+    private PlayerRef findPlayerByUuid(UUID uuid) {
+        Universe universe = Universe.get();
+        if (universe == null) return null;
+        
+        for (PlayerRef p : universe.getPlayers()) {
+            if (p.getUuid().equals(uuid)) {
                 return p;
             }
         }

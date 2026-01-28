@@ -1,11 +1,14 @@
 package com.eliteessentials.model;
 
 /**
- * Represents a group chat configuration.
- * Players with the group's permission can send and receive messages in that chat.
+ * Represents a chat channel configuration.
  * 
- * Unlike admin chat which is permission-based, group chat is tied to LuckPerms groups.
- * Each LuckPerms group can have its own private chat channel.
+ * There are two types of chat channels:
+ * 1. Group-based: Tied to LuckPerms groups (requiresGroup = true, default)
+ *    - Players in the LuckPerms group can use the chat
+ * 2. Permission-based: Tied to a permission node (requiresGroup = false)
+ *    - Players with eliteessentials.chat.<chatName> can use the chat
+ *    - Useful for cross-group chats like "Trade" or "Help"
  */
 public class GroupChat {
     
@@ -15,8 +18,18 @@ public class GroupChat {
     private String color;
     private boolean enabled;
     
+    /**
+     * When true (default): Chat requires membership in the LuckPerms group.
+     * When false: Chat requires the permission eliteessentials.chat.<groupName>.
+     * 
+     * Note: Using Boolean (object) instead of boolean (primitive) to detect
+     * if the field was present in JSON during deserialization.
+     */
+    private Boolean requiresGroup;
+    
     public GroupChat() {
         this.enabled = true;
+        // Don't set requiresGroup here - leave it null so we can detect missing field during migration
     }
     
     public GroupChat(String groupName, String displayName, String prefix, String color) {
@@ -25,6 +38,16 @@ public class GroupChat {
         this.prefix = prefix;
         this.color = color;
         this.enabled = true;
+        this.requiresGroup = true;
+    }
+    
+    public GroupChat(String groupName, String displayName, String prefix, String color, boolean requiresGroup) {
+        this.groupName = groupName;
+        this.displayName = displayName;
+        this.prefix = prefix;
+        this.color = color;
+        this.enabled = true;
+        this.requiresGroup = requiresGroup;
     }
     
     public String getGroupName() {
@@ -67,6 +90,29 @@ public class GroupChat {
         this.enabled = enabled;
     }
     
+    public boolean isRequiresGroup() {
+        return requiresGroup == null || requiresGroup;
+    }
+    
+    /**
+     * Get the raw requiresGroup value (may be null if not set in JSON).
+     * Used for migration detection.
+     */
+    public Boolean getRequiresGroupRaw() {
+        return requiresGroup;
+    }
+    
+    public void setRequiresGroup(boolean requiresGroup) {
+        this.requiresGroup = requiresGroup;
+    }
+    
+    /**
+     * Check if this is a permission-based chat (not group-based).
+     */
+    public boolean isPermissionBased() {
+        return !requiresGroup;
+    }
+    
     /**
      * Creates a default admin group chat.
      */
@@ -93,5 +139,13 @@ public class GroupChat {
      */
     public static GroupChat vipGroup() {
         return new GroupChat("vip", "VIP Chat", "[VIP]", "#f0883e");
+    }
+    
+    /**
+     * Creates a default trade chat (permission-based).
+     * Players need eliteessentials.chat.trade to use this.
+     */
+    public static GroupChat tradeChat() {
+        return new GroupChat("trade", "Trade Chat", "[TRADE]", "#f0c674", false);
     }
 }

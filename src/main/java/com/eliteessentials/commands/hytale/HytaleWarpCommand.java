@@ -57,6 +57,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         this.warpService = warpService;
         this.backService = backService;
         
+        addAliases("warps");
         addUsageVariant(new WarpWithNameCommand(warpService, backService));
     }
 
@@ -99,7 +100,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
             return;
         }
         
-        WarpSelectionPage page = new WarpSelectionPage(player, warpService, backService, configManager, world);
+        WarpSelectionPage page = new WarpSelectionPage(player, warpService, backService, configManager, world, ref, store);
         playerEntity.getPageManager().openCustomPage(ref, store, page);
     }
 

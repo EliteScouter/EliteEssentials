@@ -1,7 +1,10 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -16,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
@@ -25,7 +29,11 @@ import javax.annotation.Nonnull;
  * 
  * Usage: /clearinv
  * Aliases: /clearinventory, /ci
- * Permission: eliteessentials.command.misc.clearinv (Admin only)
+ * 
+ * Permissions:
+ * - eliteessentials.command.misc.clearinv - Use /clearinv command (Admin only)
+ * - eliteessentials.command.misc.clearinv.bypass.cooldown - Skip cooldown
+ * - eliteessentials.command.misc.clearinv.cooldown.<seconds> - Set specific cooldown
  * 
  * Clears all items from:
  * - Hotbar
@@ -37,11 +45,15 @@ import javax.annotation.Nonnull;
 public class HytaleClearInvCommand extends AbstractPlayerCommand {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private final ConfigManager configManager;
+    private static final String COMMAND_NAME = "clearinv";
     
-    public HytaleClearInvCommand(ConfigManager configManager) {
-        super("clearinv", "Clear all items from your inventory");
+    private final ConfigManager configManager;
+    private final CooldownService cooldownService;
+    
+    public HytaleClearInvCommand(ConfigManager configManager, CooldownService cooldownService) {
+        super(COMMAND_NAME, "Clear all items from your inventory");
         this.configManager = configManager;
+        this.cooldownService = cooldownService;
         
         // Add aliases
         addAliases("clearinventory", "ci");
@@ -55,10 +67,25 @@ public class HytaleClearInvCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, 
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+        UUID playerId = playerRef.getUuid();
+        PluginConfig.ClearInvConfig clearInvConfig = configManager.getConfig().clearInv;
+        
         // Permission check - admin only
-        if (!CommandPermissionUtil.canExecuteAdmin(ctx, playerRef, Permissions.CLEARINV, 
-                configManager.getConfig().clearInv.enabled)) {
+        if (!CommandPermissionUtil.canExecuteAdmin(ctx, playerRef, Permissions.CLEARINV, clearInvConfig.enabled)) {
             return;
+        }
+        
+        // Get effective cooldown from permissions
+        int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME, clearInvConfig.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                return;
+            }
         }
         
         // Get player component
@@ -114,6 +141,11 @@ public class HytaleClearInvCommand extends AbstractPlayerCommand {
         // Send success message
         String message = configManager.getMessage("clearInvSuccess", "count", String.valueOf(totalCleared));
         ctx.sendMessage(MessageFormatter.formatWithFallback(message, "#55FF55"));
+        
+        // Set cooldown after successful clear
+        if (effectiveCooldown > 0) {
+            cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
+        }
         
         if (configManager.isDebugEnabled()) {
             logger.info("Cleared " + totalCleared + " items from " + 

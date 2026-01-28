@@ -3,13 +3,18 @@ package com.eliteessentials.listeners;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
+import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.PlayerFileStorage;
+import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
 import com.hypixel.hytale.server.core.Message;
@@ -17,12 +22,12 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +43,7 @@ import java.util.logging.Logger;
  * Handles player join/quit events.
  * - Join messages (server join only, not world changes)
  * - First join messages (broadcast to everyone)
+ * - First join spawn teleport (teleport new players to /setspawn location)
  * - Quit messages (server disconnect only, not world changes)
  * - World change messages (optional)
  * - MOTD display on join (server join only, not world changes)
@@ -59,7 +65,9 @@ public class JoinQuitListener {
     private final PlayerService playerService;
     private final ScheduledExecutorService scheduler;
     private PlayerFileStorage playerFileStorage;
+    private SpawnStorage spawnStorage;
     private com.eliteessentials.services.VanishService vanishService;
+    private MailService mailService;
     
     // Track players currently on the server to differentiate world changes from joins/quits
     private final Set<UUID> onlinePlayers = ConcurrentHashMap.newKeySet();
@@ -89,10 +97,24 @@ public class JoinQuitListener {
     }
     
     /**
+     * Set the spawn storage (called after initialization).
+     */
+    public void setSpawnStorage(SpawnStorage storage) {
+        this.spawnStorage = storage;
+    }
+    
+    /**
      * Set the vanish service (called after initialization).
      */
     public void setVanishService(com.eliteessentials.services.VanishService service) {
         this.vanishService = service;
+    }
+    
+    /**
+     * Set the mail service (called after initialization).
+     */
+    public void setMailService(MailService service) {
+        this.mailService = service;
     }
     
     /**
@@ -270,11 +292,20 @@ public class JoinQuitListener {
             // Update player cache
             playerService.onPlayerJoin(playerId, playerName);
             
-            // Hide vanished players from this joining player
+            // Hide vanished players from this joining player and check if they were vanished
+            boolean playerIsVanished = false;
             if (vanishService != null) {
-                vanishService.onPlayerJoin(playerRef);
+                playerIsVanished = vanishService.onPlayerJoin(playerRef);
                 // Also set up map filter to hide vanished players from the map
                 vanishService.onPlayerReady(store, ref);
+                
+                // Send vanish reminder if player reconnected while vanished
+                if (playerIsVanished && config.vanish.showReminderOnJoin) {
+                    // Delay the reminder so it appears after the MOTD
+                    scheduler.schedule(() -> {
+                        vanishService.sendVanishReminder(playerRef);
+                    }, 2000, TimeUnit.MILLISECONDS);
+                }
             }
             
             // Notify playtime reward service
@@ -287,30 +318,100 @@ public class JoinQuitListener {
             // We check the file directly because playerService.onPlayerJoin() just created it
             boolean isFirstJoin = false;
             if (playerFileStorage != null) {
-                File playerFile = new File(playerFileStorage.getPlayersFolder(), playerId.toString() + ".json");
-                // If file was just created (by onPlayerJoin above), check if it's very new
-                // Actually, we need to check BEFORE onPlayerJoin creates it - but that already ran
-                // So we check if the player's firstJoin timestamp is within the last few seconds
                 var playerData = playerFileStorage.getPlayer(playerId);
                 if (playerData != null) {
                     long firstJoinTime = playerData.getFirstJoin();
                     long now = System.currentTimeMillis();
-                    // If firstJoin was set within the last 5 seconds, this is a new player
-                    isFirstJoin = (now - firstJoinTime) < 5000;
+                    // If firstJoin was set within the last 10 seconds, this is a new player
+                    // Using 10 seconds to account for any delays in event processing
+                    isFirstJoin = (now - firstJoinTime) < 10000;
+                    
+                    if (configManager.isDebugEnabled()) {
+                        logger.info("[FirstJoin] Player " + playerName + " firstJoinTime=" + firstJoinTime + 
+                            ", now=" + now + ", diff=" + (now - firstJoinTime) + "ms, isFirstJoin=" + isFirstJoin);
+                    }
                 }
             }
             
             if (isFirstJoin) {
-                // Broadcast first join message
-                if (config.joinMsg.firstJoinEnabled) {
+                // Broadcast first join message (unless player is vanished)
+                if (config.joinMsg.firstJoinEnabled && !playerIsVanished) {
                     String message = configManager.getMessage("firstJoinMessage", "player", playerName);
                     broadcastMessage(message, "#FFFF55");
                 }
+                
+                // Teleport first-time players to spawn if enabled
+                if (config.spawn.teleportOnFirstJoin && spawnStorage != null) {
+                    // Determine which world's spawn to use based on perWorld setting
+                    String targetWorldName = config.spawn.perWorld ? worldName : config.spawn.mainWorld;
+                    SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
+                    
+                    if (spawn != null) {
+                        try {
+                            Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
+                            Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0); // pitch=0, yaw, roll=0
+                            
+                            // Check if spawn is in a different world
+                            if (!targetWorldName.equalsIgnoreCase(worldName)) {
+                                // Cross-world teleport needs a delay to let player fully load first
+                                // Schedule the teleport after a short delay
+                                final String finalTargetWorldName = targetWorldName;
+                                final String finalPlayerName = playerName;
+                                scheduler.schedule(() -> {
+                                    world.execute(() -> {
+                                        try {
+                                            if (!ref.isValid()) {
+                                                logger.warning("[FirstJoin] Player ref no longer valid for cross-world teleport");
+                                                return;
+                                            }
+                                            
+                                            World targetWorld = findWorldByName(finalTargetWorldName);
+                                            if (targetWorld != null) {
+                                                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
+                                                store.putComponent(ref, Teleport.getComponentType(), teleport);
+                                                
+                                                logger.info("[FirstJoin] Teleported new player " + finalPlayerName + 
+                                                    " to spawn in world '" + finalTargetWorldName + "' at " +
+                                                    String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
+                                            } else {
+                                                logger.warning("[FirstJoin] Target world '" + finalTargetWorldName + 
+                                                    "' not found. Player " + finalPlayerName + " spawned at default location.");
+                                            }
+                                        } catch (Exception e) {
+                                            logger.warning("[FirstJoin] Failed cross-world teleport for " + finalPlayerName + ": " + e.getMessage());
+                                        }
+                                    });
+                                }, 1, TimeUnit.SECONDS);
+                                
+                                logger.info("[FirstJoin] Scheduled cross-world teleport for " + playerName + 
+                                    " to world '" + targetWorldName + "' in 1 second");
+                            } else {
+                                // Same world teleport - can do immediately
+                                Teleport teleport = new Teleport(spawnPos, spawnRot);
+                                store.putComponent(ref, Teleport.getComponentType(), teleport);
+                                
+                                logger.info("[FirstJoin] Teleported new player " + playerName + " to spawn at " +
+                                    String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
+                            }
+                        } catch (Exception e) {
+                            logger.warning("[FirstJoin] Failed to teleport " + playerName + " to spawn: " + e.getMessage());
+                        }
+                    } else {
+                        if (configManager.isDebugEnabled()) {
+                            logger.info("[FirstJoin] No spawn set for world '" + targetWorldName + 
+                                "', new player " + playerName + " spawned at default location");
+                        }
+                    }
+                }
             } else {
-                // Regular join message
-                if (config.joinMsg.joinEnabled) {
-                    String message = configManager.getMessage("joinMessage", "player", playerName);
-                    broadcastMessage(message, "#55FF55");
+                // Regular join message (unless player is vanished)
+                if (config.joinMsg.joinEnabled && !playerIsVanished) {
+                    // Also check if suppressJoinQuitMessages is enabled for vanished players
+                    boolean shouldSuppress = playerIsVanished && config.vanish.suppressJoinQuitMessages;
+                    if (!shouldSuppress) {
+                        String message = configManager.getMessage("joinMessage", "player", playerName);
+                        broadcastMessage(message, "#55FF55");
+                    }
                 }
             }
             
@@ -328,6 +429,20 @@ public class JoinQuitListener {
             
             // Also show world-specific MOTD for the initial world
             showWorldMotd(playerRef, worldName);
+            
+            // Notify about unread mail
+            if (config.mail.enabled && config.mail.notifyOnLogin && mailService != null) {
+                int unreadCount = mailService.getUnreadCount(playerId);
+                if (unreadCount > 0) {
+                    int mailDelay = config.mail.notifyDelaySeconds;
+                    final int finalUnreadCount = unreadCount;
+                    scheduler.schedule(() -> {
+                        String mailMsg = configManager.getMessage("mailNotifyLogin", 
+                            "count", String.valueOf(finalUnreadCount));
+                        playerRef.sendMessage(MessageFormatter.format(mailMsg));
+                    }, mailDelay, TimeUnit.SECONDS);
+                }
+            }
         });
     }
     
@@ -361,16 +476,21 @@ public class JoinQuitListener {
         // Update player cache (last seen, play time)
         playerService.onPlayerQuit(playerId);
         
-        // Clean up vanish state
+        // Check if player was vanished before cleaning up vanish state
+        boolean wasVanished = false;
         if (vanishService != null) {
-            vanishService.onPlayerLeave(playerId);
+            wasVanished = vanishService.onPlayerLeave(playerId);
         }
         
-        // Broadcast quit message if enabled
+        // Broadcast quit message if enabled (unless player was vanished)
         PluginConfig config = configManager.getConfig();
         if (config.joinMsg.quitEnabled) {
-            String message = configManager.getMessage("quitMessage", "player", playerName);
-            broadcastMessage(message, "#FF5555");
+            // Suppress quit message if player was vanished and suppressJoinQuitMessages is enabled
+            boolean shouldSuppress = wasVanished && config.vanish.suppressJoinQuitMessages;
+            if (!shouldSuppress) {
+                String message = configManager.getMessage("quitMessage", "player", playerName);
+                broadcastMessage(message, "#FF5555");
+            }
         }
     }
     
@@ -549,5 +669,28 @@ public class JoinQuitListener {
         } catch (Exception e) {
             logger.warning("Failed to send translation overrides to all players: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Find a world by name (case-insensitive).
+     * @param worldName The name of the world to find
+     * @return The World object, or null if not found
+     */
+    private World findWorldByName(String worldName) {
+        if (worldName == null) return null;
+        
+        try {
+            Universe universe = Universe.get();
+            if (universe == null) return null;
+            
+            for (World w : universe.getWorlds().values()) {
+                if (w.getName().equalsIgnoreCase(worldName)) {
+                    return w;
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Error finding world '" + worldName + "': " + e.getMessage());
+        }
+        return null;
     }
 }

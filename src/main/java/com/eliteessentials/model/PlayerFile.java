@@ -20,6 +20,9 @@ public class PlayerFile {
     private long playTime;  // Total play time in seconds
     private double wallet;
     
+    // Admin state
+    private boolean vanished;  // Whether player is in vanish mode
+    
     // Homes: name -> Home
     private Map<String, Home> homes = new LinkedHashMap<>();
     
@@ -35,6 +38,9 @@ public class PlayerFile {
     // Playtime reward claims
     private PlaytimeClaims playtimeClaims = new PlaytimeClaims();
     
+    // Mail inbox
+    private List<MailMessage> mailbox = new ArrayList<>();
+    
     public PlayerFile() {
         // For Gson deserialization
     }
@@ -46,6 +52,7 @@ public class PlayerFile {
         this.lastSeen = System.currentTimeMillis();
         this.playTime = 0;
         this.wallet = 0.0;
+        this.vanished = false;
     }
     
     // ==================== Core Identity ====================
@@ -117,6 +124,16 @@ public class PlayerFile {
         }
         this.wallet = newBalance;
         return true;
+    }
+    
+    // ==================== Admin State ====================
+    
+    public boolean isVanished() {
+        return vanished;
+    }
+    
+    public void setVanished(boolean vanished) {
+        this.vanished = vanished;
     }
     
     // ==================== Homes ====================
@@ -258,6 +275,31 @@ public class PlayerFile {
         PlaytimeClaims claims = getPlaytimeClaims();
         int current = claims.repeatableCounts.getOrDefault(rewardId, 0);
         claims.repeatableCounts.put(rewardId, current + 1);
+    }
+    
+    // ==================== Mailbox ====================
+    
+    public List<MailMessage> getMailbox() {
+        if (mailbox == null) {
+            mailbox = new ArrayList<>();
+        }
+        return mailbox;
+    }
+    
+    public void setMailbox(List<MailMessage> mailbox) {
+        this.mailbox = mailbox != null ? mailbox : new ArrayList<>();
+    }
+    
+    public void addMail(MailMessage mail) {
+        getMailbox().add(0, mail); // Add to front (newest first)
+    }
+    
+    public int getUnreadMailCount() {
+        return (int) getMailbox().stream().filter(m -> !m.isRead()).count();
+    }
+    
+    public void clearMailbox() {
+        getMailbox().clear();
     }
     
     // ==================== Inner Classes ====================

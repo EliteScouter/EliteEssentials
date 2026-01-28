@@ -44,10 +44,14 @@ Group {
 
   Group #WarpActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 140);
+    Anchor: (Right: 0, Width: 180);
+
+    Group #DeleteButtonSlot {
+      Anchor: (Width: 40, Height: 44, Right: 8);
+    }
 
     $C.@TextButton #WarpButton {
-      @Anchor = (Width: 120);
+      @Anchor = (Width: 120, Height: 44);
       Text: "Warp";
     }
   }

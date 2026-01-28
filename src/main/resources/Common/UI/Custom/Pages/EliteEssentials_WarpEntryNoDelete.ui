@@ -1,0 +1,42 @@
+$C = "../Common.ui";
+
+Group #WarpRow {
+  LayoutMode: Top;
+  Background: $C.@InputBoxBackground;
+  Padding: (Top: 10, Bottom: 10, Left: 15, Right: 15);
+  Anchor: (Bottom: 8);
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 26);
+
+    Button #TeleportButton {
+      FlexWeight: 1;
+      Style: ButtonStyle(
+        Sounds: $C.@ButtonSounds
+      );
+
+      Group {
+        LayoutMode: Left;
+
+        Label #WarpName {
+          Style: (
+            FontSize: 16,
+            RenderBold: true,
+            TextColor: #55FFFF,
+            VerticalAlignment: Center
+          );
+          Padding: (Right: 10);
+        }
+
+        Label #WarpDescription {
+          Style: (
+            FontSize: 13,
+            TextColor: #AAAAAA,
+            VerticalAlignment: Center
+          );
+        }
+      }
+    }
+  }
+}

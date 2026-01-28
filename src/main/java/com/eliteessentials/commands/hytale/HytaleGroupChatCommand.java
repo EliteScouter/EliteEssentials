@@ -21,13 +21,18 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Group chat command - allows players to chat privately with their LuckPerms group.
+ * Group chat command - allows players to chat in private channels.
+ * 
+ * Two types of chat channels:
+ * 1. Group-based: Tied to LuckPerms groups (e.g., admin, mod, staff)
+ * 2. Permission-based: Tied to permissions (e.g., trade chat with eliteessentials.chat.trade)
  * 
  * Usage:
- * - /gc <message> - Send to your primary group (or only group)
- * - /gc <group> <message> - Send to a specific group you belong to
+ * - /gc <message> - Send to your primary chat (or only chat)
+ * - /gc <chat> <message> - Send to a specific chat you have access to
+ * - /g <message> - Alias for /gc
  * 
- * Aliases: /groupchat, /gchat
+ * Aliases: /groupchat, /gchat, /g
  */
 public class HytaleGroupChatCommand extends AbstractPlayerCommand {
     
@@ -35,10 +40,10 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
     private final ConfigManager configManager;
     
     public HytaleGroupChatCommand(GroupChatService groupChatService, ConfigManager configManager) {
-        super("gc", "Send a message to your group's private chat");
+        super("gc", "Send a message to a private chat channel");
         this.groupChatService = groupChatService;
         this.configManager = configManager;
-        this.addAliases("groupchat", "gchat");
+        this.addAliases("groupchat", "gchat", "g");
         this.setAllowsExtraArguments(true);
     }
     
@@ -57,10 +62,10 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
             return;
         }
         
-        // Get player's available group chats
-        List<GroupChat> playerGroups = groupChatService.getPlayerGroupChats(player.getUuid());
+        // Get player's available chats
+        List<GroupChat> playerChats = groupChatService.getPlayerGroupChats(player.getUuid());
         
-        if (playerGroups.isEmpty()) {
+        if (playerChats.isEmpty()) {
             ctx.sendMessage(MessageFormatter.format(
                 configManager.getMessage("groupChatNoAccess")));
             return;
@@ -71,56 +76,56 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
         String[] parts = inputString.split("\\s+", 2);
         
         if (parts.length < 2 || parts[1].isBlank()) {
-            showUsage(ctx, playerGroups);
+            showUsage(ctx, playerChats);
             return;
         }
         
         String remainder = parts[1];
-        GroupChat targetGroup;
+        GroupChat targetChat;
         String message;
         
-        // Only check for group name prefix if player belongs to multiple groups
-        if (playerGroups.size() > 1) {
+        // Only check for chat name prefix if player has access to multiple chats
+        if (playerChats.size() > 1) {
             String[] messageParts = remainder.split("\\s+", 2);
-            GroupChat specifiedGroup = groupChatService.getGroupChat(messageParts[0]);
+            GroupChat specifiedChat = groupChatService.getGroupChat(messageParts[0]);
             
-            if (specifiedGroup != null && playerGroups.contains(specifiedGroup)) {
-                // Player specified a group they belong to
+            if (specifiedChat != null && playerChats.contains(specifiedChat)) {
+                // Player specified a chat they have access to
                 if (messageParts.length < 2 || messageParts[1].isBlank()) {
                     ctx.sendMessage(MessageFormatter.format(
-                        configManager.getMessage("groupChatUsageGroup", "group", specifiedGroup.getGroupName())));
+                        configManager.getMessage("groupChatUsageGroup", "group", specifiedChat.getGroupName())));
                     return;
                 }
-                targetGroup = specifiedGroup;
+                targetChat = specifiedChat;
                 message = messageParts[1];
             } else {
-                // First word isn't a valid group, use default group with full message
-                targetGroup = playerGroups.get(0);
+                // First word isn't a valid chat, use default chat with full message
+                targetChat = playerChats.get(0);
                 message = remainder;
             }
         } else {
-            // Player only has one group, use it with full message
-            targetGroup = playerGroups.get(0);
+            // Player only has one chat, use it with full message
+            targetChat = playerChats.get(0);
             message = remainder;
         }
         
         // Send the message
-        groupChatService.broadcast(targetGroup, player, message);
+        groupChatService.broadcast(targetChat, player, message);
     }
     
     /**
-     * Show usage information based on player's available groups.
+     * Show usage information based on player's available chats.
      */
-    private void showUsage(@Nonnull CommandContext ctx, @Nonnull List<GroupChat> groups) {
-        if (groups.size() == 1) {
+    private void showUsage(@Nonnull CommandContext ctx, @Nonnull List<GroupChat> chats) {
+        if (chats.size() == 1) {
             ctx.sendMessage(MessageFormatter.format(
                 configManager.getMessage("groupChatUsage")));
         } else {
-            String groupNames = groups.stream()
+            String chatNames = chats.stream()
                 .map(GroupChat::getGroupName)
                 .collect(Collectors.joining(", "));
             ctx.sendMessage(MessageFormatter.format(
-                configManager.getMessage("groupChatUsageMultiple", "groups", groupNames)));
+                configManager.getMessage("groupChatUsageMultiple", "groups", chatNames)));
         }
     }
 }

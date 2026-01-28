@@ -102,17 +102,25 @@ public final class Permissions {
     
     public static final String SLEEPPERCENT = MISC_CATEGORY + ".sleeppercent";
     public static final String GOD = MISC_CATEGORY + ".god";
+    public static final String GOD_BYPASS_COOLDOWN = MISC_CATEGORY + ".god.bypass.cooldown";
+    public static final String GOD_COOLDOWN_PREFIX = MISC_CATEGORY + ".god.cooldown.";
     public static final String HEAL = MISC_CATEGORY + ".heal";
     public static final String HEAL_BYPASS_COOLDOWN = MISC_CATEGORY + ".heal.bypass.cooldown";
     public static final String HEAL_COOLDOWN_PREFIX = MISC_CATEGORY + ".heal.cooldown.";
     public static final String MSG = MISC_CATEGORY + ".msg";
     public static final String FLY = MISC_CATEGORY + ".fly";
+    public static final String FLY_BYPASS_COOLDOWN = MISC_CATEGORY + ".fly.bypass.cooldown";
+    public static final String FLY_COOLDOWN_PREFIX = MISC_CATEGORY + ".fly.cooldown.";
     public static final String FLYSPEED = MISC_CATEGORY + ".flyspeed";
     public static final String TOP = TP_CATEGORY + ".top";
+    public static final String TOP_BYPASS_COOLDOWN = TP_CATEGORY + ".top.bypass.cooldown";
+    public static final String TOP_COOLDOWN_PREFIX = TP_CATEGORY + ".top.cooldown.";
     public static final String MOTD = MISC_CATEGORY + ".motd";
     public static final String RULES = MISC_CATEGORY + ".rules";
     public static final String BROADCAST = MISC_CATEGORY + ".broadcast";
     public static final String CLEARINV = MISC_CATEGORY + ".clearinv";
+    public static final String CLEARINV_BYPASS_COOLDOWN = MISC_CATEGORY + ".clearinv.bypass.cooldown";
+    public static final String CLEARINV_COOLDOWN_PREFIX = MISC_CATEGORY + ".clearinv.cooldown.";
     public static final String LIST = MISC_CATEGORY + ".list";
     public static final String DISCORD = MISC_CATEGORY + ".discord";
     public static final String SEEN = MISC_CATEGORY + ".seen";
@@ -120,7 +128,32 @@ public final class Permissions {
     public static final String VANISH = MISC_CATEGORY + ".vanish";
     public static final String REPAIR = MISC_CATEGORY + ".repair";
     public static final String REPAIR_ALL = MISC_CATEGORY + ".repair.all";
+    public static final String REPAIR_BYPASS_COOLDOWN = MISC_CATEGORY + ".repair.bypass.cooldown";
+    public static final String REPAIR_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.cooldown.";
     public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
+
+    // ==================== CHAT CATEGORY ====================
+    // eliteessentials.chat.*
+    public static final String CHAT_CATEGORY = NAMESPACE + ".chat";
+    
+    /** Permission to use color codes in chat */
+    public static final String CHAT_COLOR = CHAT_CATEGORY + ".color";
+    
+    /** Permission to use formatting codes (bold, italic) in chat */
+    public static final String CHAT_FORMAT = CHAT_CATEGORY + ".format";
+    
+    /** Permission to list available chats */
+    public static final String CHATS_LIST = COMMAND_BASE + ".misc.chats";
+    
+    /**
+     * Get permission for accessing a specific chat channel.
+     * Used for permission-based chats (not group-based).
+     * @param chatName Chat name
+     * @return eliteessentials.chat.<chatName>
+     */
+    public static String chatAccess(String chatName) {
+        return CHAT_CATEGORY + "." + chatName.toLowerCase();
+    }
 
     // ==================== KIT CATEGORY ====================
     // eliteessentials.command.kit.*
@@ -148,6 +181,11 @@ public final class Permissions {
     /** Bypass cost for specific command: eliteessentials.bypass.cost.<command> */
     public static final String BYPASS_COST_PREFIX = BYPASS_COST + ".";
 
+    // ==================== COST CATEGORY ====================
+    // eliteessentials.cost.<command>.<amount>
+    /** Permission-based cost prefix: eliteessentials.cost.<command>.<amount> */
+    public static final String COST_PREFIX = NAMESPACE + ".cost.";
+
     // ==================== ADMIN PERMISSIONS ====================
     // eliteessentials.admin.*
     public static final String ADMIN = ADMIN_BASE + ".*";
@@ -165,6 +203,13 @@ public final class Permissions {
     public static final String WALLET_ADMIN = ECONOMY_CATEGORY + ".wallet.admin";
     public static final String PAY = ECONOMY_CATEGORY + ".pay";
     public static final String BALTOP = ECONOMY_CATEGORY + ".baltop";
+
+    // ==================== MAIL CATEGORY ====================
+    // eliteessentials.command.mail.*
+    public static final String MAIL_CATEGORY = COMMAND_BASE + ".mail";
+    
+    public static final String MAIL = MAIL_CATEGORY + ".use";
+    public static final String MAIL_SEND = MAIL_CATEGORY + ".send";
 
     // ==================== HELPER METHODS ====================
     
@@ -211,6 +256,51 @@ public final class Permissions {
      */
     public static String healCooldown(int seconds) {
         return HEAL_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get god cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.god.cooldown.<seconds>
+     */
+    public static String godCooldown(int seconds) {
+        return GOD_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get fly cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.fly.cooldown.<seconds>
+     */
+    public static String flyCooldown(int seconds) {
+        return FLY_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get repair cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.repair.cooldown.<seconds>
+     */
+    public static String repairCooldown(int seconds) {
+        return REPAIR_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get clearinv cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.clearinv.cooldown.<seconds>
+     */
+    public static String clearinvCooldown(int seconds) {
+        return CLEARINV_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get top cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.tp.top.cooldown.<seconds>
+     */
+    public static String topCooldown(int seconds) {
+        return TOP_COOLDOWN_PREFIX + seconds;
     }
     
     /**
@@ -279,5 +369,15 @@ public final class Permissions {
      */
     public static String bypassCost(String command) {
         return BYPASS_COST_PREFIX + command;
+    }
+    
+    /**
+     * Get cost permission for a specific command and amount.
+     * @param command Command name (e.g., "home", "rtp", "warp")
+     * @param amount Cost amount
+     * @return eliteessentials.cost.<command>.<amount>
+     */
+    public static String commandCost(String command, int amount) {
+        return COST_PREFIX + command + "." + amount;
     }
 }

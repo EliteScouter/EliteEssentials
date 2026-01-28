@@ -1,8 +1,11 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.BackService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
@@ -33,18 +36,23 @@ import javax.annotation.Nonnull;
  * 
  * Permissions:
  * - eliteessentials.command.tp.top - Use /top command
+ * - eliteessentials.command.tp.top.bypass.cooldown - Skip cooldown
+ * - eliteessentials.command.tp.top.cooldown.<seconds> - Set specific cooldown
  */
 public class HytaleTopCommand extends AbstractPlayerCommand {
 
+    private static final String COMMAND_NAME = "top";
     private static final int MAX_HEIGHT = 256;
     
     private final BackService backService;
     private final ConfigManager configManager;
+    private final CooldownService cooldownService;
 
-    public HytaleTopCommand(BackService backService, ConfigManager configManager) {
-        super("top", "Teleport to the highest block above you");
+    public HytaleTopCommand(BackService backService, ConfigManager configManager, CooldownService cooldownService) {
+        super(COMMAND_NAME, "Teleport to the highest block above you");
         this.backService = backService;
         this.configManager = configManager;
+        this.cooldownService = cooldownService;
     }
 
     @Override
@@ -56,11 +64,24 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
+        PluginConfig.TopConfig topConfig = configManager.getConfig().top;
         
         // Check permission (Admin command)
-        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.TOP, 
-                configManager.getConfig().top.enabled)) {
+        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.TOP, topConfig.enabled)) {
             return;
+        }
+        
+        // Get effective cooldown from permissions
+        int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME, topConfig.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                return;
+            }
         }
 
         // Get player's current position
@@ -114,6 +135,11 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
         store.putComponent(ref, Teleport.getComponentType(), teleport);
 
         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
+        
+        // Set cooldown after successful teleport
+        if (effectiveCooldown > 0) {
+            cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
+        }
     }
 
     /**

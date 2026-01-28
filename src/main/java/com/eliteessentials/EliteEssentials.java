@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.events.StarterKitEvent;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.integration.VaultUnlockedIntegration;
 import com.eliteessentials.listeners.ChatListener;
 import com.eliteessentials.listeners.JoinQuitListener;
 import com.eliteessentials.listeners.RespawnListener;
@@ -20,6 +21,7 @@ import com.eliteessentials.services.GodService;
 import com.eliteessentials.services.GroupChatService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.KitService;
+import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.MessageService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
@@ -89,6 +91,7 @@ public class EliteEssentials extends JavaPlugin {
     private AliasService aliasService;
     private PlayerService playerService;
     private CostService costService;
+    private MailService mailService;
     private PlayTimeRewardStorage playTimeRewardStorage;
     private PlayTimeRewardService playTimeRewardService;
     private HytaleFlyCommand flyCommand;
@@ -99,6 +102,7 @@ public class EliteEssentials extends JavaPlugin {
     private StarterKitEvent starterKitEvent;
     private JoinQuitListener joinQuitListener;
     private ChatListener chatListener;
+    private VaultUnlockedIntegration vaultUnlockedIntegration;
     private File dataFolder;
 
     public EliteEssentials(JavaPluginInit init) {
@@ -113,13 +117,24 @@ public class EliteEssentials extends JavaPlugin {
         // Get data folder - Hytale may create mods/Group_Name/ or mods/Group/Name/
         // We want just mods/EliteEssentials/ so construct it directly
         java.nio.file.Path baseDataPath = getDataDirectory();
+        getLogger().at(Level.INFO).log("Hytale provided data directory: " + baseDataPath.toAbsolutePath());
         
         // Find mods folder in the path
         java.nio.file.Path modsPath = findModsFolder(baseDataPath);
         if (modsPath != null) {
             // Use mods/EliteEssentials/ directly
             this.dataFolder = modsPath.resolve("EliteEssentials").toFile();
-            getLogger().at(Level.INFO).log("Using data folder: " + this.dataFolder.getAbsolutePath());
+            getLogger().at(Level.INFO).log("Using normalized data folder: " + this.dataFolder.getAbsolutePath());
+            
+            // Check if old data exists in Hytale's original path (migration hint)
+            File hytaleOriginal = baseDataPath.toFile();
+            if (!hytaleOriginal.equals(this.dataFolder) && hytaleOriginal.exists()) {
+                File oldSpawn = new File(hytaleOriginal, "spawn.json");
+                if (oldSpawn.exists()) {
+                    getLogger().at(Level.WARNING).log("Found spawn.json in old location: " + oldSpawn.getAbsolutePath());
+                    getLogger().at(Level.WARNING).log("You may need to copy files from the old location to: " + this.dataFolder.getAbsolutePath());
+                }
+            }
         } else {
             // Fallback to what Hytale gave us
             this.dataFolder = baseDataPath.toFile();
@@ -172,6 +187,7 @@ public class EliteEssentials extends JavaPlugin {
         sleepService = new SleepService(configManager);
         godService = new GodService();
         vanishService = new VanishService(configManager);
+        vanishService.setPlayerFileStorage(playerFileStorage);
         groupChatService = new GroupChatService(this.dataFolder, configManager);
         messageService = new MessageService();
         kitService = new KitService(this.dataFolder);
@@ -181,12 +197,16 @@ public class EliteEssentials extends JavaPlugin {
         aliasService = new AliasService(this.dataFolder, getCommandRegistry());
         playerService = new PlayerService(playerFileStorage, configManager);
         costService = new CostService(configManager);
+        mailService = new MailService(playerFileStorage, configManager);
         
         // Initialize playtime rewards
         playTimeRewardStorage = new PlayTimeRewardStorage(this.dataFolder);
         playTimeRewardStorage.load();
         playTimeRewardService = new PlayTimeRewardService(playTimeRewardStorage, playerService, configManager);
         playTimeRewardService.setPlayerFileStorage(playerFileStorage);
+        
+        // Initialize VaultUnlocked integration (optional - for cross-plugin economy support)
+        vaultUnlockedIntegration = new VaultUnlockedIntegration(configManager, playerService);
         
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
     }
@@ -210,7 +230,9 @@ public class EliteEssentials extends JavaPlugin {
         // Register join/quit listener for join/quit messages, first join, and MOTD
         joinQuitListener = new JoinQuitListener(configManager, motdStorage, playerService);
         joinQuitListener.setPlayerFileStorage(playerFileStorage);
+        joinQuitListener.setSpawnStorage(spawnStorage);
         joinQuitListener.setVanishService(vanishService);
+        joinQuitListener.setMailService(mailService);
         joinQuitListener.registerEvents(getEventRegistry());
         getLogger().at(Level.INFO).log("Join/Quit listener registered.");
         
@@ -289,6 +311,11 @@ public class EliteEssentials extends JavaPlugin {
             getLogger().at(Level.INFO).log("PlayTime Rewards service started.");
         }
         
+        // Initialize VaultUnlocked integration (economy cross-plugin support)
+        if (configManager.getConfig().economy.enabled) {
+            vaultUnlockedIntegration.initialize();
+        }
+        
         getLogger().at(Level.INFO).log("EliteEssentials started successfully!");
         
         // Validate all JSON config files at the END of startup so errors are visible
@@ -354,6 +381,9 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (playTimeRewardService != null) {
             playTimeRewardService.stop();
+        }
+        if (vaultUnlockedIntegration != null) {
+            vaultUnlockedIntegration.shutdown();
         }
         
         getLogger().at(Level.INFO).log("EliteEssentials disabled.");
@@ -431,7 +461,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // God command
         if (config.god.enabled) {
-            getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager));
+            getCommandRegistry().registerCommand(new HytaleGodCommand(godService, configManager, cooldownService));
             registeredCommands.append("/god, ");
         }
         
@@ -444,7 +474,8 @@ public class EliteEssentials extends JavaPlugin {
         // Group chat command
         if (config.groupChat.enabled) {
             getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager));
-            registeredCommands.append("/gc, ");
+            getCommandRegistry().registerCommand(new HytaleChatsCommand(groupChatService, configManager));
+            registeredCommands.append("/gc, /g, /chats, ");
         }
         
         // Send message command (admin - works from console)
@@ -453,7 +484,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // Repair command
         if (config.repair.enabled) {
-            getCommandRegistry().registerCommand(new HytaleRepairCommand(configManager));
+            getCommandRegistry().registerCommand(new HytaleRepairCommand(configManager, cooldownService));
             registeredCommands.append("/repair, ");
         }
         
@@ -472,13 +503,13 @@ public class EliteEssentials extends JavaPlugin {
         
         // Top command
         if (config.top.enabled) {
-            getCommandRegistry().registerCommand(new HytaleTopCommand(backService, configManager));
+            getCommandRegistry().registerCommand(new HytaleTopCommand(backService, configManager, cooldownService));
             registeredCommands.append("/top, ");
         }
         
         // Fly commands
         if (config.fly.enabled) {
-            flyCommand = new HytaleFlyCommand(configManager);
+            flyCommand = new HytaleFlyCommand(configManager, cooldownService);
             getCommandRegistry().registerCommand(flyCommand);
             getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
             registeredCommands.append("/fly, /flyspeed, ");
@@ -510,7 +541,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // Clear inventory command
         if (config.clearInv.enabled) {
-            getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager));
+            getCommandRegistry().registerCommand(new HytaleClearInvCommand(configManager, cooldownService));
             registeredCommands.append("/clearinv, ");
         }
         
@@ -538,6 +569,12 @@ public class EliteEssentials extends JavaPlugin {
         // Player info commands (always register - useful utility)
         getCommandRegistry().registerCommand(new HytaleSeenCommand(configManager, playerService));
         registeredCommands.append("/seen, ");
+        
+        // Mail command
+        if (config.mail.enabled) {
+            getCommandRegistry().registerCommand(new HytaleMailCommand(mailService, configManager, playerFileStorage));
+            registeredCommands.append("/mail, ");
+        }
         
         // Help command (always register)
         getCommandRegistry().registerCommand(new HytaleHelpCommand());
@@ -638,12 +675,20 @@ public class EliteEssentials extends JavaPlugin {
         return playerService;
     }
     
+    public MailService getMailService() {
+        return mailService;
+    }
+    
     public PlayerFileStorage getPlayerFileStorage() {
         return playerFileStorage;
     }
     
     public CostService getCostService() {
         return costService;
+    }
+    
+    public VaultUnlockedIntegration getVaultUnlockedIntegration() {
+        return vaultUnlockedIntegration;
     }
     
     public PlayTimeRewardService getPlayTimeRewardService() {

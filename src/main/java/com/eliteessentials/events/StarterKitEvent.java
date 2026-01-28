@@ -5,7 +5,6 @@ import com.eliteessentials.model.KitItem;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.storage.PlayerFileStorage;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -53,8 +52,14 @@ public class StarterKitEvent {
                 return;
             }
             
-            Store<EntityStore> store = ref.getStore();
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            // Get the player from the event directly (doesn't require store access)
+            Player eventPlayer = event.getPlayer();
+            if (eventPlayer == null) {
+                logger.warning("PlayerReadyEvent: player is null");
+                return;
+            }
+            
+            PlayerRef playerRef = eventPlayer.getPlayerRef();
             if (playerRef == null) {
                 logger.warning("PlayerReadyEvent: playerRef is null");
                 return;
@@ -65,14 +70,12 @@ public class StarterKitEvent {
             logger.info("PlayerReadyEvent for: " + username + " (" + uuid + ")");
             
             // Check if this is a new player using PlayerFileStorage
-            // A player is "new" if their file doesn't exist on disk (not just in cache)
             if (playerFileStorage == null) {
                 logger.warning("PlayerFileStorage not set, cannot check first join");
                 return;
             }
             
-            // Check if player file exists on disk - this tells us if they've joined before
-            // We check the file directly because the cache might have been populated this session
+            // Check if player file exists on disk
             java.io.File playerFile = new java.io.File(playerFileStorage.getPlayersFolder(), uuid.toString() + ".json");
             boolean isNewPlayer = !playerFile.exists();
             
@@ -92,32 +95,33 @@ public class StarterKitEvent {
                 return;
             }
             
-            // Get player component
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                logger.warning("Could not get player component for new player " + username);
-                return;
-            }
-            
-            Inventory inventory = player.getInventory();
-            if (inventory == null) {
-                logger.warning("Could not get inventory for new player " + username);
-                return;
-            }
-            
-            for (Kit kit : starterKits) {
-                logger.info("Applying starter kit '" + kit.getDisplayName() + "' to " + username);
-                applyKit(kit, inventory);
+            // Execute on the world thread to safely access store/inventory
+            eventPlayer.getWorld().execute(() -> {
+                if (!ref.isValid()) {
+                    logger.warning("Ref became invalid before kit application");
+                    return;
+                }
                 
-                // Mark starter kits as claimed to prevent re-claiming via /kit
-                kitService.setOnetimeClaimed(uuid, kit.getId());
+                Inventory inventory = eventPlayer.getInventory();
+                if (inventory == null) {
+                    logger.warning("Could not get inventory for new player " + username);
+                    return;
+                }
                 
-                logger.info("Applied starter kit '" + kit.getDisplayName() + "' to new player " + username);
-            }
-            
-            // Sync inventory to client
-            player.sendInventory();
-            logger.info("Sent inventory update to " + username);
+                for (Kit kit : starterKits) {
+                    logger.info("Applying starter kit '" + kit.getDisplayName() + "' to " + username);
+                    applyKit(kit, inventory);
+                    
+                    // Mark starter kits as claimed to prevent re-claiming via /kit
+                    kitService.setOnetimeClaimed(uuid, kit.getId());
+                    
+                    logger.info("Applied starter kit '" + kit.getDisplayName() + "' to new player " + username);
+                }
+                
+                // Sync inventory to client
+                eventPlayer.sendInventory();
+                logger.info("Sent inventory update to " + username);
+            });
         });
         
         logger.info("StarterKitEvent registered successfully");

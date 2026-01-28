@@ -1,6 +1,7 @@
 package com.eliteessentials.api;
 
 import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.integration.VaultUnlockedIntegration;
 import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.services.PlayerService;
 
@@ -11,6 +12,10 @@ import java.util.logging.Logger;
 /**
  * Public API for EliteEssentials Economy system.
  * Other mods can use this to interact with player wallets.
+ * 
+ * Supports VaultUnlocked integration:
+ * - When useExternalEconomy is enabled, delegates to external economy via VaultUnlocked
+ * - When vaultUnlockedProvider is enabled, other plugins can use VaultUnlocked to access our economy
  * 
  * Usage from other mods:
  * <pre>
@@ -49,6 +54,14 @@ public final class EconomyAPI {
         }
         return plugin.getConfigManager().getConfig().economy.enabled;
     }
+    
+    /**
+     * Check if we're using an external economy via VaultUnlocked.
+     */
+    public static boolean isUsingExternalEconomy() {
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        return vault != null && vault.isUsingExternalEconomy();
+    }
 
     /**
      * Get the currency name (singular).
@@ -85,6 +98,12 @@ public final class EconomyAPI {
     public static double getBalance(UUID playerId) {
         if (!isEnabled()) return 0.0;
         
+        // Check for external economy first
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            return vault.getExternalBalance(playerId);
+        }
+        
         PlayerService service = getPlayerService();
         if (service == null) return 0.0;
         
@@ -98,6 +117,14 @@ public final class EconomyAPI {
      * @return true if player has enough, false otherwise
      */
     public static boolean has(UUID playerId, double amount) {
+        if (!isEnabled()) return false;
+        
+        // Check for external economy first
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            return vault.externalHas(playerId, amount);
+        }
+        
         return getBalance(playerId) >= amount;
     }
 
@@ -109,6 +136,12 @@ public final class EconomyAPI {
      */
     public static boolean withdraw(UUID playerId, double amount) {
         if (!isEnabled() || amount <= 0) return false;
+        
+        // Check for external economy first
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            return vault.externalWithdraw(playerId, amount);
+        }
         
         PlayerService service = getPlayerService();
         if (service == null) return false;
@@ -125,6 +158,12 @@ public final class EconomyAPI {
     public static boolean deposit(UUID playerId, double amount) {
         if (!isEnabled() || amount <= 0) return false;
         
+        // Check for external economy first
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            return vault.externalDeposit(playerId, amount);
+        }
+        
         PlayerService service = getPlayerService();
         if (service == null) return false;
         
@@ -133,12 +172,20 @@ public final class EconomyAPI {
 
     /**
      * Set a player's balance directly.
+     * Note: Not supported when using external economy.
      * @param playerId Player UUID
      * @param amount New balance (must be non-negative)
-     * @return true if successful, false if error
+     * @return true if successful, false if error or using external economy
      */
     public static boolean setBalance(UUID playerId, double amount) {
         if (!isEnabled() || amount < 0) return false;
+        
+        // External economy doesn't support direct balance setting
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            logger.warning("setBalance() not supported with external economy");
+            return false;
+        }
         
         PlayerService service = getPlayerService();
         if (service == null) return false;
@@ -157,19 +204,16 @@ public final class EconomyAPI {
         if (!isEnabled() || amount <= 0) return false;
         if (from.equals(to)) return false;
         
-        PlayerService service = getPlayerService();
-        if (service == null) return false;
-        
         // Check if sender has enough
         if (!has(from, amount)) return false;
         
         // Perform transfer
-        if (service.removeMoney(from, amount)) {
-            if (service.addMoney(to, amount)) {
+        if (withdraw(from, amount)) {
+            if (deposit(to, amount)) {
                 return true;
             } else {
                 // Rollback if deposit fails
-                service.addMoney(from, amount);
+                deposit(from, amount);
                 return false;
             }
         }
@@ -218,10 +262,17 @@ public final class EconomyAPI {
 
     /**
      * Get player data (for advanced usage).
+     * Note: Returns empty when using external economy.
      * @param playerId Player UUID
      * @return Optional containing PlayerFile if found
      */
     public static Optional<PlayerFile> getPlayerData(UUID playerId) {
+        // External economy doesn't expose player data
+        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        if (vault != null && vault.isUsingExternalEconomy()) {
+            return Optional.empty();
+        }
+        
         PlayerService service = getPlayerService();
         if (service == null) return Optional.empty();
         

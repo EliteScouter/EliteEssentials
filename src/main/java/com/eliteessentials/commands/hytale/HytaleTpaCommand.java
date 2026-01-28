@@ -56,7 +56,9 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
-        if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPA, config.tpa.enabled)) {
+        // Only check affordability - cost will be charged when teleport actually happens in /tpaccept
+        if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA,
+                config.tpa.enabled, "tpa", config.tpa.cost)) {
             return;
         }
         Player playerEntity = store.getComponent(ref, Player.getComponentType());

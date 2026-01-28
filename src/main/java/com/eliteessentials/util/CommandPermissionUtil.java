@@ -142,7 +142,8 @@ public class CommandPermissionUtil {
 
     /**
      * Check if a command can be executed with cost.
-     * Combines permission check and cost charge in one call.
+     * Only CHECKS if player can afford - does NOT charge.
+     * Use this for commands with warmups, then call chargeCost() after success.
      * 
      * @param ctx Command context
      * @param player Player executing the command
@@ -150,7 +151,7 @@ public class CommandPermissionUtil {
      * @param enabled Whether the command is enabled
      * @param commandName Command name for cost bypass check
      * @param cost Cost to charge (0 = free)
-     * @return true if command can proceed (has permission and paid/bypassed cost)
+     * @return true if command can proceed (has permission and can afford cost)
      */
     public static boolean canExecuteWithCost(CommandContext ctx, PlayerRef player, 
             String permission, boolean enabled, String commandName, double cost) {
@@ -159,12 +160,30 @@ public class CommandPermissionUtil {
             return false;
         }
         
-        // Then check/charge cost
+        // Then check if player can afford (but don't charge yet)
         CostService costService = EliteEssentials.getInstance().getCostService();
         if (costService != null) {
-            return costService.chargeIfNeeded(ctx, player, commandName, cost);
+            return costService.checkCanAfford(ctx, player, commandName, cost);
         }
         
+        return true;
+    }
+
+    /**
+     * Charge the player for a command cost.
+     * Call this AFTER the command succeeds (e.g., after warmup completes).
+     * 
+     * @param ctx Command context
+     * @param player Player to charge
+     * @param commandName Command name for cost calculation
+     * @param cost Cost to charge (0 = free)
+     * @return true if charged successfully or no cost needed
+     */
+    public static boolean chargeCost(CommandContext ctx, PlayerRef player, String commandName, double cost) {
+        CostService costService = EliteEssentials.getInstance().getCostService();
+        if (costService != null) {
+            return costService.charge(ctx, player, commandName, cost);
+        }
         return true;
     }
 

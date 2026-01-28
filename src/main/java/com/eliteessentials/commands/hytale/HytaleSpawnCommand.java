@@ -131,6 +131,9 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
                 Teleport teleport = new Teleport(finalTargetWorld, spawnPos, spawnRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
+                // Charge cost AFTER successful teleport
+                CommandPermissionUtil.chargeCost(ctx, player, "spawn", config.spawn.cost);
+                
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
             });
             

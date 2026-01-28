@@ -171,6 +171,9 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
                 Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
                 store.putComponent(ref, Teleport.getComponentType(), teleport);
                 
+                // Charge cost AFTER successful teleport
+                CommandPermissionUtil.chargeCost(ctx, player, "home", config.homes.cost);
+                
                 if (!finalSilent) {
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeTeleported", "name", finalHomeName), "#55FF55"));
                 }

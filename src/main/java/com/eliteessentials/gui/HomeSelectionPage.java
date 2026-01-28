@@ -74,7 +74,14 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         commandBuilder.append("Pages/EliteEssentials_HomePage.ui");
 
         UUID playerId = playerRef.getUuid();
-        
+
+        Map<String, Home> homes = homeService.getHomes(playerId);
+        int maxHomes = configManager.getConfig().homes.maxHomes;
+        String title = configManager.getMessage("guiHomesTitle",
+            "count", String.valueOf(homes.size()),
+            "max", String.valueOf(maxHomes));
+        commandBuilder.set("#TitleLabel.Text", title);
+
         buildHomeList(commandBuilder, eventBuilder);
     }
 
@@ -103,10 +110,19 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         UUID playerId = playerRef.getUuid();
         PluginConfig config = configManager.getConfig();
         
-        Optional<Home> homeOpt = homeService.getHome(playerId, data.home);
+        // Check if this is a delete action (D: prefix) or teleport (T: prefix)
+        if (data.home.startsWith("D:")) {
+            String homeName = data.home.substring(2);
+            handleDeleteHome(playerId, homeName);
+            return;
+        }
+        
+        String homeName = data.home.startsWith("T:") ? data.home.substring(2) : data.home;
+        
+        Optional<Home> homeOpt = homeService.getHome(playerId, homeName);
         
         if (homeOpt.isEmpty()) {
-            sendMessage(configManager.getMessage("homeNotFound", "name", data.home), "#FF5555");
+            sendMessage(configManager.getMessage("homeNotFound", "name", homeName), "#FF5555");
             this.close();
             return;
         }
@@ -131,8 +147,9 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         CostService costService = EliteEssentials.getInstance().getCostService();
         double cost = config.homes.cost;
         if (costService != null && cost > 0) {
-            if (!costService.canAfford(playerId, cost)) {
-                sendMessage(configManager.getMessage("notEnoughMoney", "cost", costService.formatCost(cost)), "#FF5555");
+            if (!costService.canAfford(playerId, "home", cost)) {
+                double effectiveCost = costService.getEffectiveCost(playerId, "home", cost);
+                sendMessage(configManager.getMessage("notEnoughMoney", "cost", costService.formatCost(effectiveCost)), "#FF5555");
                 return;
             }
         }
@@ -206,6 +223,82 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         
         warmupService.startWarmup(playerRef, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref, false);
     }
+    
+    private void handleDeleteHome(UUID playerId, String homeName) {
+        Optional<Home> homeOpt = homeService.getHome(playerId, homeName);
+        
+        if (homeOpt.isEmpty()) {
+            sendMessage(configManager.getMessage("homeNotFound", "name", homeName), "#FF5555");
+            return;
+        }
+        
+        // Delete the home
+        HomeService.Result result = homeService.deleteHome(playerId, homeName);
+        
+        if (result == HomeService.Result.SUCCESS) {
+            sendMessage(configManager.getMessage("homeDeleted", "name", homeName), "#55FF55");
+            // Refresh the GUI to show updated list
+            refreshHomeList();
+        } else {
+            sendMessage(configManager.getMessage("homeDeleteFailed"), "#FF5555");
+        }
+    }
+    
+    private void refreshHomeList() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        
+        UUID playerId = playerRef.getUuid();
+        
+        // Update title with new count
+        Map<String, Home> homes = homeService.getHomes(playerId);
+        int maxHomes = configManager.getConfig().homes.maxHomes;
+        String title = configManager.getMessage("guiHomesTitle",
+            "count", String.valueOf(homes.size()),
+            "max", String.valueOf(maxHomes));
+        cmd.set("#TitleLabel.Text", title);
+        
+        // Clear and rebuild home list
+        cmd.clear("#HomeCards");
+        
+        List<Home> homeList = new ArrayList<>(homes.values());
+        homeList.sort(Comparator.comparing(Home::getName));
+        
+        for (int i = 0; i < homeList.size(); i++) {
+            Home home = homeList.get(i);
+            String selector = "#HomeCards[" + i + "]";
+
+            cmd.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
+            cmd.set(selector + " #HomeName.Text", home.getName());
+
+            String coords = String.format("%.0f, %.0f, %.0f",
+                home.getLocation().getX(),
+                home.getLocation().getY(),
+                home.getLocation().getZ());
+            cmd.set(selector + " #HomeWorld.Text", "World: " + home.getLocation().getWorld() + " at " + coords);
+
+            events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #HomeTeleportButton",
+                new EventData()
+                    .append("Action", ACTION_TELEPORT)
+                    .append("Home", home.getName()),
+                false
+            );
+            
+            events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #HomeEditButton",
+                new EventData()
+                    .append("Action", ACTION_EDIT)
+                    .append("Home", home.getName()),
+                false
+            );
+
+        }
+        
+        this.sendUpdate(cmd, events, false);
+    }
 
     private void openEditPage(Ref<EntityStore> ref, Store<EntityStore> store, String homeName) {
         Player playerEntity = store.getComponent(ref, Player.getComponentType());
@@ -256,6 +349,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
                     .append("Home", home.getName()),
                 false
             );
+
         }
     }
 

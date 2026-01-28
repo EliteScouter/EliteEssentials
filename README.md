@@ -117,6 +117,17 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - Command costs - charge players for using teleport commands
 - Full API for other mods to integrate (`com.eliteessentials.api.EconomyAPI`)
 
+### Mail System
+- **`/mail send <player> <message>`** - Send mail to any player (online or offline)
+- **`/mail read [number]`** - Read a specific mail or first unread
+- **`/mail list`** - List all mail with timestamps and unread indicators
+- **`/mail clear`** - Clear all mail
+- **`/mail clear read`** - Clear only read mail
+- **`/mail delete <number>`** - Delete specific mail
+- Login notification when you have unread mail
+- Spam protection with per-recipient cooldown
+- Configurable mailbox limit and message length
+
 ### PlayTime Rewards
 - **Repeatable Rewards** - Trigger every X minutes of playtime (e.g., hourly bonus)
 - **Milestone Rewards** - One-time rewards at specific playtime thresholds (e.g., 100 hours = VIP)
@@ -185,6 +196,7 @@ Config file is automatically created on first server start with sensible default
 | `/pay <player> <amount>` | Send money to player | Everyone |
 | `/baltop` | View richest players | Everyone |
 | `/eco` | Economy admin commands | Admin |
+| `/mail` | Send/receive offline mail | Everyone |
 | `/alias` | Manage command aliases | Admin |
 | `/eliteessentials reload` | Reload configuration | Admin |
 
