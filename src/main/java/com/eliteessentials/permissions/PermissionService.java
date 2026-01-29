@@ -232,9 +232,16 @@ public class PermissionService {
         
         // Try to get custom limit from LuckPerms (returns highest value found)
         if (LuckPermsIntegration.isAvailable()) {
+            // Check full permission format: eliteessentials.command.home.limit.<number>
             int lpLimit = getHighestPermissionValue(playerId, Permissions.HOME_LIMIT_PREFIX);
             if (lpLimit > 0) {
                 return lpLimit;
+            }
+            
+            // Check short permission format: homes.limit.<number>
+            int shortLimit = getHighestPermissionValue(playerId, "homes.limit.");
+            if (shortLimit > 0) {
+                return shortLimit;
             }
         }
         
@@ -251,7 +258,13 @@ public class PermissionService {
      * @return The highest value found, or -1 if not found
      */
     private int getHighestPermissionValue(UUID playerId, String permissionPrefix) {
+        ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+        boolean debug = configManager != null && configManager.isDebugEnabled();
+        
         if (!LuckPermsIntegration.isAvailable()) {
+            if (debug) {
+                logger.info("[HomeLimit] LuckPerms not available");
+            }
             return -1;
         }
         
@@ -259,6 +272,9 @@ public class PermissionService {
         try {
             Object[] lpObjects = getLuckPermsObjectsViaReflection(playerId);
             if (lpObjects == null) {
+                if (debug) {
+                    logger.info("[HomeLimit] Could not get LuckPerms objects for player");
+                }
                 return -1;
             }
             
@@ -275,6 +291,17 @@ public class PermissionService {
             @SuppressWarnings("unchecked")
             java.util.Map<String, Boolean> permMap = (java.util.Map<String, Boolean>) getPermissionMapMethod.invoke(permissionData);
             
+            if (debug) {
+                logger.info("[HomeLimit] Searching for prefix: " + permissionPrefix);
+                logger.info("[HomeLimit] Permission map has " + permMap.size() + " entries");
+                // Log all permissions that contain "home" or "limit"
+                for (java.util.Map.Entry<String, Boolean> entry : permMap.entrySet()) {
+                    if (entry.getKey().contains("home") || entry.getKey().contains("limit")) {
+                        logger.info("[HomeLimit] Found perm: " + entry.getKey() + " = " + entry.getValue());
+                    }
+                }
+            }
+            
             int highestValue = -1;
             
             for (java.util.Map.Entry<String, Boolean> entry : permMap.entrySet()) {
@@ -282,6 +309,9 @@ public class PermissionService {
                     String valuePart = entry.getKey().substring(permissionPrefix.length());
                     try {
                         int value = Integer.parseInt(valuePart);
+                        if (debug) {
+                            logger.info("[HomeLimit] Matched: " + entry.getKey() + " -> value " + value);
+                        }
                         if (value > highestValue) {
                             highestValue = value;
                         }
@@ -289,9 +319,16 @@ public class PermissionService {
                 }
             }
             
+            if (debug) {
+                logger.info("[HomeLimit] Final result for prefix '" + permissionPrefix + "': " + highestValue);
+            }
+            
             return highestValue;
             
         } catch (Exception e) {
+            if (debug) {
+                logger.info("[HomeLimit] Exception: " + e.getMessage());
+            }
             return -1;
         }
     }

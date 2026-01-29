@@ -74,7 +74,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         UUID playerId = playerRef.getUuid();
 
         Map<String, Home> homes = homeService.getHomes(playerId);
-        int maxHomes = configManager.getConfig().homes.maxHomes;
+        int maxHomes = homeService.getMaxHomes(playerId);
         String title = configManager.getMessage("guiHomesTitle",
             "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
@@ -250,7 +250,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         
         // Update title with new count
         Map<String, Home> homes = homeService.getHomes(playerId);
-        int maxHomes = configManager.getConfig().homes.maxHomes;
+        int maxHomes = homeService.getMaxHomes(playerId);
         String title = configManager.getMessage("guiHomesTitle",
             "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
