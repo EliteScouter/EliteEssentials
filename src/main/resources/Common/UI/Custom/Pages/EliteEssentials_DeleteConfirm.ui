@@ -1,6 +1,0 @@
-$C = "../Common.ui";
-
-$C.@CancelTextButton #DeleteButton {
-  Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
-  Text: "Delete";
-}

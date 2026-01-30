@@ -1,47 +1,36 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 $C.@PageOverlay {
   LayoutMode: Middle;
   $C.@Container {
-    Anchor: (Width: 580, Height: 400);
+    Anchor: (Width: 580, Height: 420);
 
     #Title {
       Group {
-        Anchor: (Height: 50);
-
-        Label #TitleLabel {
-          Style: (
-            FontSize: 24,
-            LetterSpacing: 2,
-            RenderUppercase: true,
-            RenderBold: true,
-            TextColor: #ccb588,
-            HorizontalAlignment: Center,
-            VerticalAlignment: Center
-          );
-          Padding: (Top: 3);
-          Text: "Your Homes";
+        $E.@EEPageTitle {
+          @Text = "Your Homes";
         }
       }
     }
 
     #Content {
-      LayoutMode: Left;
+      LayoutMode: Top;
 
-      Group #Main {
-        LayoutMode: Top;
+      Group #HomeList {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 4);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-        Group #HomeList {
-          Anchor: (Width: 560);
-          FlexWeight: 1;
-          LayoutMode: TopScrolling;
-          Padding: (Left: 4);
-          ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-          Group #HomeCards {
-            LayoutMode: Top;
-          }
+        Group #HomeCards {
+          LayoutMode: Top;
         }
+      }
+
+      Group #Pagination {
+        LayoutMode: Left;
+        Anchor: (Top: 10, Left: 0, Right: 0);
       }
     }
   }

@@ -1,4 +1,5 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
@@ -36,10 +37,10 @@ Group {
 
   Group #WarpActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 130);
+    Anchor: (Right: 0, Width: 110);
 
-    $C.@TextButton #WarpButton {
-      @Anchor = (Width: 120, Height: 44);
+    $E.@EEPrimarySmallTextButton #WarpButton {
+      @Anchor = (Width: 90);
       Text: "Warp";
     }
   }

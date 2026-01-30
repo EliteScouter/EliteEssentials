@@ -2,12 +2,14 @@ package com.eliteessentials.storage;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -25,8 +27,6 @@ public class MessagesStorage {
             .setPrettyPrinting()
             .disableHtmlEscaping()  // Keep & as & instead of \u0026
             .create();
-    private static final Type MESSAGES_TYPE = new TypeToken<Map<String, String>>(){}.getType();
-
     private final File dataFolder;
     private final Object fileLock = new Object();
     private Map<String, String> messages = new HashMap<>();
@@ -46,8 +46,12 @@ public class MessagesStorage {
         }
 
         try (Reader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-            Map<String, String> loaded = gson.fromJson(reader, MESSAGES_TYPE);
-            if (loaded != null) {
+            JsonElement element = gson.fromJson(reader, JsonElement.class);
+            Map<String, String> loaded = new HashMap<>();
+            if (element != null) {
+                flattenJson("", element, loaded);
+            }
+            if (!loaded.isEmpty()) {
                 messages = loaded;
                 logger.info("Loaded " + messages.size() + " messages from messages.json");
                 return true;
@@ -69,7 +73,7 @@ public class MessagesStorage {
         File file = new File(dataFolder, "messages.json");
         synchronized (fileLock) {
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-                gson.toJson(messages, writer);
+                gson.toJson(unflatten(messages), writer);
                 logger.info("Saved " + messages.size() + " messages to messages.json");
             } catch (Exception e) {
                 logger.warning("Failed to save messages.json: " + e.getMessage());
@@ -139,5 +143,49 @@ public class MessagesStorage {
             }
         }
         return added;
+    }
+
+    private static void flattenJson(String prefix, JsonElement element, Map<String, String> out) {
+        if (element == null || element.isJsonNull()) {
+            return;
+        }
+        if (element.isJsonObject()) {
+            JsonObject obj = element.getAsJsonObject();
+            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
+                flattenJson(key, entry.getValue(), out);
+            }
+            return;
+        }
+        if (element.isJsonPrimitive()) {
+            JsonPrimitive primitive = element.getAsJsonPrimitive();
+            out.put(prefix, primitive.getAsString());
+        }
+    }
+
+    private static Map<String, Object> unflatten(Map<String, String> flat) {
+        Map<String, Object> root = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : flat.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            String[] parts = key.split("\\.");
+            Map<String, Object> current = root;
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i];
+                if (i == parts.length - 1) {
+                    current.put(part, value);
+                } else {
+                    Object existing = current.get(part);
+                    if (existing instanceof Map) {
+                        current = (Map<String, Object>) existing;
+                    } else {
+                        Map<String, Object> child = new LinkedHashMap<>();
+                        current.put(part, child);
+                        current = child;
+                    }
+                }
+            }
+        }
+        return root;
     }
 }

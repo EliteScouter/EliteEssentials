@@ -60,13 +60,24 @@ public class HomeEditPage extends InteractiveCustomUIPage<HomeEditPage.HomeEditD
                       UIEventBuilder eventBuilder, Store<EntityStore> store) {
         commandBuilder.append("Pages/EliteEssentials_HomeEditPage.ui");
 
+        commandBuilder.set("#PageTitleLabel.Text", configManager.getMessage("gui.HomeEditTitle"));
+        commandBuilder.set("#HomeNameLabel.Text", configManager.getMessage("gui.HomeEditNameLabel"));
+        commandBuilder.set("#HomeNameInput.PlaceholderText", configManager.getMessage("gui.HomeEditNamePlaceholder"));
+        commandBuilder.set("#CancelButton.Text", configManager.getMessage("gui.HomeEditCancelButton"));
+        commandBuilder.set("#DoneButton.Text", configManager.getMessage("gui.HomeEditRenameButton"));
+        commandBuilder.set("#DangerZoneLabel.Text", configManager.getMessage("gui.HomeEditDangerTitle"));
+        commandBuilder.set("#DangerZoneInfo.Text", configManager.getMessage("gui.HomeEditDangerBody"));
+
         Optional<Home> homeOpt = homeService.getHome(playerRef.getUuid(), homeName);
         if (homeOpt.isPresent()) {
             String existingName = homeOpt.get().getName();
             pendingNewName = existingName;
             commandBuilder.set("#HomeNameInput.Value", existingName);
         }
-        commandBuilder.set("#DeleteButton.Text", deleteConfirm ? "Confirm" : "Delete");
+        commandBuilder.set("#DeleteButton.Text",
+            deleteConfirm
+                ? configManager.getMessage("gui.HomeEditDeleteConfirmButton")
+                : configManager.getMessage("gui.HomeEditDeleteButton"));
 
         Player playerEntity = store.getComponent(ref, Player.getComponentType());
         if (playerEntity != null) {
@@ -195,7 +206,10 @@ public class HomeEditPage extends InteractiveCustomUIPage<HomeEditPage.HomeEditD
 
     private void updateDeleteButton() {
         UICommandBuilder commandBuilder = new UICommandBuilder();
-        commandBuilder.set("#DeleteButton.Text", deleteConfirm ? "Confirm" : "Delete");
+        commandBuilder.set("#DeleteButton.Text",
+            deleteConfirm
+                ? configManager.getMessage("gui.HomeEditDeleteConfirmButton")
+                : configManager.getMessage("gui.HomeEditDeleteButton"));
         sendUpdate(commandBuilder, false);
     }
 

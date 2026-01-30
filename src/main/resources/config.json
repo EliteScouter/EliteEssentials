@@ -4,6 +4,13 @@
   
   "debug": false,
   "advancedPermissions": false,
+
+  "gui": {
+    "playersPerTpaPage": 8,
+    "warpsPerPage": 8,
+    "homesPerPage": 8,
+    "kitsPerPage": 8
+  },
   
   "rtp": {
     "enabled": true,

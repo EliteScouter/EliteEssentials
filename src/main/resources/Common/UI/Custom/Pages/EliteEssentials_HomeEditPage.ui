@@ -1,17 +1,16 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 $C.@PageOverlay {
   LayoutMode: Middle;
 
   $C.@Container {
-    Anchor: (Width: 580, Height: 300);
+    Anchor: (Width: 580, Height: 270);
 
     #Title {
       Group {
-        Label #TitleText {
-          Anchor: (Height: 28);
-          Style: (...$C.@TitleStyle, HorizontalAlignment: Center);
-          Text: "Edit Home";
+        $E.@EEPageTitle {
+          @Text = "Edit Home";
         }
       }
     }
@@ -24,7 +23,7 @@ $C.@PageOverlay {
         LayoutMode: Top;
         Anchor: (Bottom: 8);
 
-        Label {
+        Label #HomeNameLabel {
           Anchor: (Bottom: 6);
           Style: $C.@SubtitleStyle;
           Text: "Home Name";
@@ -38,17 +37,17 @@ $C.@PageOverlay {
 
       Group {
         LayoutMode: Left;
-        Anchor: (Height: 44, Bottom: 10);
+        Anchor: (Height: 32, Bottom: 10);
 
         Group { FlexWeight: 1; }
 
-        $C.@SecondaryTextButton #CancelButton {
-          @Anchor = (Width: 130, Right: 8);
+        $C.@SmallSecondaryTextButton #CancelButton {
+          @Anchor = (Width: 100, Right: 8);
           Text: "Cancel";
         }
 
-        $C.@TextButton #DoneButton {
-          @Anchor = (Width: 130);
+        $E.@EEPrimarySmallTextButton #DoneButton {
+          @Anchor = (Width: 110);
           Text: "Rename";
         }
       }
@@ -61,13 +60,13 @@ $C.@PageOverlay {
         LayoutMode: Top;
         Anchor: (Bottom: 0);
 
-        Label {
+        Label #DangerZoneLabel {
           Anchor: (Bottom: 2);
           Style: $C.@SubtitleStyle;
           Text: "Danger Zone";
         }
 
-        Label {
+        Label #DangerZoneInfo {
           Anchor: (Bottom: 6);
           Style: (
             FontSize: 11,
@@ -78,10 +77,10 @@ $C.@PageOverlay {
 
         Group {
           LayoutMode: Left;
-          Anchor: (Height: 44);
+          Anchor: (Height: 32);
 
-          $C.@CancelTextButton #DeleteButton {
-            @Anchor = (Width: 140);
+          $E.@EECancelSmallTextButton #DeleteButton {
+            @Anchor = (Width: 110);
             Text: "Delete";
           }
         }

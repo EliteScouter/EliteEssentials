@@ -1,4 +1,5 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
@@ -20,11 +21,11 @@ Group {
 
   Group #PlayerActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 140);
+    Anchor: (Right: 0, Width: 100);
 
-    $C.@TextButton #PlayerActionButton {
-      @Anchor = (Width: 140);
-      Text: "TPA";
+    $E.@EEPrimarySmallTextButton #PlayerActionButton {
+      @Anchor = (Width: 100);
+      Text: "Request";
     }
   }
 }

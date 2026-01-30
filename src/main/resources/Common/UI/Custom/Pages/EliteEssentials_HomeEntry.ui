@@ -1,4 +1,5 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
@@ -36,15 +37,15 @@ Group {
 
   Group #HomeActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 210);
+    Anchor: (Right: 0, Width: 190);
 
-    $C.@SecondaryTextButton #HomeEditButton {
-      @Anchor = (Width: 90, Right: 8);
+    $C.@SmallSecondaryTextButton #HomeEditButton {
+      @Anchor = (Width: 70, Right: 8);
       Text: "Edit";
     }
 
-    $C.@TextButton #HomeTeleportButton {
-      @Anchor = (Width: 110, Right: 8);
+    $E.@EEPrimarySmallTextButton #HomeTeleportButton {
+      @Anchor = (Width: 60);
       Text: "Go";
     }
   }

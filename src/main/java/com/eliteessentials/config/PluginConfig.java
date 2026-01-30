@@ -24,6 +24,11 @@ public class PluginConfig {
      */
     public boolean advancedPermissions = false;
 
+    // ==================== GUI ====================
+    
+    /** GUI pagination and entry limits */
+    public GuiConfig gui = new GuiConfig();
+
     // ==================== COMMAND CONFIGS ====================
     
     public RtpConfig rtp = new RtpConfig();
@@ -376,12 +381,36 @@ public class PluginConfig {
         messages.put("deathGeneric", "{player} died");
         
         // ==================== GUI LABELS ====================
-        messages.put("guiHomesTitle", "Your Homes ({count}/{max})");
-        messages.put("guiWarpsTitle", "Server Warps");
-        messages.put("guiKitStatusLocked", "[Locked]");
-        messages.put("guiKitStatusClaimed", "Claimed");
-        messages.put("guiKitStatusReady", "Ready");
-        messages.put("guiWarpStatusOpOnly", "[OP Only]");
+        messages.put("gui.HomesTitle", "Your Homes ({count}/{max})");
+        messages.put("gui.WarpsTitle", "Server Warps");
+        messages.put("gui.KitTitle", "Kits");
+        messages.put("gui.TpaTitle", "TPA");
+        messages.put("gui.TpahereTitle", "TPAHERE");
+        messages.put("gui.TpaEmpty", "No other players online.");
+        messages.put("gui.TpaRequestButton", "Request");
+        messages.put("gui.PaginationPrev", "Prev");
+        messages.put("gui.PaginationNext", "Next");
+        messages.put("gui.PaginationLabel", "Page {current} / {total}");
+        messages.put("gui.WarpButton", "Warp");
+        messages.put("gui.WarpDeleteButton", "X");
+        messages.put("gui.WarpDeleteConfirmButton", "?");
+        messages.put("gui.KitClaimButton", "Claim");
+        messages.put("gui.HomeEntryEdit", "Edit");
+        messages.put("gui.HomeEntryGo", "Go");
+        messages.put("gui.HomeEntryWorld", "World: {world} at {coords}");
+        messages.put("gui.HomeEditTitle", "Edit Home");
+        messages.put("gui.HomeEditNameLabel", "Home Name");
+        messages.put("gui.HomeEditNamePlaceholder", "Enter a new name");
+        messages.put("gui.HomeEditCancelButton", "Cancel");
+        messages.put("gui.HomeEditRenameButton", "Rename");
+        messages.put("gui.HomeEditDangerTitle", "Danger Zone");
+        messages.put("gui.HomeEditDangerBody", "Do you want to delete this home?");
+        messages.put("gui.HomeEditDeleteButton", "Delete");
+        messages.put("gui.HomeEditDeleteConfirmButton", "Confirm");
+        messages.put("gui.KitStatusLocked", "[Locked]");
+        messages.put("gui.KitStatusClaimed", "Claimed");
+        messages.put("gui.KitStatusReady", "Ready");
+        messages.put("gui.WarpStatusOpOnly", "[OP Only]");
         
         // ==================== PLAYTIME REWARDS ====================
         messages.put("playTimeRewardReceived", "&a[Reward] &fYou received: &e{reward}");
@@ -452,6 +481,22 @@ public class PluginConfig {
             // Return default range
             return new WorldRtpRange(minRange, maxRange);
         }
+    }
+
+    // ==================== GUI ====================
+    
+    public static class GuiConfig {
+        /** Number of entries shown per page in the TPA/TPAHERE GUI */
+        public int playersPerTpaPage = 8;
+        
+        /** Number of entries shown per page in the Warp GUI */
+        public int warpsPerPage = 8;
+        
+        /** Number of entries shown per page in the Homes GUI */
+        public int homesPerPage = 8;
+        
+        /** Number of entries shown per page in the Kits GUI */
+        public int kitsPerPage = 8;
     }
     
     /**

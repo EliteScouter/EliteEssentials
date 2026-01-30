@@ -1,35 +1,36 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 $C.@PageOverlay {
   LayoutMode: Middle;
   $C.@Container {
-    Anchor: (Width: 580, Height: 400);
+    Anchor: (Width: 580, Height: 420);
 
     #Title {
       Group {
-        $C.@Title {
-          @Text = "EliteEssentials Kits";
+        $E.@EEPageTitle {
+          @Text = "Kits";
         }
       }
     }
 
     #Content {
-      LayoutMode: Left;
+      LayoutMode: Top;
 
-      Group #Main {
-        LayoutMode: Top;
+      Group #KitList {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 4);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
-        Group #KitList {
-          Anchor: (Width: 560);
-          FlexWeight: 1;
-          LayoutMode: TopScrolling;
-          Padding: (Left: 4);
-          ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-          Group #KitCards {
-            LayoutMode: Top;
-          }
+        Group #KitCards {
+          LayoutMode: Top;
         }
+      }
+
+      Group #Pagination {
+        LayoutMode: Left;
+        Anchor: (Top: 10, Left: 0, Right: 0);
       }
     }
   }

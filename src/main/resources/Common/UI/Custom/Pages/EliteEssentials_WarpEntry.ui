@@ -1,4 +1,5 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
@@ -44,14 +45,19 @@ Group {
 
   Group #WarpActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 180);
+    Anchor: (Right: 0, Width: 140);
 
     Group #DeleteButtonSlot {
-      Anchor: (Width: 40, Height: 44, Right: 8);
+      Anchor: (Width: 40, Height: 32, Right: 8);
+
+      $E.@EECancelSmallTextButton #DeleteButton {
+        @Anchor = (Width: 40, Height: 32);
+        Text: "X";
+      }
     }
 
-    $C.@TextButton #WarpButton {
-      @Anchor = (Width: 120, Height: 44);
+    $E.@EEPrimarySmallTextButton #WarpButton {
+      @Anchor = (Width: 90);
       Text: "Warp";
     }
   }
