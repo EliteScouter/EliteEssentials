@@ -87,12 +87,13 @@ public class ChatListener {
         // Replace placeholders
         String formattedMessage = format
                 .replace("{player}", playerName)
-                .replace("{message}", processedMessage)
                 .replace("{displayname}", playerName);
 
         if (PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi && formattedMessage.indexOf('%') != -1) {
             formattedMessage = PAPIIntegration.setPlaceholders(sender, formattedMessage);
         }
+
+        formattedMessage = format.replace("{message}", processedMessage);
         
         if (configManager.isDebugEnabled()) {
             logger.info("Formatted message: " + formattedMessage);
