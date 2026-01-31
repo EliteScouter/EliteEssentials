@@ -2,6 +2,7 @@ package com.eliteessentials.listeners;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
@@ -88,6 +89,10 @@ public class ChatListener {
                 .replace("{player}", playerName)
                 .replace("{message}", processedMessage)
                 .replace("{displayname}", playerName);
+
+        if (PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi && formattedMessage.indexOf('%') != -1) {
+            formattedMessage = PAPIIntegration.setPlaceholders(sender, formattedMessage);
+        }
         
         if (configManager.isDebugEnabled()) {
             logger.info("Formatted message: " + formattedMessage);
