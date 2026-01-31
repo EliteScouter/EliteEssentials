@@ -7,6 +7,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.gui.components.PaginationControl;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -41,6 +42,7 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final KitService kitService;
     private final ConfigManager configManager;
+    private int pageIndex = 0;
 
     public KitSelectionPage(PlayerRef playerRef, KitService kitService, ConfigManager configManager) {
         super(playerRef, CustomPageLifetime.CanDismiss, KitPageData.CODEC);
@@ -54,68 +56,32 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
         // Load the custom UI page
         commandBuilder.append("Pages/EliteEssentials_KitPage.ui");
 
-        List<Kit> allKits = new ArrayList<>(kitService.getAllKits());
-        UUID playerId = playerRef.getUuid();
-        
-        if (allKits.isEmpty()) {
-            return;
-        }
+        commandBuilder.set("#PageTitleLabel.Text", configManager.getMessage("gui.KitTitle"));
 
-        // Build kit entries
-        for (int i = 0; i < allKits.size(); i++) {
-            Kit kit = allKits.get(i);
-            String selector = "#KitCards[" + i + "]";
-
-            // Add kit entry UI element
-            commandBuilder.append("#KitCards", "Pages/EliteEssentials_KitEntry.ui");
-            
-            // Check kit-specific permission
-            String kitPermission = Permissions.kitAccess(kit.getId());
-            boolean hasPermission = PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) ||
-                                   PermissionService.get().isAdmin(playerId);
-            boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
-
-            String statusText;
-            boolean canClaim = true;
-            
-            if (!hasPermission) {
-                statusText = configManager.getMessage("guiKitStatusLocked");
-                canClaim = false;
-            } else if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
-                statusText = configManager.getMessage("guiKitStatusClaimed");
-                canClaim = false;
-            } else {
-                long remainingCooldown = kitService.getRemainingCooldown(playerId, kit.getId());
-                if (remainingCooldown > 0) {
-                    statusText = formatCooldown(remainingCooldown);
-                    if (!canBypassCooldown) {
-                        canClaim = false;
-                    }
-                } else {
-                    statusText = configManager.getMessage("guiKitStatusReady");
-                }
-            }
-            
-            // Set kit name with status in the same line
-            commandBuilder.set(selector + " #KitName.Text", kit.getDisplayName() + " (" + statusText + ")");
-
-            // Set description
-            commandBuilder.set(selector + " #KitDescription.Text", kit.getDescription());
-
-            commandBuilder.set(selector + " #KitStatus.Text", "");
-            commandBuilder.set(selector + " #KitClaimButton.Disabled", !canClaim);
-
-            // Bind click event
-            eventBuilder.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #KitClaimButton",
-                EventData.of("Kit", kit.getId())
-            );
-        }
+        commandBuilder.clear("#Pagination");
+        commandBuilder.append("#Pagination", "Pages/EliteEssentials_Pagination.ui");
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(eventBuilder, "#Pagination");
+        buildKitList(commandBuilder, eventBuilder);
     }
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, KitPageData data) {
+        if (data.pageAction != null) {
+            if ("Next".equalsIgnoreCase(data.pageAction)) {
+                pageIndex++;
+            } else if ("Prev".equalsIgnoreCase(data.pageAction)) {
+                pageIndex = Math.max(0, pageIndex - 1);
+            }
+            updateList();
+            return;
+        }
+
         if (data.kit == null || data.kit.isEmpty()) {
             return;
         }
@@ -265,6 +231,97 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
         playerRef.sendMessage(MessageFormatter.formatWithFallback(message, color));
     }
 
+    private void updateList() {
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(eventBuilder, "#Pagination");
+        buildKitList(commandBuilder, eventBuilder);
+        sendUpdate(commandBuilder, eventBuilder, false);
+    }
+
+    private void buildKitList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        List<Kit> allKits = new ArrayList<>(kitService.getAllKits());
+        UUID playerId = playerRef.getUuid();
+        
+        if (allKits.isEmpty()) {
+            commandBuilder.clear("#KitCards");
+            PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", configManager.getMessage("gui.PaginationLabel"));
+            return;
+        }
+
+        int pageSize = Math.max(1, configManager.getConfig().gui.kitsPerPage);
+        String pageLabelFormat = configManager.getMessage("gui.PaginationLabel");
+        int totalPages = (int) Math.ceil(allKits.size() / (double) pageSize);
+        if (pageIndex >= totalPages) {
+            pageIndex = totalPages - 1;
+        }
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, allKits.size());
+
+        commandBuilder.clear("#KitCards");
+
+        for (int i = start; i < end; i++) {
+            Kit kit = allKits.get(i);
+            int entryIndex = i - start;
+            String selector = "#KitCards[" + entryIndex + "]";
+
+            // Add kit entry UI element
+            commandBuilder.append("#KitCards", "Pages/EliteEssentials_KitEntry.ui");
+            
+            // Check kit-specific permission
+            String kitPermission = Permissions.kitAccess(kit.getId());
+            boolean hasPermission = PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) ||
+                                   PermissionService.get().isAdmin(playerId);
+            boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
+
+            String statusText;
+            boolean canClaim = true;
+            
+            if (!hasPermission) {
+                statusText = configManager.getMessage("gui.KitStatusLocked");
+                canClaim = false;
+            } else if (kit.isOnetime() && kitService.hasClaimedOnetime(playerId, kit.getId())) {
+                statusText = configManager.getMessage("gui.KitStatusClaimed");
+                canClaim = false;
+            } else {
+                long remainingCooldown = kitService.getRemainingCooldown(playerId, kit.getId());
+                if (remainingCooldown > 0) {
+                    statusText = formatCooldown(remainingCooldown);
+                    if (!canBypassCooldown) {
+                        canClaim = false;
+                    }
+                } else {
+                    statusText = configManager.getMessage("gui.KitStatusReady");
+                }
+            }
+            
+            // Set kit name with status in the same line
+            commandBuilder.set(selector + " #KitName.Text", kit.getDisplayName() + " (" + statusText + ")");
+
+            // Set description
+            commandBuilder.set(selector + " #KitDescription.Text", kit.getDescription());
+
+            commandBuilder.set(selector + " #KitStatus.Text", "");
+            commandBuilder.set(selector + " #KitClaimButton.Disabled", !canClaim);
+            commandBuilder.set(selector + " #KitClaimButton.Text", configManager.getMessage("gui.KitClaimButton"));
+
+            // Bind click event
+            eventBuilder.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #KitClaimButton",
+                EventData.of("Kit", kit.getId())
+            );
+        }
+
+        PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, pageLabelFormat);
+    }
+
     /**
      * Format cooldown seconds into readable string.
      */
@@ -287,12 +344,19 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
         public static final BuilderCodec<KitPageData> CODEC = BuilderCodec.builder(KitPageData.class, KitPageData::new)
                 .append(new KeyedCodec<>("Kit", Codec.STRING), (data, s) -> data.kit = s, data -> data.kit)
                 .add()
+                .append(new KeyedCodec<>("PageAction", Codec.STRING), (data, s) -> data.pageAction = s, data -> data.pageAction)
+                .add()
                 .build();
 
         private String kit;
+        private String pageAction;
 
         public String getKit() {
             return kit;
+        }
+
+        public String getPageAction() {
+            return pageAction;
         }
     }
 }

@@ -1,0 +1,72 @@
+$C = "../Common.ui";
+
+@SmallButtonHeight = 32;
+@SmallButtonPadding = 16;
+
+@EEPageTitleLabelStyle = LabelStyle(
+  FontSize: 24,
+  LetterSpacing: 2,
+  RenderUppercase: true,
+  RenderBold: true,
+  TextColor: #ccb588,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@EEPageTitle = Group {
+  @Text = "";
+
+  Anchor: (Height: 50);
+
+  Label #PageTitleLabel {
+    Style: @EEPageTitleLabelStyle;
+    Padding: (Top: 3);
+    Text: @Text;
+  }
+};
+
+@EEPrimarySmallTextButtonStyle = TextButtonStyle(
+  Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: $C.@SmallButtonLabelStyle),
+  Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: $C.@SmallButtonLabelStyle),
+  Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: $C.@SmallButtonLabelStyle),
+  Disabled: (Background: $C.@DefaultSquareButtonDisabledBackground, LabelStyle: $C.@SmallButtonDisabledLabelStyle),
+  Sounds: $C.@ButtonSounds,
+);
+
+@EECancelSmallTextButtonStyle = TextButtonStyle(
+  Default: (Background: $C.@CancelTextButtonStyle.Default.Background, LabelStyle: $C.@SmallButtonLabelStyle),
+  Hovered: (Background: $C.@CancelTextButtonStyle.Hovered.Background, LabelStyle: $C.@SmallButtonLabelStyle),
+  Pressed: (Background: $C.@CancelTextButtonStyle.Pressed.Background, LabelStyle: $C.@SmallButtonLabelStyle),
+  Disabled: (Background: $C.@CancelTextButtonStyle.Disabled.Background, LabelStyle: $C.@SmallButtonDisabledLabelStyle),
+  Sounds: $C.@ButtonsCancel,
+);
+
+@EEPrimarySmallTextButton = TextButton {
+  @Anchor = Anchor();
+  @Sounds = ();
+  Style: (
+    ...@EEPrimarySmallTextButtonStyle,
+    Sounds: (
+      ...$C.@ButtonSounds,
+      ...@Sounds
+    )
+  );
+  Anchor: (...@Anchor, Height: @SmallButtonHeight);
+  Padding: (Horizontal: @SmallButtonPadding);
+  Text: @Text;
+};
+
+@EECancelSmallTextButton = TextButton {
+  @Anchor = Anchor();
+  @Sounds = ();
+  Style: (
+    ...@EECancelSmallTextButtonStyle,
+    Sounds: (
+      ...$C.@ButtonSounds,
+      ...@Sounds
+    )
+  );
+  Anchor: (...@Anchor, Height: @SmallButtonHeight);
+  Padding: (Horizontal: @SmallButtonPadding);
+  Text: @Text;
+};

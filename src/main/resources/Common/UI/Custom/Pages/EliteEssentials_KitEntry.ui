@@ -1,4 +1,5 @@
 $C = "../Common.ui";
+$E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
@@ -44,10 +45,10 @@ Group {
 
   Group #KitActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 140);
+    Anchor: (Right: 0, Width: 110);
 
-    $C.@TextButton #KitClaimButton {
-      @Anchor = (Width: 120);
+    $E.@EEPrimarySmallTextButton #KitClaimButton {
+      @Anchor = (Width: 90);
       Text: "Claim";
     }
   }

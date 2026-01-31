@@ -42,8 +42,6 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
         TPAHERE
     }
 
-    private static final int PAGE_SIZE = 8;
-
     private final Mode mode;
     private final TpaService tpaService;
     private final ConfigManager configManager;
@@ -62,11 +60,19 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
                       UIEventBuilder eventBuilder, Store<EntityStore> store) {
         commandBuilder.append("Pages/EliteEssentials_TpaPage.ui");
 
-        String title = mode == Mode.TPA ? "TPA" : "TPAHERE";
-        commandBuilder.set("#PageTitle.Text", title);
+        String title = mode == Mode.TPA
+            ? configManager.getMessage("gui.TpaTitle")
+            : configManager.getMessage("gui.TpahereTitle");
+        commandBuilder.set("#PageTitleLabel.Text", title);
 
         commandBuilder.clear("#Pagination");
         commandBuilder.append("#Pagination", "Pages/EliteEssentials_Pagination.ui");
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
 
         eventBuilder.addEventBinding(
             CustomUIEventBindingType.ValueChanged,
@@ -107,7 +113,9 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
         List<PlayerRef> players = new ArrayList<>(Universe.get().getPlayers());
         UUID selfId = playerRef.getUuid();
-        players.removeIf(p -> p.getUuid().equals(selfId));
+        if (!configManager.isDebugEnabled()) {
+            players.removeIf(p -> p.getUuid().equals(selfId));
+        }
 
         VanishService vanishService = EliteEssentials.getInstance().getVanishService();
         boolean canSeeVanished = canSeeVanishedPlayers();
@@ -123,18 +131,19 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
         if (players.isEmpty()) {
             commandBuilder.appendInline("#PlayerCards",
-                "Label { Text: \"No other players online.\"; Style: (Alignment: Center); }");
-            PaginationControl.setEmpty(commandBuilder, "#Pagination");
+                "Label { Text: \"" + configManager.getMessage("gui.TpaEmpty") + "\"; Style: (Alignment: Center); }");
+            PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", configManager.getMessage("gui.PaginationLabel"));
             return;
         }
 
-        int totalPages = (int) Math.ceil(players.size() / (double) PAGE_SIZE);
+        int pageSize = Math.max(1, configManager.getConfig().gui.playersPerTpaPage);
+        int totalPages = (int) Math.ceil(players.size() / (double) pageSize);
         if (pageIndex >= totalPages) {
             pageIndex = totalPages - 1;
         }
 
-        int start = pageIndex * PAGE_SIZE;
-        int end = Math.min(start + PAGE_SIZE, players.size());
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, players.size());
 
         for (int i = start; i < end; i++) {
             PlayerRef target = players.get(i);
@@ -143,7 +152,7 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
             commandBuilder.append("#PlayerCards", "Pages/EliteEssentials_TpaEntry.ui");
             commandBuilder.set(selector + " #PlayerName.Text", target.getUsername());
-            commandBuilder.set(selector + " #PlayerActionButton.Text", mode == Mode.TPA ? "TPA" : "TPAHERE");
+            commandBuilder.set(selector + " #PlayerActionButton.Text", configManager.getMessage("gui.TpaRequestButton"));
 
             eventBuilder.addEventBinding(
                 CustomUIEventBindingType.Activating,
@@ -154,7 +163,7 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
             );
         }
 
-        PaginationControl.update(commandBuilder, "#Pagination", pageIndex, totalPages);
+        PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, configManager.getMessage("gui.PaginationLabel"));
     }
 
     private void updateList() {
@@ -164,6 +173,12 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
             CustomUIEventBindingType.ValueChanged,
             "#SearchInput",
             EventData.of("@SearchQuery", "#SearchInput.Value")
+        );
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
         );
         PaginationControl.bind(eventBuilder, "#Pagination");
         buildPlayerList(commandBuilder, eventBuilder);

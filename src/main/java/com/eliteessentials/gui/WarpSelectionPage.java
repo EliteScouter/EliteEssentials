@@ -14,6 +14,7 @@ import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.gui.components.PaginationControl;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -50,8 +51,6 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "warp";
-    private static final String DELETE_BUTTON_DEFAULT = "X";
-    private static final String DELETE_BUTTON_CONFIRM = "?";
     private static final String ACTION_TELEPORT = "teleport";
     private static final String ACTION_DELETE = "delete";
     private static final String ACTION_CANCEL_DELETE = "cancelDelete";
@@ -61,8 +60,8 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
     private final ConfigManager configManager;
     private final World world;
     private final boolean canDelete;
-    private final DeleteConfirmState deleteConfirmState =
-        new DeleteConfirmState(DELETE_BUTTON_DEFAULT, DELETE_BUTTON_CONFIRM, 250);
+    private int pageIndex = 0;
+    private final DeleteConfirmState deleteConfirmState;
 
     public WarpSelectionPage(PlayerRef playerRef, WarpService warpService, BackService backService, 
                              ConfigManager configManager, World world,
@@ -72,6 +71,11 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         this.backService = backService;
         this.configManager = configManager;
         this.world = world;
+        this.deleteConfirmState = new DeleteConfirmState(
+            configManager.getMessage("gui.WarpDeleteButton"),
+            configManager.getMessage("gui.WarpDeleteConfirmButton"),
+            250
+        );
         
         // Check if player can delete warps
         PermissionService perms = PermissionService.get();
@@ -83,8 +87,18 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
                       UIEventBuilder eventBuilder, Store<EntityStore> store) {
         commandBuilder.append("Pages/EliteEssentials_WarpPage.ui");
         
-        String title = configManager.getMessage("guiWarpsTitle");
-        commandBuilder.set("#TitleLabel.Text", title);
+        String title = configManager.getMessage("gui.WarpsTitle");
+        commandBuilder.set("#PageTitleLabel.Text", title);
+
+        commandBuilder.clear("#Pagination");
+        commandBuilder.append("#Pagination", "Pages/EliteEssentials_Pagination.ui");
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(eventBuilder, "#Pagination");
 
         buildWarpList(commandBuilder, eventBuilder);
     }
@@ -92,21 +106,32 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
     private void buildWarpList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         UUID playerId = playerRef.getUuid();
         PermissionService perms = PermissionService.get();
-        
+        int pageSize = Math.max(1, configManager.getConfig().gui.warpsPerPage);
+        String pageLabelFormat = configManager.getMessage("gui.PaginationLabel");
+
         List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
+        commandBuilder.clear("#WarpCards");
 
         if (accessibleWarps.isEmpty()) {
+            PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", pageLabelFormat);
             return;
         }
 
-        for (int i = 0; i < accessibleWarps.size(); i++) {
+        int totalPages = (int) Math.ceil(accessibleWarps.size() / (double) pageSize);
+        if (pageIndex >= totalPages) {
+            pageIndex = totalPages - 1;
+        }
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, accessibleWarps.size());
+
+        for (int i = start; i < end; i++) {
             Warp warp = accessibleWarps.get(i);
-            String selector = "#WarpCards[" + i + "]";
+            int entryIndex = i - start;
+            String selector = "#WarpCards[" + entryIndex + "]";
 
             // Use different UI file based on delete permission
             if (canDelete) {
                 commandBuilder.append("#WarpCards", "Pages/EliteEssentials_WarpEntry.ui");
-                commandBuilder.append(selector + " #DeleteButtonSlot", "Pages/EliteEssentials_DeleteConfirm.ui");
                 commandBuilder.set(selector + " #DeleteButton.Text", getDeleteButtonText(warp.getName()));
                 eventBuilder.addEventBinding(
                     CustomUIEventBindingType.Activating,
@@ -133,6 +158,7 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
             // Show description
             String description = warp.getDescription() != null ? warp.getDescription() : "";
             commandBuilder.set(selector + " #WarpDescription.Text", description);
+            commandBuilder.set(selector + " #WarpButton.Text", configManager.getMessage("gui.WarpButton"));
 
             // Bind teleport button
             eventBuilder.addEventBinding(
@@ -144,10 +170,22 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
                 false
             );
         }
+
+        PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, pageLabelFormat);
     }
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, WarpPageData data) {
+        if (data.pageAction != null) {
+            if ("Next".equalsIgnoreCase(data.pageAction)) {
+                pageIndex++;
+            } else if ("Prev".equalsIgnoreCase(data.pageAction)) {
+                pageIndex = Math.max(0, pageIndex - 1);
+            }
+            updateList();
+            return;
+        }
+
         if (data.action == null || data.action.isEmpty()) {
             return;
         }
@@ -309,57 +347,15 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         UICommandBuilder cmd = new UICommandBuilder();
         UIEventBuilder events = new UIEventBuilder();
         
-        cmd.set("#TitleLabel.Text", configManager.getMessage("guiWarpsTitle"));
-        cmd.clear("#WarpCards");
-        
-        UUID playerId = playerRef.getUuid();
-        PermissionService perms = PermissionService.get();
-        
-        List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
-        
-        for (int i = 0; i < accessibleWarps.size(); i++) {
-            Warp warp = accessibleWarps.get(i);
-            String selector = "#WarpCards[" + i + "]";
-
-            // Use different UI file based on delete permission
-            if (canDelete) {
-                cmd.append("#WarpCards", "Pages/EliteEssentials_WarpEntry.ui");
-                cmd.append(selector + " #DeleteButtonSlot", "Pages/EliteEssentials_DeleteConfirm.ui");
-                cmd.set(selector + " #DeleteButton.Text", getDeleteButtonText(warp.getName()));
-                events.addEventBinding(
-                    CustomUIEventBindingType.Activating,
-                    selector + " #DeleteButton",
-                    new EventData()
-                        .append("Action", ACTION_DELETE)
-                        .append("Warp", warp.getName()),
-                    false
-                );
-                events.addEventBinding(
-                    CustomUIEventBindingType.MouseExited,
-                    selector + " #DeleteButton",
-                    new EventData()
-                        .append("Action", ACTION_CANCEL_DELETE)
-                        .append("Warp", warp.getName()),
-                    false
-                );
-            } else {
-                cmd.append("#WarpCards", "Pages/EliteEssentials_WarpEntryNoDelete.ui");
-            }
-            
-            cmd.set(selector + " #WarpName.Text", warp.getName());
-            
-            String description = warp.getDescription() != null ? warp.getDescription() : "";
-            cmd.set(selector + " #WarpDescription.Text", description);
-
-            events.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #WarpButton",
-                new EventData()
-                    .append("Action", ACTION_TELEPORT)
-                    .append("Warp", warp.getName()),
-                false
-            );
-        }
+        cmd.set("#PageTitleLabel.Text", configManager.getMessage("gui.WarpsTitle"));
+        PaginationControl.setButtonLabels(
+            cmd,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(events, "#Pagination");
+        buildWarpList(cmd, events);
         
         this.sendUpdate(cmd, events, false);
     }
@@ -392,14 +388,39 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         UUID playerId = playerRef.getUuid();
         PermissionService perms = PermissionService.get();
         List<Warp> accessibleWarps = getAccessibleWarps(playerId, perms);
+        int pageSize = Math.max(1, configManager.getConfig().gui.warpsPerPage);
+        int totalPages = (int) Math.ceil(accessibleWarps.size() / (double) pageSize);
+        if (totalPages <= 0) {
+            return;
+        }
+        if (pageIndex >= totalPages) {
+            pageIndex = totalPages - 1;
+        }
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, accessibleWarps.size());
 
-        for (int i = 0; i < accessibleWarps.size(); i++) {
+        for (int i = start; i < end; i++) {
             Warp warp = accessibleWarps.get(i);
-            String selector = "#WarpCards[" + i + "] #DeleteButton.Text";
+            int entryIndex = i - start;
+            String selector = "#WarpCards[" + entryIndex + "] #DeleteButton.Text";
             cmd.set(selector, getDeleteButtonText(warp.getName()));
         }
 
         sendUpdate(cmd, false);
+    }
+
+    private void updateList() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        PaginationControl.setButtonLabels(
+            cmd,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(events, "#Pagination");
+        buildWarpList(cmd, events);
+        sendUpdate(cmd, events, false);
     }
 
     public static class WarpPageData {
@@ -408,10 +429,13 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
                 .add()
                 .append(new KeyedCodec<>("Action", Codec.STRING), (data, s) -> data.action = s, data -> data.action)
                 .add()
+                .append(new KeyedCodec<>("PageAction", Codec.STRING), (data, s) -> data.pageAction = s, data -> data.pageAction)
+                .add()
                 .build();
 
         private String warp;
         private String action;
+        private String pageAction;
 
         public String getWarp() {
             return warp;
@@ -419,6 +443,10 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
 
         public String getAction() {
             return action;
+        }
+
+        public String getPageAction() {
+            return pageAction;
         }
     }
 }

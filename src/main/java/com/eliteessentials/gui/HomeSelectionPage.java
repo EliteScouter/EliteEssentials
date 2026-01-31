@@ -12,6 +12,7 @@ import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.gui.components.PaginationControl;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -56,6 +57,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
     private final BackService backService;
     private final ConfigManager configManager;
     private final World world;
+    private int pageIndex = 0;
 
     public HomeSelectionPage(PlayerRef playerRef, HomeService homeService, BackService backService, 
                              ConfigManager configManager, World world) {
@@ -75,16 +77,36 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
 
         Map<String, Home> homes = homeService.getHomes(playerId);
         int maxHomes = homeService.getMaxHomes(playerId);
-        String title = configManager.getMessage("guiHomesTitle",
+        String title = configManager.getMessage("gui.HomesTitle",
             "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
-        commandBuilder.set("#TitleLabel.Text", title);
+        commandBuilder.set("#PageTitleLabel.Text", title);
+
+        commandBuilder.clear("#Pagination");
+        commandBuilder.append("#Pagination", "Pages/EliteEssentials_Pagination.ui");
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(eventBuilder, "#Pagination");
 
         buildHomeList(commandBuilder, eventBuilder);
     }
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, HomePageData data) {
+        if (data.pageAction != null) {
+            if ("Next".equalsIgnoreCase(data.pageAction)) {
+                pageIndex++;
+            } else if ("Prev".equalsIgnoreCase(data.pageAction)) {
+                pageIndex = Math.max(0, pageIndex - 1);
+            }
+            updateList();
+            return;
+        }
+
         if (data.action == null || data.action.isEmpty()) {
             return;
         }
@@ -251,49 +273,19 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         // Update title with new count
         Map<String, Home> homes = homeService.getHomes(playerId);
         int maxHomes = homeService.getMaxHomes(playerId);
-        String title = configManager.getMessage("guiHomesTitle",
+        String title = configManager.getMessage("gui.HomesTitle",
             "count", String.valueOf(homes.size()),
             "max", String.valueOf(maxHomes));
-        cmd.set("#TitleLabel.Text", title);
+        cmd.set("#PageTitleLabel.Text", title);
         
-        // Clear and rebuild home list
-        cmd.clear("#HomeCards");
-        
-        List<Home> homeList = new ArrayList<>(homes.values());
-        homeList.sort(Comparator.comparing(Home::getName));
-        
-        for (int i = 0; i < homeList.size(); i++) {
-            Home home = homeList.get(i);
-            String selector = "#HomeCards[" + i + "]";
-
-            cmd.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
-            cmd.set(selector + " #HomeName.Text", home.getName());
-
-            String coords = String.format("%.0f, %.0f, %.0f",
-                home.getLocation().getX(),
-                home.getLocation().getY(),
-                home.getLocation().getZ());
-            cmd.set(selector + " #HomeWorld.Text", "World: " + home.getLocation().getWorld() + " at " + coords);
-
-            events.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #HomeTeleportButton",
-                new EventData()
-                    .append("Action", ACTION_TELEPORT)
-                    .append("Home", home.getName()),
-                false
-            );
-            
-            events.addEventBinding(
-                CustomUIEventBindingType.Activating,
-                selector + " #HomeEditButton",
-                new EventData()
-                    .append("Action", ACTION_EDIT)
-                    .append("Home", home.getName()),
-                false
-            );
-
-        }
+        PaginationControl.setButtonLabels(
+            cmd,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(events, "#Pagination");
+        buildHomeList(cmd, events);
         
         this.sendUpdate(cmd, events, false);
     }
@@ -315,12 +307,25 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         homeList.sort(Comparator.comparing(Home::getName));
 
         if (homeList.isEmpty()) {
+            commandBuilder.clear("#HomeCards");
+            PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", configManager.getMessage("gui.PaginationLabel"));
             return;
         }
+        int pageSize = Math.max(1, configManager.getConfig().gui.homesPerPage);
+        String pageLabelFormat = configManager.getMessage("gui.PaginationLabel");
+        int totalPages = (int) Math.ceil(homeList.size() / (double) pageSize);
+        if (pageIndex >= totalPages) {
+            pageIndex = totalPages - 1;
+        }
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, homeList.size());
 
-        for (int i = 0; i < homeList.size(); i++) {
+        commandBuilder.clear("#HomeCards");
+
+        for (int i = start; i < end; i++) {
             Home home = homeList.get(i);
-            String selector = "#HomeCards[" + i + "]";
+            int entryIndex = i - start;
+            String selector = "#HomeCards[" + entryIndex + "]";
 
             commandBuilder.append("#HomeCards", "Pages/EliteEssentials_HomeEntry.ui");
             commandBuilder.set(selector + " #HomeName.Text", home.getName());
@@ -329,7 +334,16 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
                 home.getLocation().getX(),
                 home.getLocation().getY(),
                 home.getLocation().getZ());
-            commandBuilder.set(selector + " #HomeWorld.Text", "World: " + home.getLocation().getWorld() + " at " + coords);
+            commandBuilder.set(
+                selector + " #HomeWorld.Text",
+                configManager.getMessage(
+                    "gui.HomeEntryWorld",
+                    "world", home.getLocation().getWorld(),
+                    "coords", coords
+                )
+            );
+            commandBuilder.set(selector + " #HomeEditButton.Text", configManager.getMessage("gui.HomeEntryEdit"));
+            commandBuilder.set(selector + " #HomeTeleportButton.Text", configManager.getMessage("gui.HomeEntryGo"));
 
             eventBuilder.addEventBinding(
                 CustomUIEventBindingType.Activating,
@@ -349,6 +363,8 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
             );
 
         }
+
+        PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, pageLabelFormat);
     }
 
     private void sendMessage(String message, String color) {
@@ -364,10 +380,13 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
                 .add()
                 .append(new KeyedCodec<>("Action", Codec.STRING), (data, s) -> data.action = s, data -> data.action)
                 .add()
+                .append(new KeyedCodec<>("PageAction", Codec.STRING), (data, s) -> data.pageAction = s, data -> data.pageAction)
+                .add()
                 .build();
 
         private String home;
         private String action;
+        private String pageAction;
 
         public String getHome() {
             return home;
@@ -376,5 +395,23 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         public String getAction() {
             return action;
         }
+
+        public String getPageAction() {
+            return pageAction;
+        }
+    }
+
+    private void updateList() {
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
+        PaginationControl.setButtonLabels(
+            commandBuilder,
+            "#Pagination",
+            configManager.getMessage("gui.PaginationPrev"),
+            configManager.getMessage("gui.PaginationNext")
+        );
+        PaginationControl.bind(eventBuilder, "#Pagination");
+        buildHomeList(commandBuilder, eventBuilder);
+        sendUpdate(commandBuilder, eventBuilder, false);
     }
 }
