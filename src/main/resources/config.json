@@ -155,6 +155,7 @@
   "chatFormat": {
     "enabled": true,
     "defaultFormat": "&7{player}: &f{message}",
+    "placeholderapi": true,
     "groupFormats": {
       "Owner": "&4[Owner] {player}&r: {message}",
       "Admin": "&c[Admin] {player}&r: {message}",

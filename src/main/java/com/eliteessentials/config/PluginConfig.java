@@ -908,6 +908,8 @@ public class PluginConfig {
         
         /** Default chat format if no group matches */
         public String defaultFormat = "&7{player}: &f{message}";
+
+        public boolean placeholderapi = true;
         
         private static Map<String, String> createDefaultGroupFormats() {
             Map<String, String> formats = new HashMap<>();

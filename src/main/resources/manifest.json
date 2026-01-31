@@ -11,7 +11,9 @@
   "Main": "com.eliteessentials.EliteEssentials",
   "ServerVersion": ">=2026.1.0",
   "Dependencies": {},
-  "OptionalDependencies": {},
+  "OptionalDependencies": {
+    "HelpChat:PlaceholderAPI": "*"
+  },
   "DisabledByDefault": false,
   "IncludesAssetPack": true
 }

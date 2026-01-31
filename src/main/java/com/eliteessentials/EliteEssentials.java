@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.events.StarterKitEvent;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.integration.VaultUnlockedIntegration;
 import com.eliteessentials.listeners.ChatListener;
 import com.eliteessentials.listeners.JoinQuitListener;
@@ -220,6 +221,9 @@ public class EliteEssentials extends JavaPlugin {
         
         // Register permissions with LuckPerms for autocomplete/discovery
         LuckPermsIntegration.registerPermissions();
+
+        // Register PlaceholderAPI integration
+        PAPIIntegration.register();
         
         // Register starter kit event for new players
         starterKitEvent = new StarterKitEvent(kitService);
