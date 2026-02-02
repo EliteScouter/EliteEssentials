@@ -1,7 +1,7 @@
 $C = "../Common.ui";
 
-@SmallButtonHeight = 32;
-@SmallButtonPadding = 16;
+@SmallButtonHeight = 28;
+@SmallButtonPadding = 12;
 
 @EEPageTitleLabelStyle = LabelStyle(
   FontSize: 24,

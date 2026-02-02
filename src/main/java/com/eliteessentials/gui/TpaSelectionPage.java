@@ -34,6 +34,7 @@ import java.util.UUID;
 
 /**
  * UI page for selecting a player to send TPA/TPAHERE requests.
+ * Also shows pending incoming requests at the top for easy accept/deny.
  */
 public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.TpaPageData> {
 
@@ -41,6 +42,9 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
         TPA,
         TPAHERE
     }
+
+    private static final String ACTION_ACCEPT = "accept";
+    private static final String ACTION_DENY = "deny";
 
     private final Mode mode;
     private final TpaService tpaService;
@@ -86,6 +90,24 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, TpaPageData data) {
+        // Handle accept/deny actions for pending requests
+        if (data.action != null && data.requesterId != null) {
+            UUID requesterId;
+            try {
+                requesterId = UUID.fromString(data.requesterId);
+            } catch (IllegalArgumentException e) {
+                return;
+            }
+            
+            if (ACTION_ACCEPT.equals(data.action)) {
+                handleAcceptRequest(requesterId, ref, store);
+                return;
+            } else if (ACTION_DENY.equals(data.action)) {
+                handleDenyRequest(requesterId);
+                return;
+            }
+        }
+
         if (data.targetId != null && !data.targetId.isEmpty()) {
             handleRequest(data.targetId, data.targetName);
             return;
@@ -108,11 +130,110 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
         }
     }
 
+    private void handleAcceptRequest(UUID requesterId, Ref<EntityStore> ref, Store<EntityStore> store) {
+        UUID playerId = playerRef.getUuid();
+        
+        // Accept the request through the service
+        var requestOpt = tpaService.acceptRequestFrom(playerId, requesterId);
+        
+        if (requestOpt.isEmpty()) {
+            sendMessage(configManager.getMessage("tpaNoPending"), "#FF5555");
+            updateList();
+            return;
+        }
+        
+        TpaRequest request = requestOpt.get();
+        PlayerRef requester = Universe.get().getPlayer(requesterId);
+        
+        if (requester == null || !requester.isValid()) {
+            sendMessage(configManager.getMessage("tpaPlayerOffline", "player", request.getRequesterName()), "#FF5555");
+            updateList();
+            return;
+        }
+        
+        // Close GUI first
+        this.close();
+        
+        // Notify both players
+        sendMessage(configManager.getMessage("tpaAccepted", "player", request.getRequesterName()), "#55FF55");
+        requester.sendMessage(MessageFormatter.formatWithFallback(
+            configManager.getMessage("tpaRequestAccepted", "player", playerRef.getUsername()), "#55FF55"));
+        
+        // Execute the teleport using the TpaAcceptHelper
+        TpaAcceptHelper.executeTeleport(playerRef, ref, store, requester, request, 
+            configManager, EliteEssentials.getInstance().getBackService());
+    }
+
+    private void handleDenyRequest(UUID requesterId) {
+        UUID playerId = playerRef.getUuid();
+        
+        // Check if request still exists
+        List<TpaRequest> pending = tpaService.getPendingRequests(playerId);
+        TpaRequest request = pending.stream()
+            .filter(r -> r.getRequesterId().equals(requesterId))
+            .findFirst()
+            .orElse(null);
+        
+        if (request == null) {
+            sendMessage(configManager.getMessage("tpaNoPending"), "#FF5555");
+            updateList();
+            return;
+        }
+        
+        // Actually deny the request
+        tpaService.denyRequestFrom(playerId, requesterId);
+        
+        PlayerRef requester = Universe.get().getPlayer(requesterId);
+        
+        sendMessage(configManager.getMessage("tpaDenied", "player", request.getRequesterName()), "#FFAA00");
+        
+        if (requester != null) {
+            requester.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("tpaRequestDenied", "player", playerRef.getUsername()), "#FF5555"));
+        }
+        
+        // Refresh the list to remove the denied request
+        updateList();
+    }
+
     private void buildPlayerList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         commandBuilder.clear("#PlayerCards");
 
-        List<PlayerRef> players = new ArrayList<>(Universe.get().getPlayers());
         UUID selfId = playerRef.getUuid();
+        
+        // First, show pending incoming requests at the top
+        List<TpaRequest> pendingRequests = tpaService.getPendingRequests(selfId);
+        int pendingCount = 0;
+        
+        for (TpaRequest request : pendingRequests) {
+            String selector = "#PlayerCards[" + pendingCount + "]";
+            commandBuilder.append("#PlayerCards", "Pages/EliteEssentials_TpaPendingEntry.ui");
+            
+            String label = configManager.getMessage("gui.TpaPendingFrom", "player", request.getRequesterName());
+            commandBuilder.set(selector + " #RequesterName.Text", label);
+            commandBuilder.set(selector + " #AcceptButton.Text", configManager.getMessage("gui.TpaAcceptButton"));
+            commandBuilder.set(selector + " #DenyButton.Text", configManager.getMessage("gui.TpaDenyButton"));
+            
+            eventBuilder.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #AcceptButton",
+                new EventData()
+                    .append("Action", ACTION_ACCEPT)
+                    .append("RequesterId", request.getRequesterId().toString())
+            );
+            eventBuilder.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #DenyButton",
+                new EventData()
+                    .append("Action", ACTION_DENY)
+                    .append("RequesterId", request.getRequesterId().toString())
+            );
+            
+            pendingCount++;
+        }
+
+        // Now show available players to send requests to
+        List<PlayerRef> players = new ArrayList<>(Universe.get().getPlayers());
         if (!configManager.isDebugEnabled()) {
             players.removeIf(p -> p.getUuid().equals(selfId));
         }
@@ -129,7 +250,7 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
         players.sort(Comparator.comparing(PlayerRef::getUsername, String.CASE_INSENSITIVE_ORDER));
 
-        if (players.isEmpty()) {
+        if (players.isEmpty() && pendingCount == 0) {
             commandBuilder.appendInline("#PlayerCards",
                 "Label { Text: \"" + configManager.getMessage("gui.TpaEmpty") + "\"; Style: (Alignment: Center); }");
             PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", configManager.getMessage("gui.PaginationLabel"));
@@ -137,17 +258,19 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
         }
 
         int pageSize = Math.max(1, configManager.getConfig().gui.playersPerTpaPage);
-        int totalPages = (int) Math.ceil(players.size() / (double) pageSize);
+        // Adjust page size to account for pending requests shown
+        int availableSlots = Math.max(1, pageSize - pendingCount);
+        int totalPages = players.isEmpty() ? 1 : (int) Math.ceil(players.size() / (double) availableSlots);
         if (pageIndex >= totalPages) {
             pageIndex = totalPages - 1;
         }
 
-        int start = pageIndex * pageSize;
-        int end = Math.min(start + pageSize, players.size());
+        int start = pageIndex * availableSlots;
+        int end = Math.min(start + availableSlots, players.size());
 
         for (int i = start; i < end; i++) {
             PlayerRef target = players.get(i);
-            int entryIndex = i - start;
+            int entryIndex = pendingCount + (i - start);
             String selector = "#PlayerCards[" + entryIndex + "]";
 
             commandBuilder.append("#PlayerCards", "Pages/EliteEssentials_TpaEntry.ui");
@@ -163,7 +286,12 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
             );
         }
 
-        PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, configManager.getMessage("gui.PaginationLabel"));
+        // Only show pagination if there are more players than fit on one page
+        if (players.size() > availableSlots) {
+            PaginationControl.updateOrHide(commandBuilder, "#Pagination", pageIndex, totalPages, configManager.getMessage("gui.PaginationLabel"));
+        } else {
+            PaginationControl.setEmptyAndHide(commandBuilder, "#Pagination", configManager.getMessage("gui.PaginationLabel"));
+        }
     }
 
     private void updateList() {
@@ -299,12 +427,18 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
             .add()
             .append(new KeyedCodec<>("@SearchQuery", Codec.STRING), (data, s) -> data.searchQuery = s, data -> data.searchQuery)
             .add()
+            .append(new KeyedCodec<>("Action", Codec.STRING), (data, s) -> data.action = s, data -> data.action)
+            .add()
+            .append(new KeyedCodec<>("RequesterId", Codec.STRING), (data, s) -> data.requesterId = s, data -> data.requesterId)
+            .add()
             .build();
 
         private String targetId;
         private String targetName;
         private String pageAction;
         private String searchQuery;
+        private String action;
+        private String requesterId;
 
         public String getTargetId() {
             return targetId;
@@ -320,6 +454,14 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
 
         public String getSearchQuery() {
             return searchQuery;
+        }
+        
+        public String getAction() {
+            return action;
+        }
+        
+        public String getRequesterId() {
+            return requesterId;
         }
     }
 }

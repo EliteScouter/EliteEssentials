@@ -393,7 +393,7 @@ public class PluginConfig {
         messages.put("gui.PaginationLabel", "Page {current} / {total}");
         messages.put("gui.WarpButton", "Warp");
         messages.put("gui.WarpDeleteButton", "X");
-        messages.put("gui.WarpDeleteConfirmButton", "?");
+        messages.put("gui.WarpDeleteConfirmButton", "OK?");
         messages.put("gui.KitClaimButton", "Claim");
         messages.put("gui.HomeEntryEdit", "Edit");
         messages.put("gui.HomeEntryGo", "Go");
@@ -411,6 +411,12 @@ public class PluginConfig {
         messages.put("gui.KitStatusClaimed", "Claimed");
         messages.put("gui.KitStatusReady", "Ready");
         messages.put("gui.WarpStatusOpOnly", "[OP Only]");
+        messages.put("gui.TpaPendingTitle", "Pending Requests");
+        messages.put("gui.TpaPendingFrom", "From: {player}");
+        messages.put("gui.TpaAcceptButton", "Accept");
+        messages.put("gui.TpaDenyButton", "Deny");
+        messages.put("tpaUseAcceptCommand", "Type /tpaccept to accept the request from {player}");
+        messages.put("tpaUseDenyCommand", "Type /tpdeny to deny the request from {player}");
         
         // ==================== PLAYTIME REWARDS ====================
         messages.put("playTimeRewardReceived", "&a[Reward] &fYou received: &e{reward}");
@@ -487,16 +493,16 @@ public class PluginConfig {
     
     public static class GuiConfig {
         /** Number of entries shown per page in the TPA/TPAHERE GUI */
-        public int playersPerTpaPage = 8;
+        public int playersPerTpaPage = 6;
         
         /** Number of entries shown per page in the Warp GUI */
-        public int warpsPerPage = 8;
+        public int warpsPerPage = 6;
         
         /** Number of entries shown per page in the Homes GUI */
-        public int homesPerPage = 8;
+        public int homesPerPage = 6;
         
         /** Number of entries shown per page in the Kits GUI */
-        public int kitsPerPage = 8;
+        public int kitsPerPage = 6;
     }
     
     /**

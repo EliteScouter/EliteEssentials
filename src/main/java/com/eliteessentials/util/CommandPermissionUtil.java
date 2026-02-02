@@ -208,4 +208,26 @@ public class CommandPermissionUtil {
         }
         return 0.0;
     }
+
+    /**
+     * Charge a player directly without CommandContext (for GUI usage).
+     * 
+     * @param playerId Player UUID to charge
+     * @param commandName Command name for cost calculation
+     * @param cost Cost to charge (0 = free)
+     * @return true if charged successfully or no cost needed
+     */
+    public static boolean chargeCostDirect(UUID playerId, String commandName, double cost) {
+        if (cost <= 0) {
+            return true;
+        }
+        CostService costService = EliteEssentials.getInstance().getCostService();
+        if (costService != null && !costService.canBypassCost(playerId, commandName)) {
+            double effectiveCost = costService.getEffectiveCost(playerId, commandName, cost);
+            if (effectiveCost > 0) {
+                EliteEssentials.getInstance().getPlayerService().removeMoney(playerId, effectiveCost);
+            }
+        }
+        return true;
+    }
 }

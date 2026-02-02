@@ -3,9 +3,9 @@ $E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 70);
+  Anchor: (Left: 2, Right: 2, Bottom: 4, Height: 48);
   Background: $C.@InputBoxBackground;
-  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
+  Padding: (Top: 4, Bottom: 4, Left: 10, Right: 10);
 
   Group #HomeInfo {
     LayoutMode: Top;
@@ -14,11 +14,11 @@ Group {
 
     Group #HomeText {
       LayoutMode: Top;
-      Anchor: (Height: 44, Top: 6);
+      Anchor: (Height: 36, Top: 2);
 
       Label #HomeName {
         Style: (
-          FontSize: 18,
+          FontSize: 15,
           RenderBold: true,
           TextColor: #55FF55,
           HorizontalAlignment: Start
@@ -27,7 +27,7 @@ Group {
 
       Label #HomeWorld {
         Style: (
-          FontSize: 11,
+          FontSize: 10,
           TextColor: #AAAAAA,
           HorizontalAlignment: Start
         );
@@ -37,15 +37,15 @@ Group {
 
   Group #HomeActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 190);
+    Anchor: (Right: 0, Width: 160);
 
     $C.@SmallSecondaryTextButton #HomeEditButton {
-      @Anchor = (Width: 70, Right: 8);
+      @Anchor = (Width: 70, Right: 6);
       Text: "Edit";
     }
 
     $E.@EEPrimarySmallTextButton #HomeTeleportButton {
-      @Anchor = (Width: 60);
+      @Anchor = (Width: 50);
       Text: "Go";
     }
   }

@@ -7,11 +7,11 @@ Group {
   Background: $C.@InputBoxBackground;
   Padding: (Top: 4, Bottom: 4, Left: 10, Right: 10);
 
-  Label #PlayerName {
+  Label #RequesterName {
     Style: (
       FontSize: 15,
       RenderBold: true,
-      TextColor: #bfe3ff,
+      TextColor: #ffcc4d,
       HorizontalAlignment: Start,
       VerticalAlignment: Center
     );
@@ -19,13 +19,18 @@ Group {
     Anchor: (Left: 0, Right: 10, Top: 0, Bottom: 0);
   }
 
-  Group #PlayerActions {
+  Group #PendingActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 90);
+    Anchor: (Right: 0, Width: 180);
 
-    $E.@EEPrimarySmallTextButton #PlayerActionButton {
+    $E.@EECancelSmallTextButton #DenyButton {
+      @Anchor = (Width: 70, Right: 8);
+      Text: "Deny";
+    }
+
+    $E.@EEPrimarySmallTextButton #AcceptButton {
       @Anchor = (Width: 90);
-      Text: "Request";
+      Text: "Accept";
     }
   }
 }

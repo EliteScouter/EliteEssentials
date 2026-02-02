@@ -3,9 +3,9 @@ $E = "EliteEssentials_Shared.ui";
 
 Group {
   LayoutMode: Left;
-  Anchor: (Left: 2, Right: 2, Bottom: 6, Height: 70);
+  Anchor: (Left: 2, Right: 2, Bottom: 4, Height: 48);
   Background: $C.@InputBoxBackground;
-  Padding: (Top: 8, Bottom: 8, Left: 10, Right: 10);
+  Padding: (Top: 4, Bottom: 4, Left: 10, Right: 10);
 
   Group #WarpInfo {
     LayoutMode: Top;
@@ -14,11 +14,11 @@ Group {
 
     Group {
       LayoutMode: Top;
-      Anchor: (Height: 44, Top: 6);
+      Anchor: (Height: 36, Top: 2);
 
       Label #WarpName {
         Style: (
-          FontSize: 18,
+          FontSize: 15,
           RenderBold: true,
           TextColor: #55FFFF,
           HorizontalAlignment: Start
@@ -27,7 +27,7 @@ Group {
 
       Label #WarpDescription {
         Style: (
-          FontSize: 11,
+          FontSize: 10,
           TextColor: #AAAAAA,
           HorizontalAlignment: Start
         );
@@ -35,7 +35,7 @@ Group {
 
       Label #WarpStatus {
         Style: (
-          FontSize: 10,
+          FontSize: 9,
           TextColor: #FF5555,
           HorizontalAlignment: Start
         );
@@ -45,19 +45,19 @@ Group {
 
   Group #WarpActions {
     LayoutMode: Right;
-    Anchor: (Right: 0, Width: 140);
+    Anchor: (Right: 0, Width: 130);
 
     Group #DeleteButtonSlot {
-      Anchor: (Width: 40, Height: 32, Right: 8);
+      Anchor: (Width: 36, Height: 28, Right: 6);
 
       $E.@EECancelSmallTextButton #DeleteButton {
-        @Anchor = (Width: 40, Height: 32);
+        @Anchor = (Width: 36, Height: 28);
         Text: "X";
       }
     }
 
     $E.@EEPrimarySmallTextButton #WarpButton {
-      @Anchor = (Width: 90);
+      @Anchor = (Width: 80);
       Text: "Warp";
     }
   }

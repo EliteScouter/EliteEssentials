@@ -64,6 +64,9 @@ public class MessagesStorage {
 
     /**
      * Save messages to messages.json.
+     * Messages are saved as a flat key-value map (no nesting).
+     * Keys like "gui.HomesTitle" stay as literal strings, not nested objects.
+     * This keeps the file consistent and easier for users to translate.
      */
     public void save() {
         if (!dataFolder.exists()) {
@@ -73,7 +76,13 @@ public class MessagesStorage {
         File file = new File(dataFolder, "messages.json");
         synchronized (fileLock) {
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-                gson.toJson(unflatten(messages), writer);
+                // Save as flat map - dotted keys stay as literal strings
+                // This is more consistent and won't break existing translations
+                Map<String, String> sorted = new LinkedHashMap<>();
+                messages.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(e -> sorted.put(e.getKey(), e.getValue()));
+                gson.toJson(sorted, writer);
                 logger.info("Saved " + messages.size() + " messages to messages.json");
             } catch (Exception e) {
                 logger.warning("Failed to save messages.json: " + e.getMessage());
@@ -161,31 +170,5 @@ public class MessagesStorage {
             JsonPrimitive primitive = element.getAsJsonPrimitive();
             out.put(prefix, primitive.getAsString());
         }
-    }
-
-    private static Map<String, Object> unflatten(Map<String, String> flat) {
-        Map<String, Object> root = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : flat.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            String[] parts = key.split("\\.");
-            Map<String, Object> current = root;
-            for (int i = 0; i < parts.length; i++) {
-                String part = parts[i];
-                if (i == parts.length - 1) {
-                    current.put(part, value);
-                } else {
-                    Object existing = current.get(part);
-                    if (existing instanceof Map) {
-                        current = (Map<String, Object>) existing;
-                    } else {
-                        Map<String, Object> child = new LinkedHashMap<>();
-                        current.put(part, child);
-                        current = child;
-                    }
-                }
-            }
-        }
-        return root;
     }
 }

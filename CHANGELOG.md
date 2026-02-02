@@ -4,14 +4,36 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ## [1.1.6] - 2026-02-02
 
+### Added
+
+**GUI Improvements - Compact Design & Better UX**
+* All GUI entries (Homes, Warps, Kits, TPA) reduced from 70px to 48px height for more compact display
+* Default page size reduced from 8 to 6 items per page for better visibility without scrolling (CHANGEABLE IN CONFIG)
+* TPA GUI now shows pending incoming requests at the top with Accept/Deny buttons
+* Clicking Accept/Deny in TPA GUI directly handles the request without needing to type commands
+* Home Edit button widened from 60px to 70px for better readability
+* All GUI text and button labels now configurable via messages in config.json
+
+**New Configuration Messages**
+* `gui.TpaPendingFrom` - Label for pending TPA requests ("From: {player}")
+* `gui.TpaAcceptButton` - Accept button text
+* `gui.TpaDenyButton` - Deny button text
+* `gui.WarpDeleteConfirmButton` - Changed from "?" to "OK?" (ASCII-safe)
+
 ### Changed
 
 **PlayTime Rewards - Universal Command Execution**
 * Reward commands now use `CommandManager` to execute ANY registered server command as console
 * Works with commands from any mod/plugin (EcoTale, custom mods, etc.)
-* No longer limited to few commands.
+* No longer limited to few commands
 * Supports both `{player}` and `%player%` placeholders
 * Commands execute on world thread for thread safety
+
+**GUI Button Sizing**
+* Reduced button height from 32px to 28px across all GUIs
+* Reduced button padding from 16px to 12px for more compact appearance
+* TPA pending Accept button: 90px wide (matches Request button)
+* TPA pending Deny button: 70px wide
 
 ### Fixed
 
@@ -28,6 +50,18 @@ All notable changes to EliteEssentials will be documented in this file.
 * All commands properly handle teleporting between different worlds
 * Thread-safe execution on correct world threads
 * Proper world parameter in Teleport constructor for Hytale's cross-world handling
+
+### Technical
+
+**New Files**
+* `TpaAcceptHelper.java` - Shared teleport logic for TPA accept from GUI
+* `EliteEssentials_TpaPendingEntry.ui` - UI template for pending TPA request entries
+* Added `chargeCostDirect()` method to `CommandPermissionUtil` for GUI cost handling
+
+**UI Files Modified**
+* All entry UI files made more compact (Home, Warp, Kit, TPA)
+* `EliteEssentials_Shared.ui` - Reduced button sizes
+* Page size defaults changed in `PluginConfig.java`
 
 ### Technical
 
