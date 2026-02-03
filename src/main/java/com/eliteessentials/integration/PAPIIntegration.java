@@ -1,5 +1,6 @@
 package com.eliteessentials.integration;
 
+import com.eliteessentials.integration.papi.PlaceholderAPI;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -9,7 +10,7 @@ import java.util.logging.Logger;
 
 public final class PAPIIntegration {
     private static final Logger LOGGER = Logger.getLogger("EliteEssentials");
-    private static Method SET_PLACEHOLDERS;
+    private static PlaceholderAPI placeholderapi = null;
     private static boolean available = false;
 
     private PAPIIntegration() {
@@ -18,11 +19,17 @@ public final class PAPIIntegration {
 
     public static void register() {
         try {
-            final Class<?> clazz = Class.forName("at.helpch.placeholderapi.PlaceholderAPI");
-            SET_PLACEHOLDERS = clazz.getMethod("setPlaceholders", PlayerRef.class, String.class);
+            final Class<?> papiClass = Class.forName("at.helpch.placeholderapi.PlaceholderAPI");
+            placeholderapi = ((Class<PlaceholderAPI>) Class.forName("com.eliteessentials.integration.papi.PAPIImplementation")).getConstructor().newInstance();
             available = true;
+
+            final Class<?> expansionClass = Class.forName("com.eliteessentials.integration.papi.EliteEssentialsExpansion");
+            final Object expansion = expansionClass.getConstructor().newInstance();
+            final Method register = expansionClass.getMethod("register");
+            register.invoke(expansion);
+            LOGGER.info("[PlaceholderAPI] Found, placeholders will be replaced in chat.");
         } catch (Exception e) {
-            LOGGER.info("[PlaceholderAPI] not found, placeholders will not be replaced in chat.");
+            LOGGER.info("[PlaceholderAPI] Not found, placeholders will not be replaced in chat.");
             available = false;
         }
     }
@@ -31,17 +38,21 @@ public final class PAPIIntegration {
         return available;
     }
 
-    @Nullable
+    @NotNull
     public static String setPlaceholders(@Nullable final PlayerRef player, @NotNull final String text) {
-        try {
-            final Object result = SET_PLACEHOLDERS.invoke(null, player, text);
-
-            if (result instanceof String replaced) {
-                return replaced;
-            }
-        } catch (Exception ignored) {
+        if (placeholderapi == null) {
+            return text;
         }
 
-        return null;
+        return placeholderapi.setPlaceholders(player, text);
+    }
+
+    @NotNull
+    public static String setRelationalPlaceholders(@Nullable final PlayerRef one, @Nullable final PlayerRef two, @NotNull final String text) {
+        if (placeholderapi == null) {
+            return text;
+        }
+
+        return placeholderapi.setRelationPlaceholders(one, two, text);
     }
 }

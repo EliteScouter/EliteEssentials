@@ -11,6 +11,8 @@ description = findProperty("pluginDescription") as String? ?: "Essential command
 repositories {
     mavenLocal()
     mavenCentral()
+
+    maven("https://repo.helpch.at/releases")
     
     // VaultUnlocked API repository
     // Note: VaultUnlocked 2.18.3 for Hytale requires JVM 25+ at runtime
@@ -23,6 +25,8 @@ repositories {
 dependencies {
     // Hytale Server API (provided by server at runtime)
     compileOnly(files("hytaleserver.jar"))
+
+    compileOnly("at.helpch:placeholderapi-hytale:1.0.4")
     
     // VaultUnlocked - integration is reflection-based to allow building with JVM 21
     // while running on JVM 25+ servers. No compile-time dependency needed.

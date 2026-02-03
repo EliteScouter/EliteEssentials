@@ -92,16 +92,15 @@ public class ChatListener {
         if (PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi && formattedMessage.indexOf('%') != -1) {
             formattedMessage = PAPIIntegration.setPlaceholders(sender, formattedMessage);
         }
-
-        formattedMessage = format.replace("{message}", processedMessage);
         
         if (configManager.isDebugEnabled()) {
-            logger.info("Formatted message: " + formattedMessage);
+            logger.info("Formatted message: " + formattedMessage.replace("{message}", processedMessage));
         }
         
         // Broadcast the formatted message to all players
-        Message message = MessageFormatter.format(formattedMessage);
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+            String replacedMessage = PAPIIntegration.setRelationalPlaceholders(sender, player, format.replace("{message}", processedMessage));
+            Message message = MessageFormatter.format(replacedMessage);
             player.sendMessage(message);
         }
         
