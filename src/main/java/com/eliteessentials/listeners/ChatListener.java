@@ -269,4 +269,3 @@ public class ChatListener {
         return 0;
     }
 }
-

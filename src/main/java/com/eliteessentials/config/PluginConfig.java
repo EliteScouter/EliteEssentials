@@ -774,6 +774,14 @@ public class PluginConfig {
          * Only applies when persistOnReconnect is true.
          */
         public boolean showReminderOnJoin = true;
+        
+        /**
+         * Make vanished players immune to mob damage.
+         * When true: Vanished players become invulnerable (like creative mode).
+         * This prevents mobs from damaging vanished players.
+         * Note: This makes the player invulnerable to ALL damage, not just mob damage.
+         */
+        public boolean mobImmunity = true;
     }
 
     // ==================== GROUP CHAT ====================

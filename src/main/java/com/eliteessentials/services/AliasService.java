@@ -2,7 +2,9 @@ package com.eliteessentials.services;
 
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.commands.hytale.HytaleHomeCommand;
+import com.eliteessentials.commands.hytale.HytaleKitCommand;
 import com.eliteessentials.commands.hytale.HytaleWarpCommand;
+import com.eliteessentials.model.Location;
 import com.eliteessentials.storage.AliasStorage;
 import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.storage.SpawnStorage;
@@ -10,12 +12,16 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -26,6 +32,7 @@ import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntitySta
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
@@ -112,13 +119,21 @@ public class AliasService {
                     case "warp": doWarp(ctx, store, ref, player, world, args, silent); break;
                     case "spawn": doSpawn(ctx, store, ref, player, world, silent); break;
                     case "home": doHome(ctx, store, ref, player, world, args, silent); break;
+                    case "homes": doHomes(ctx, player); break;
                     case "heal": doHeal(ctx, store, ref, player, silent); break;
                     case "god": doGod(ctx, store, ref, player, silent); break;
                     case "fly": doFly(ctx, store, ref, player, silent); break;
                     case "rules": doRules(player); break;
                     case "motd": doMotd(player, world); break;
                     case "discord": doDiscord(player); break;
-                    default: ctx.sendMessage(Message.raw("Unknown: " + cn).color("#FF5555"));
+                    case "kit": doKit(ctx, store, ref, player, world, args); break;
+                    case "back": doBack(ctx, store, ref, player, world, silent); break;
+                    case "top": doTop(ctx, store, ref, player, world, silent); break;
+                    case "list": doList(ctx, player); break;
+                    case "clearinv": doClearInv(ctx, store, ref, player, silent); break;
+                    case "repair": doRepair(ctx, store, ref, player, silent); break;
+                    case "vanish": doVanish(ctx, store, ref, player, silent); break;
+                    default: ctx.sendMessage(Message.raw("Alias error: Command '" + cn + "' is not supported. Supported: warp, spawn, home, homes, heal, god, fly, rules, motd, discord, kit, back, top, list, clearinv, repair, vanish").color("#FF5555"));
                 }
             } catch (Exception e) { logger.warning("[Alias] " + cn + ": " + e.getMessage()); }
         }
@@ -333,6 +348,217 @@ public class AliasService {
             }
             for (String line : lines) {
                 if (!line.trim().isEmpty()) player.sendMessage(MessageFormatter.format(line));
+            }
+        }
+
+        private void doHomes(CommandContext ctx, PlayerRef player) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.HOMES, config.homes.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            var homeService = EliteEssentials.getInstance().getHomeService();
+            var homes = homeService.getHomes(playerId);
+            if (homes.isEmpty()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homesEmpty"), "#FFAA00"));
+                return;
+            }
+            ctx.sendMessage(Message.raw("Your homes: " + String.join(", ", homes.keySet())).color("#55FF55"));
+        }
+
+        private void doKit(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, String args) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.KIT, config.kits.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            if (args.isEmpty()) {
+                ctx.sendMessage(Message.raw("Usage: kit <name>").color("#FFAA00"));
+                return;
+            }
+            
+            var kitService = EliteEssentials.getInstance().getKitService();
+            HytaleKitCommand.claimKit(ctx, store, ref, player, args, kitService, configManager);
+        }
+
+        private void doBack(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, boolean silent) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.BACK, config.back.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            var backService = EliteEssentials.getInstance().getBackService();
+            Optional<Location> locOpt = backService.popLocation(playerId);
+            if (locOpt.isEmpty()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backNoLocation"), "#FF5555"));
+                return;
+            }
+            
+            Location loc = locOpt.get();
+            World targetWorld = Universe.get().getWorld(loc.getWorld());
+            if (targetWorld == null) targetWorld = world;
+            final World finalWorld = targetWorld;
+            
+            world.execute(() -> {
+                if (!ref.isValid()) return;
+                Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
+                Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
+                store.putComponent(ref, Teleport.getComponentType(), new Teleport(finalWorld, pos, rot));
+                if (!silent) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
+                }
+            });
+        }
+
+        private void doTop(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, boolean silent) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.TOP, config.top.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) return;
+            
+            Vector3d pos = transform.getPosition();
+            int blockX = (int) Math.floor(pos.getX());
+            int blockZ = (int) Math.floor(pos.getZ());
+            
+            // Get chunk at player's position
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
+            WorldChunk chunk = world.getChunk(chunkIndex);
+            if (chunk == null) {
+                ctx.sendMessage(Message.raw("Chunk not loaded.").color("#FF5555"));
+                return;
+            }
+            
+            // Find highest solid block
+            int topY = -1;
+            for (int y = 255; y >= 0; y--) {
+                BlockType blockType = chunk.getBlockType(blockX, y, blockZ);
+                if (blockType != null && blockType.getMaterial() == BlockMaterial.Solid) {
+                    topY = y + 1;
+                    break;
+                }
+            }
+            if (topY < 0) {
+                ctx.sendMessage(Message.raw("No solid ground found.").color("#FF5555"));
+                return;
+            }
+            final int finalY = topY;
+            world.execute(() -> {
+                if (!ref.isValid()) return;
+                Vector3d newPos = new Vector3d(pos.getX(), finalY, pos.getZ());
+                HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
+                Vector3f rot = hr != null ? new Vector3f(0, hr.getRotation().y, 0) : new Vector3f(0, 0, 0);
+                store.putComponent(ref, Teleport.getComponentType(), new Teleport(world, newPos, rot));
+                if (!silent) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
+                }
+            });
+        }
+
+        private void doList(CommandContext ctx, PlayerRef player) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.LIST, config.list.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            var players = Universe.get().getPlayers();
+            if (players.isEmpty()) {
+                ctx.sendMessage(Message.raw("No players online.").color("#FFAA00"));
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (var p : players) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(p.getUsername());
+            }
+            ctx.sendMessage(Message.raw("Online (" + players.size() + "): " + sb.toString()).color("#55FF55"));
+        }
+
+        private void doClearInv(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, boolean silent) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.CLEARINV, config.clearInv.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            Player playerComp = store.getComponent(ref, Player.getComponentType());
+            if (playerComp == null) return;
+            var inv = playerComp.getInventory();
+            inv.getHotbar().clear();
+            inv.getStorage().clear();
+            if (!silent) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("clearInvSuccess"), "#55FF55"));
+            }
+        }
+
+        private void doRepair(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, boolean silent) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.REPAIR, config.repair.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            Player playerComp = store.getComponent(ref, Player.getComponentType());
+            if (playerComp == null) return;
+            var inventory = playerComp.getInventory();
+            var hotbar = inventory.getHotbar();
+            short slot = (short) inventory.getActiveHotbarSlot();
+            var item = hotbar.getItemStack(slot);
+            if (item == null || com.hypixel.hytale.server.core.inventory.ItemStack.isEmpty(item)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("repairNoItem"), "#FF5555"));
+                return;
+            }
+            if (item.getDurability() < item.getMaxDurability()) {
+                var repairedItem = item.withDurability(item.getMaxDurability());
+                hotbar.replaceItemStackInSlot(slot, item, repairedItem);
+            }
+            if (!silent) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("repairSuccess"), "#55FF55"));
+            }
+        }
+
+        private void doVanish(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, boolean silent) {
+            var configManager = EliteEssentials.getInstance().getConfigManager();
+            var config = configManager.getConfig();
+            UUID playerId = player.getUuid();
+            
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.VANISH, config.vanish.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            
+            var vanishService = EliteEssentials.getInstance().getVanishService();
+            boolean vanished = vanishService.toggleVanish(playerId, player.getUsername());
+            if (!silent) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage(vanished ? "vanishEnabled" : "vanishDisabled"), vanished ? "#55FF55" : "#FF5555"));
             }
         }
 

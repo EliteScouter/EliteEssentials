@@ -13,8 +13,11 @@ import java.util.regex.Pattern;
 
 /**
  * Utility for formatting messages with Minecraft-style color codes and clickable links.
- * Supports color codes (&0-f), hex colors (&#RRGGBB), formatting codes (&l, &o, &r), 
- * and automatic URL detection.
+ * Supports color codes (&0-f), hex colors (&#RRGGBB), formatting codes, and automatic URL detection.
+ * 
+ * IMPORTANT: Hytale chat only supports &l (bold) and &r (reset) for formatting.
+ * Other formatting codes (&o italic, &m strikethrough, &n underline, &k obfuscated) 
+ * are parsed but DO NOT render in Hytale's chat system.
  * 
  * Hex color examples:
  * - &#FF0000 = Red

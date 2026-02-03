@@ -22,6 +22,13 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ### Changed
 
+**Messages File Format Improved**
+* `messages.json` now saves as a flat key-value structure instead of nested objects
+* All message keys are sorted alphabetically for easier navigation
+* Keys like `gui.HomesTitle` now stay as literal strings instead of becoming nested `{"gui": {"HomesTitle": ...}}`
+* Existing translations will continue to work - the plugin reads both formats
+* For a clean, organized messages file: delete `messages.json` and restart the server (you'll need to re-apply any custom translations)
+
 **PlayTime Rewards - Universal Command Execution**
 * Reward commands now use `CommandManager` to execute ANY registered server command as console
 * Works with commands from any mod/plugin (EcoTale, custom mods, etc.)

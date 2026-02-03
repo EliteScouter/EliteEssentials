@@ -1,15 +1,19 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -52,10 +56,36 @@ public class HytaleListCommand extends CommandBase {
         
         // Get all online players
         List<PlayerRef> players = Universe.get().getPlayers();
-        int playerCount = players.size();
+        
+        // Check if the command sender can see vanished players
+        // Get sender UUID - sender can be PlayerRef or Player
+        UUID senderId = null;
+        Object sender = ctx.sender();
+        if (sender instanceof PlayerRef playerRef) {
+            senderId = playerRef.getUuid();
+        } else if (sender instanceof Player player) {
+            PlayerRef playerRef = player.getPlayerRef();
+            if (playerRef != null) {
+                senderId = playerRef.getUuid();
+            }
+        }
+        
+        boolean canSeeVanished = senderId != null && 
+            (perms.isAdmin(senderId) || perms.hasPermission(senderId, Permissions.VANISH));
+        
+        // Filter out vanished players if the sender can't see them
+        VanishService vanishService = EliteEssentials.getInstance().getVanishService();
+        List<PlayerRef> visiblePlayers = players;
+        if (vanishService != null && !canSeeVanished) {
+            visiblePlayers = players.stream()
+                .filter(p -> !vanishService.isVanished(p.getUuid()))
+                .collect(Collectors.toList());
+        }
+        
+        int playerCount = visiblePlayers.size();
         
         // Get player names sorted alphabetically
-        List<String> playerNames = players.stream()
+        List<String> playerNames = visiblePlayers.stream()
             .map(PlayerRef::getUsername)
             .sorted(String.CASE_INSENSITIVE_ORDER)
             .collect(Collectors.toList());

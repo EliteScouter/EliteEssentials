@@ -108,6 +108,17 @@
     "enabled": true
   },
   
+  "vanish": {
+    "enabled": true,
+    "hideFromList": true,
+    "hideFromMap": true,
+    "mimicJoinLeave": true,
+    "persistOnReconnect": true,
+    "suppressJoinQuitMessages": true,
+    "showReminderOnJoin": true,
+    "mobImmunity": true
+  },
+  
   "top": {
     "enabled": true,
     "cost": 0.0

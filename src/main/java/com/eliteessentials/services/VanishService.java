@@ -8,8 +8,10 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
@@ -28,6 +30,12 @@ import java.util.logging.Logger;
  * and hidden from the Server Players list.
  * 
  * Vanish state is persisted in each player's JSON file (players/{uuid}.json).
+ * 
+ * NOTE: The mobImmunity config option provides damage immunity (Invulnerable component)
+ * but NOT true NPC detection immunity. In Hytale, NPCs can only be made to ignore
+ * players in Creative mode with "Allow NPC Detection" disabled. Since we don't want
+ * to force players into Creative mode (security concern), vanished players in Adventure
+ * mode will still be detected by mobs but won't take damage.
  */
 public class VanishService {
     
@@ -101,6 +109,12 @@ public class VanishService {
         // correct WorldMapTracker method. See updateMapFiltersForAll() comments.
         if (config.vanish.hideFromMap) {
             updateMapFiltersForAll();
+        }
+        
+        // Update mob immunity (invulnerability) if enabled
+        // This makes vanished players immune to mob damage, similar to creative mode
+        if (config.vanish.mobImmunity) {
+            updateMobImmunity(playerId, vanished);
         }
         
         // Send fake join/leave message if enabled
@@ -210,6 +224,10 @@ public class VanishService {
     /**
      * Called when a player is fully loaded into a world (has Player component).
      * Sets up the map filter to hide vanished players.
+     * Also applies invulnerability if the player is vanished and mobImmunity is enabled.
+     * 
+     * NOTE: True mob immunity (NPCs not detecting player) only works in Creative mode.
+     * In Adventure mode, we can only provide damage immunity via Invulnerable component.
      */
     public void onPlayerReady(Store<EntityStore> store, Ref<EntityStore> ref) {
         if (store == null || ref == null || !ref.isValid()) return;
@@ -222,8 +240,25 @@ public class VanishService {
             
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef != null) {
+                UUID playerId = playerRef.getUuid();
+                
                 // Store the player's store/ref for later map filter updates
-                playerStoreRefs.put(playerRef.getUuid(), new PlayerStoreRef(store, ref));
+                playerStoreRefs.put(playerId, new PlayerStoreRef(store, ref));
+                
+                // Apply invulnerability if player is vanished and mobImmunity is enabled
+                // Note: This only provides damage immunity, not true NPC detection immunity
+                // (that would require Creative mode which we don't want to force)
+                if (config.vanish.mobImmunity && vanishedPlayers.contains(playerId)) {
+                    try {
+                        store.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+                        
+                        if (configManager.isDebugEnabled()) {
+                            logger.info("[Vanish] Applied invulnerability for reconnecting vanished player: " + playerRef.getUsername());
+                        }
+                    } catch (Exception e) {
+                        logger.warning("[Vanish] Failed to apply invulnerability on reconnect: " + e.getMessage());
+                    }
+                }
             }
             
             if (!config.vanish.hideFromMap) return;
@@ -399,5 +434,83 @@ public class VanishService {
      */
     public int getVanishedCount() {
         return vanishedPlayers.size();
+    }
+    
+    /**
+     * Update invulnerability for a vanished player.
+     * 
+     * NOTE: True mob immunity (NPCs not detecting player) only works in Creative mode
+     * with allowNPCDetection=false. Since we don't want to force players into Creative
+     * mode (security concern for mods), we only provide damage immunity via the
+     * Invulnerable component. Mobs will still detect and attack vanished players,
+     * but they won't take damage.
+     * 
+     * If you're already in Creative mode, you can manually disable "Allow NPC Detection"
+     * in your settings for full mob immunity.
+     */
+    private void updateMobImmunity(UUID playerId, boolean vanished) {
+        try {
+            Universe universe = Universe.get();
+            if (universe == null) return;
+            
+            PlayerRef playerRef = null;
+            for (PlayerRef p : universe.getPlayers()) {
+                if (p.getUuid().equals(playerId)) {
+                    playerRef = p;
+                    break;
+                }
+            }
+            
+            if (playerRef == null) return;
+            
+            Ref<EntityStore> initialRef = playerRef.getReference();
+            if (initialRef == null || !initialRef.isValid()) return;
+            
+            Store<EntityStore> store = initialRef.getStore();
+            EntityStore entityStore = store.getExternalData();
+            if (entityStore == null) return;
+            
+            World world = entityStore.getWorld();
+            if (world == null) return;
+            
+            final PlayerRef finalPlayerRef = playerRef;
+            
+            world.execute(() -> {
+                try {
+                    Ref<EntityStore> ref = finalPlayerRef.getReference();
+                    if (ref == null || !ref.isValid()) {
+                        return;
+                    }
+                    
+                    Store<EntityStore> currentStore = ref.getStore();
+                    
+                    if (vanished) {
+                        // Add invulnerability for damage immunity
+                        currentStore.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+                        
+                        if (configManager.isDebugEnabled()) {
+                            logger.info("[Vanish] Applied invulnerability (damage immunity) for vanished player");
+                        }
+                    } else {
+                        // Remove invulnerability (unless they have god mode)
+                        GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
+                        if (godService == null || !godService.isGodMode(playerId)) {
+                            try {
+                                currentStore.removeComponent(ref, Invulnerable.getComponentType());
+                                if (configManager.isDebugEnabled()) {
+                                    logger.info("[Vanish] Removed invulnerability for unvanished player");
+                                }
+                            } catch (IllegalArgumentException e) {
+                                // Component not present, ignore
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warning("[Vanish] Failed to update invulnerability: " + e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            logger.warning("[Vanish] Failed to update invulnerability: " + e.getMessage());
+        }
     }
 }

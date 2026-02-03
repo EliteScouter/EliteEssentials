@@ -168,10 +168,25 @@ public class VaultUnlockedIntegration {
                 logger.info("[VaultUnlocked] Checking for external economy...");
             }
             
-            Economy economy = VaultUnlockedServicesManager.get().economyObj();
+            VaultUnlockedServicesManager manager = VaultUnlockedServicesManager.get();
+            if (manager == null) {
+                logger.warning("[VaultUnlocked] VaultUnlockedServicesManager.get() returned null!");
+                return false;
+            }
+            
+            if (configManager.isDebugEnabled()) {
+                logger.info("[VaultUnlocked] ServicesManager obtained, checking economyObj()...");
+            }
+            
+            Economy economy = manager.economyObj();
             
             if (economy == null) {
                 logger.info("[VaultUnlocked] No economy provider registered with VaultUnlocked.");
+                // Log additional diagnostic info
+                if (configManager.isDebugEnabled()) {
+                    logger.info("[VaultUnlocked] This means no plugin has called VaultUnlockedServicesManager.economy() to register.");
+                    logger.info("[VaultUnlocked] Check if TheEconomy has VaultUnlocked support enabled in its config.");
+                }
                 return false;
             }
             

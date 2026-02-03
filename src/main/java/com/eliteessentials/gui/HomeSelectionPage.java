@@ -77,9 +77,10 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
 
         Map<String, Home> homes = homeService.getHomes(playerId);
         int maxHomes = homeService.getMaxHomes(playerId);
+        String maxDisplay = maxHomes == Integer.MAX_VALUE ? "*" : String.valueOf(maxHomes);
         String title = configManager.getMessage("gui.HomesTitle",
             "count", String.valueOf(homes.size()),
-            "max", String.valueOf(maxHomes));
+            "max", maxDisplay);
         commandBuilder.set("#PageTitleLabel.Text", title);
 
         commandBuilder.clear("#Pagination");
@@ -281,9 +282,10 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
         // Update title with new count
         Map<String, Home> homes = homeService.getHomes(playerId);
         int maxHomes = homeService.getMaxHomes(playerId);
+        String maxDisplay = maxHomes == Integer.MAX_VALUE ? "*" : String.valueOf(maxHomes);
         String title = configManager.getMessage("gui.HomesTitle",
             "count", String.valueOf(homes.size()),
-            "max", String.valueOf(maxHomes));
+            "max", maxDisplay);
         cmd.set("#PageTitleLabel.Text", title);
         
         PaginationControl.setButtonLabels(

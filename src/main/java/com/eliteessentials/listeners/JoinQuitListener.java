@@ -176,9 +176,10 @@ public class JoinQuitListener {
         // Mark as potentially changing worlds
         worldChangingPlayers.add(playerId);
         
-        // Broadcast world leave message if enabled
+        // Broadcast world leave message if enabled (but not for vanished players)
         PluginConfig config = configManager.getConfig();
-        if (config.joinMsg.worldChangeEnabled && onlinePlayers.contains(playerId)) {
+        boolean isVanished = vanishService != null && vanishService.isVanished(playerId);
+        if (config.joinMsg.worldChangeEnabled && onlinePlayers.contains(playerId) && !isVanished) {
             String message = configManager.getMessage("worldLeaveMessage", "player", playerName, "world", worldName);
             if (message != null && !message.isEmpty()) {
                 broadcastMessage(message, "#AAAAAA");
@@ -230,8 +231,9 @@ public class JoinQuitListener {
         
         // If player was draining (world change), show world MOTD and broadcast
         if (isWorldChange) {
-            // Broadcast world join message if enabled
-            if (config.joinMsg.worldChangeEnabled) {
+            // Broadcast world join message if enabled (but not for vanished players)
+            boolean isVanished = vanishService != null && vanishService.isVanished(playerId);
+            if (config.joinMsg.worldChangeEnabled && !isVanished) {
                 String message = configManager.getMessage("worldJoinMessage", "player", playerName, "world", worldName);
                 if (message != null && !message.isEmpty()) {
                     broadcastMessage(message, "#AAAAAA");
@@ -655,7 +657,7 @@ public class JoinQuitListener {
         // Replace placeholders
         String playerName = playerRef.getUsername();
         String serverName = config.motd.serverName;
-        int playerCount = Universe.get().getPlayers().size();
+        int playerCount = getVisiblePlayerCount();
         
         // Send each line with formatting
         for (String line : motdLines) {
@@ -703,7 +705,7 @@ public class JoinQuitListener {
         PluginConfig config = configManager.getConfig();
         String playerName = playerRef.getUsername();
         String serverName = config.motd.serverName;
-        int playerCount = Universe.get().getPlayers().size();
+        int playerCount = getVisiblePlayerCount();
         
         for (String line : worldMotd.lines) {
             if (line.trim().isEmpty()) {
@@ -725,6 +727,18 @@ public class JoinQuitListener {
      */
     private void scheduleGlobalMotd(PlayerRef playerRef, int delaySeconds, String worldName) {
         scheduler.schedule(() -> showGlobalMotd(playerRef, worldName), delaySeconds, TimeUnit.SECONDS);
+    }
+    
+    /**
+     * Get the visible player count (total players minus vanished players).
+     * Used for {playercount} placeholder in MOTD.
+     */
+    private int getVisiblePlayerCount() {
+        int totalPlayers = Universe.get().getPlayers().size();
+        if (vanishService != null) {
+            return totalPlayers - vanishService.getVanishedCount();
+        }
+        return totalPlayers;
     }
     
     /**

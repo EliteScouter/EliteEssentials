@@ -12,7 +12,9 @@
   "ServerVersion": ">=2026.1.0",
   "Dependencies": {},
   "OptionalDependencies": {
-    "HelpChat:PlaceholderAPI": "*"
+    "HelpChat:PlaceholderAPI": "*",
+    "net.milkbowl:VaultUnlocked": "*",
+    "Economy:EconomySystem": "*"
   },
   "DisabledByDefault": false,
   "IncludesAssetPack": true
