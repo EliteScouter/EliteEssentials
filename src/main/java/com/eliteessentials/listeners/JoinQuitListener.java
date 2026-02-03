@@ -12,14 +12,11 @@ import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.UpdateType;
 import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -231,9 +228,6 @@ public class JoinQuitListener {
             if (config.joinMsg.worldChangeEnabled) {
                 String message = configManager.getMessage("worldJoinMessage", "player", playerName, "world", worldName);
                 if (message != null && !message.isEmpty()) {
-                    event.getWorld().getPlayerRefs().forEach(recipient -> {
-
-                    });
                     broadcastMessage(message, "#AAAAAA", playerRef);
                 }
             }
