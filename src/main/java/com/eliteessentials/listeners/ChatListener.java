@@ -2,6 +2,7 @@ package com.eliteessentials.listeners;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
@@ -83,12 +84,29 @@ public class ChatListener {
         // Replace placeholders - build the formatted message step by step
         String formattedMessage = format
                 .replace("{player}", playerName)
-                .replace("{displayname}", playerName)
-                .replace("{message}", processedMessage);
+                .replace("{displayname}", playerName);
+        
+        // Check if PAPI is available and enabled
+        boolean isPapiAvailable = PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi;
+
+        if (isPapiAvailable) {
+            formattedMessage = PAPIIntegration.setPlaceholders(sender, formattedMessage);
+        }
+        
+        if (configManager.isDebugEnabled()) {
+            logger.info("Formatted message: " + formattedMessage.replace("{message}", processedMessage));
+        }
         
         // Broadcast the formatted message to all players
-        Message message = MessageFormatter.format(formattedMessage);
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+            String playerFormattedMessage = formattedMessage;
+            
+            if (isPapiAvailable) {
+                playerFormattedMessage = PAPIIntegration.setRelationalPlaceholders(sender, player, playerFormattedMessage);
+            }
+            
+            playerFormattedMessage = playerFormattedMessage.replace("{message}", processedMessage);
+            Message message = MessageFormatter.format(playerFormattedMessage);
             player.sendMessage(message);
         }
     }

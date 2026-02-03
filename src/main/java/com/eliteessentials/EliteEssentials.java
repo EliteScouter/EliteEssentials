@@ -229,7 +229,7 @@ public class EliteEssentials extends JavaPlugin {
         LuckPermsIntegration.registerPermissions();
 
         // Register PlaceholderAPI integration
-        PAPIIntegration.register();
+        PAPIIntegration.register(this);
         
         // Register starter kit event for new players
         starterKitEvent = new StarterKitEvent(kitService);
