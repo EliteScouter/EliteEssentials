@@ -7,6 +7,7 @@ import com.eliteessentials.services.PlayerService;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,7 +42,29 @@ public final class EconomyAPI {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
 
+    private static boolean vaultClassChecked = false;
+    private static boolean vaultClassAvailable = false;
+
     private EconomyAPI() {} // Static API class
+
+    /**
+     * Safely get VaultUnlockedIntegration without triggering class loading
+     * of Vault2 classes when VaultUnlocked is not installed.
+     */
+    private static VaultUnlockedIntegration getVaultIntegration() {
+        if (!vaultClassChecked) {
+            vaultClassChecked = true;
+            try {
+                Class.forName("net.milkbowl.vault2.economy.Economy");
+                vaultClassAvailable = true;
+            } catch (ClassNotFoundException e) {
+                vaultClassAvailable = false;
+                logger.log(Level.FINE, "[EconomyAPI] Vault2 classes not available, VaultUnlocked integration disabled.");
+            }
+        }
+        if (!vaultClassAvailable) return null;
+        return VaultUnlockedIntegration.get();
+    }
 
     /**
      * Check if the economy system is enabled.
@@ -63,7 +86,7 @@ public final class EconomyAPI {
      */
     public static boolean isUsingExternalEconomy() {
         // First check if VaultUnlocked integration has confirmed external economy
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return true;
         }
@@ -114,7 +137,7 @@ public final class EconomyAPI {
         if (!isEnabled()) return 0.0;
         
         // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return vault.getExternalBalance(playerId);
         }
@@ -135,7 +158,7 @@ public final class EconomyAPI {
         if (!isEnabled()) return false;
         
         // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return vault.externalHas(playerId, amount);
         }
@@ -153,7 +176,7 @@ public final class EconomyAPI {
         if (!isEnabled() || amount <= 0) return false;
         
         // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return vault.externalWithdraw(playerId, amount);
         }
@@ -174,7 +197,7 @@ public final class EconomyAPI {
         if (!isEnabled() || amount <= 0) return false;
         
         // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return vault.externalDeposit(playerId, amount);
         }
@@ -196,7 +219,7 @@ public final class EconomyAPI {
         if (!isEnabled() || amount < 0) return false;
         
         // External economy doesn't support direct balance setting
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             logger.warning("setBalance() not supported with external economy");
             return false;
@@ -283,7 +306,7 @@ public final class EconomyAPI {
      */
     public static Optional<PlayerFile> getPlayerData(UUID playerId) {
         // External economy doesn't expose player data
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+        VaultUnlockedIntegration vault = getVaultIntegration();
         if (vault != null && vault.isUsingExternalEconomy()) {
             return Optional.empty();
         }
