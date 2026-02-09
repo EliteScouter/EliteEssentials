@@ -215,6 +215,18 @@ public class EliteEssentials extends JavaPlugin {
             vaultUnlockedIntegration = null;
         }
         
+        // Register custom UseBlock interaction for spawn protection (flower/pebble pickup blocking).
+        // InteractivelyPickupItemEvent.setCancelled() is broken in Hytale API, so we intercept
+        // at the interaction level instead - same approach as SimpleClaims.
+        try {
+            var interaction = getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC);
+            interaction.register("UseBlock", com.eliteessentials.interactions.SpawnUseBlockInteraction.class, 
+                com.eliteessentials.interactions.SpawnUseBlockInteraction.CUSTOM_CODEC);
+            getLogger().at(Level.INFO).log("Custom UseBlock interaction registered for spawn pickup protection.");
+        } catch (Exception e) {
+            getLogger().at(Level.WARNING).log("Could not register custom UseBlock interaction: " + e.getMessage());
+        }
+        
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
     }
 

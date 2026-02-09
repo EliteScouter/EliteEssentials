@@ -105,6 +105,22 @@ public class SpawnProtectionService {
     }
 
     /**
+     * Check if X/Z coordinates are within the protected spawn area of a specific world.
+     */
+    public boolean isInProtectedArea(String worldName, int x, int z) {
+        if (!isEnabled()) return false;
+        
+        SpawnLocation spawn = worldSpawns.get(worldName);
+        if (spawn == null) return false;
+        
+        int radius = getRadius();
+        double dx = Math.abs(x - spawn.x);
+        double dz = Math.abs(z - spawn.z);
+
+        return dx <= radius && dz <= radius;
+    }
+
+    /**
      * Check if a block position is within the protected spawn area of a specific world.
      */
     public boolean isInProtectedArea(String worldName, Vector3i blockPos) {

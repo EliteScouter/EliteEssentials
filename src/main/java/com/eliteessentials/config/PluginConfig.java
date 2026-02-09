@@ -223,8 +223,6 @@ public class PluginConfig {
         messages.put("vanishEnabled", "&aYou are now vanished. Other players cannot see you.");
         messages.put("vanishDisabled", "&cYou are now visible to other players.");
         messages.put("vanishReminder", "&c&l>> YOU ARE STILL VANISHED <<");
-        messages.put("vanishFakeLeave", "&e{player} &7left the server.");
-        messages.put("vanishFakeJoin", "&e{player} &7joined the server.");
         
         // ==================== GROUP CHAT ====================
         messages.put("groupChatNoAccess", "&cYou don't have access to any chat channels.");

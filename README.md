@@ -60,6 +60,7 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **One-time kits** - Kits that can only be claimed once per player
 - **Cooldown kits** - Configurable cooldown between claims
 - **Starter Kit** - Automatically given to new players on first join
+- **Kit Commands** - Kits can execute server commands on claim (e.g., grant permissions, give currency, run any plugin command)
 - Fully configurable items, cooldowns, and permissions per kit
 
 ### Utility Commands

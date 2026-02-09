@@ -4,6 +4,7 @@ import com.eliteessentials.model.Kit;
 import com.eliteessentials.model.KitItem;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.storage.PlayerFileStorage;
+import com.eliteessentials.util.CommandExecutor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
@@ -111,6 +112,11 @@ public class StarterKitEvent {
                 for (Kit kit : starterKits) {
                     logger.info("Applying starter kit '" + kit.getDisplayName() + "' to " + username);
                     applyKit(kit, inventory);
+                    
+                    // Execute kit commands (run ANY server command as console)
+                    if (kit.hasCommands()) {
+                        CommandExecutor.executeCommands(kit.getCommands(), username, uuid, "StarterKit-" + kit.getId());
+                    }
                     
                     // Mark starter kits as claimed to prevent re-claiming via /kit
                     kitService.setOnetimeClaimed(uuid, kit.getId());

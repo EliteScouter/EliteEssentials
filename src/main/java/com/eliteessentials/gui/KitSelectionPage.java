@@ -7,6 +7,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.CommandExecutor;
 import com.eliteessentials.gui.components.PaginationControl;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -153,6 +154,12 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
 
         // Sync inventory
         player.sendInventory();
+
+        // Execute kit commands (run ANY server command as console)
+        if (kit.hasCommands()) {
+            CommandExecutor.setDebugEnabled(configManager.isDebugEnabled());
+            CommandExecutor.executeCommands(kit.getCommands(), playerRef.getUsername(), playerId, "Kit-" + kit.getId());
+        }
 
         // Set cooldown or mark as claimed
         if (kit.isOnetime()) {

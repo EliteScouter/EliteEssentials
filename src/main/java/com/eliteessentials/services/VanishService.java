@@ -96,23 +96,15 @@ public class VanishService {
             }
         }
         
-        // Update in-world visibility
-        updateVisibilityForAll(playerId, vanished);
+        // Update visibility + player list in a single pass over all players
+        // This avoids multiple separate iterations which caused lag on 50+ player servers
+        updateAllPlayersInSinglePass(playerId, vanished, config);
         
-        // Update player list if enabled
-        if (config.vanish.hideFromList) {
-            updatePlayerListForAll(playerId, vanished);
-        }
-        
-        // Update map filters - NOTE: This currently only affects NEW players joining
-        // To properly hide already-tracked players from the map, need to find the 
-        // correct WorldMapTracker method. See updateMapFiltersForAll() comments.
-        if (config.vanish.hideFromMap) {
-            updateMapFiltersForAll();
-        }
+        // Map filters do NOT need updating here - the filter lambda already references
+        // the live vanishedPlayers set, so it picks up changes automatically each tick.
+        // The filter is only set once per player in onPlayerReady().
         
         // Update mob immunity (invulnerability) if enabled
-        // This makes vanished players immune to mob damage, similar to creative mode
         if (config.vanish.mobImmunity) {
             updateMobImmunity(playerId, vanished);
         }
@@ -332,8 +324,8 @@ public class VanishService {
             Universe universe = Universe.get();
             if (universe == null) return;
             
-            // Get the appropriate message
-            String messageKey = vanished ? "vanishFakeLeave" : "vanishFakeJoin";
+            // Get the appropriate message (use standard join/leave messages)
+            String messageKey = vanished ? "leaveMessage" : "joinMessage";
             String message = configManager.getMessage(messageKey, "player", playerName);
             
             // Broadcast to all players
@@ -346,6 +338,77 @@ public class VanishService {
             }
         } catch (Exception e) {
             logger.warning("Failed to broadcast fake vanish message: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Combined single-pass update for visibility, player list, and fake message.
+     * Instead of iterating all players 3-5 separate times, we do it once.
+     * This is critical for servers with 50+ players where multiple iterations
+     * caused noticeable lag spikes when an admin toggled vanish.
+     */
+    private void updateAllPlayersInSinglePass(UUID targetId, boolean hide, PluginConfig config) {
+        try {
+            Universe universe = Universe.get();
+            if (universe == null) return;
+            
+            // Pre-build packets once (not per-player)
+            RemoveFromServerPlayerList removePacket = config.vanish.hideFromList && hide
+                ? new RemoveFromServerPlayerList(new UUID[] { targetId })
+                : null;
+            
+            // For unhide, we need the target player info - find them while iterating
+            PlayerRef targetPlayer = null;
+            
+            for (PlayerRef player : universe.getPlayers()) {
+                UUID pid = player.getUuid();
+                
+                if (pid.equals(targetId)) {
+                    targetPlayer = player;
+                    continue; // Don't hide/remove player from themselves
+                }
+                
+                try {
+                    // 1. Update in-world visibility
+                    if (hide) {
+                        player.getHiddenPlayersManager().hidePlayer(targetId);
+                    } else {
+                        player.getHiddenPlayersManager().showPlayer(targetId);
+                    }
+                    
+                    // 2. Update player list (reuse pre-built packet for hide)
+                    if (config.vanish.hideFromList) {
+                        if (hide && removePacket != null) {
+                            player.getPacketHandler().write(removePacket);
+                        }
+                        // For unhide, we handle after the loop once we have targetPlayer
+                    }
+                } catch (Exception e) {
+                    logger.warning("Failed to update vanish state for " + player.getUsername() + ": " + e.getMessage());
+                }
+            }
+            
+            // Handle unhide player list in a second pass only when needed (unvanishing)
+            if (config.vanish.hideFromList && !hide && targetPlayer != null) {
+                ServerPlayerListPlayer listPlayer = new ServerPlayerListPlayer(
+                    targetPlayer.getUuid(),
+                    targetPlayer.getUsername(),
+                    targetPlayer.getWorldUuid(),
+                    0
+                );
+                AddToServerPlayerList addPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[] { listPlayer });
+                
+                for (PlayerRef player : universe.getPlayers()) {
+                    if (player.getUuid().equals(targetId)) continue;
+                    try {
+                        player.getPacketHandler().write(addPacket);
+                    } catch (Exception e) {
+                        logger.warning("Failed to re-add to player list for " + player.getUsername() + ": " + e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to update vanish state for all players: " + e.getMessage());
         }
     }
     
@@ -450,43 +513,27 @@ public class VanishService {
      */
     private void updateMobImmunity(UUID playerId, boolean vanished) {
         try {
-            Universe universe = Universe.get();
-            if (universe == null) return;
+            // Use stored ref instead of iterating all players to find the target
+            PlayerStoreRef psr = playerStoreRefs.get(playerId);
+            if (psr == null || psr.ref == null || !psr.ref.isValid()) return;
             
-            PlayerRef playerRef = null;
-            for (PlayerRef p : universe.getPlayers()) {
-                if (p.getUuid().equals(playerId)) {
-                    playerRef = p;
-                    break;
-                }
-            }
-            
-            if (playerRef == null) return;
-            
-            Ref<EntityStore> initialRef = playerRef.getReference();
-            if (initialRef == null || !initialRef.isValid()) return;
-            
-            Store<EntityStore> store = initialRef.getStore();
+            Store<EntityStore> store = psr.ref.getStore();
             EntityStore entityStore = store.getExternalData();
             if (entityStore == null) return;
             
             World world = entityStore.getWorld();
             if (world == null) return;
             
-            final PlayerRef finalPlayerRef = playerRef;
+            final Ref<EntityStore> storedRef = psr.ref;
             
             world.execute(() -> {
                 try {
-                    Ref<EntityStore> ref = finalPlayerRef.getReference();
-                    if (ref == null || !ref.isValid()) {
-                        return;
-                    }
+                    if (!storedRef.isValid()) return;
                     
-                    Store<EntityStore> currentStore = ref.getStore();
+                    Store<EntityStore> currentStore = storedRef.getStore();
                     
                     if (vanished) {
-                        // Add invulnerability for damage immunity
-                        currentStore.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+                        currentStore.putComponent(storedRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
                         
                         if (configManager.isDebugEnabled()) {
                             logger.info("[Vanish] Applied invulnerability (damage immunity) for vanished player");
@@ -496,7 +543,7 @@ public class VanishService {
                         GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
                         if (godService == null || !godService.isGodMode(playerId)) {
                             try {
-                                currentStore.removeComponent(ref, Invulnerable.getComponentType());
+                                currentStore.removeComponent(storedRef, Invulnerable.getComponentType());
                                 if (configManager.isDebugEnabled()) {
                                     logger.info("[Vanish] Removed invulnerability for unvanished player");
                                 }

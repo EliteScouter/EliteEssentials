@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.eliteessentials.commands.args.SimpleStringArg;
+import com.eliteessentials.util.CommandExecutor;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
@@ -209,6 +210,12 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
 
         // Sync inventory
         playerComponent.sendInventory();
+
+        // Execute kit commands (run ANY server command as console)
+        if (kit.hasCommands()) {
+            CommandExecutor.setDebugEnabled(configManager.isDebugEnabled());
+            CommandExecutor.executeCommands(kit.getCommands(), player.getUsername(), playerId, "Kit-" + kit.getId());
+        }
 
         // Set cooldown or mark as claimed
         if (kit.isOnetime()) {

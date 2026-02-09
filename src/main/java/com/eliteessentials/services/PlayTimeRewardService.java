@@ -7,15 +7,12 @@ import com.eliteessentials.model.PlayTimeReward;
 import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.storage.PlayTimeRewardStorage;
 import com.eliteessentials.storage.PlayerFileStorage;
+import com.eliteessentials.util.CommandExecutor;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.command.system.CommandManager;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import com.hypixel.hytale.server.core.universe.world.World;
 
-import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
@@ -368,112 +365,10 @@ public class PlayTimeRewardService {
         }
         
         // Execute commands
-        for (String command : reward.getCommands()) {
-            executeCommand(command, playerName, playerId);
-        }
+        CommandExecutor.setDebugEnabled(configManager.isDebugEnabled());
+        CommandExecutor.executeCommands(reward.getCommands(), playerName, playerId, "PlayTimeReward");
     }
     
-    /**
-     * Execute a reward command with placeholder replacement.
-     * Uses CommandManager to execute ANY registered server command as console.
-     * This allows rewards to use commands from any mod/plugin on the server.
-     * 
-     * Supported placeholders:
-     * - {player} or %player% - replaced with player's username
-     */
-    private void executeCommand(String command, String playerName, UUID playerId) {
-        try {
-            // Replace placeholders (support both {player} and %player% formats)
-            String processedCommand = command
-                    .replace("{player}", playerName)
-                    .replace("%player%", playerName)
-                    .trim();
-            
-            // Remove leading slash if present
-            if (processedCommand.startsWith("/")) {
-                processedCommand = processedCommand.substring(1);
-            }
-            
-            // Remove surrounding quotes if present
-            if (processedCommand.startsWith("\"") && processedCommand.endsWith("\"")) {
-                processedCommand = processedCommand.substring(1, processedCommand.length() - 1);
-            }
-            
-            if (processedCommand.isEmpty()) {
-                logger.warning("[PlayTimeReward] Empty command after processing: " + command);
-                return;
-            }
-            
-            // Get player's world for thread-safe execution
-            PlayerRef playerRef = Universe.get().getPlayer(playerId);
-            World world = null;
-            
-            if (playerRef != null && playerRef.isValid()) {
-                world = Universe.get().getWorld(playerRef.getWorldUuid());
-            }
-            
-            if (world == null) {
-                world = Universe.get().getDefaultWorld();
-            }
-            
-            if (world == null) {
-                logger.warning("[PlayTimeReward] Could not find a valid world to execute command for " + playerName);
-                return;
-            }
-            
-            // Execute command on world thread for thread safety
-            final String finalCommand = processedCommand;
-            world.execute(() -> {
-                try {
-                    CommandManager cm = CommandManager.get();
-                    
-                    // Create a console sender with full permissions
-                    CommandSender consoleSender = new CommandSender() {
-                        @Override
-                        public String getDisplayName() {
-                            return "Console";
-                        }
-                        
-                        @Override
-                        public UUID getUuid() {
-                            return new UUID(0, 0);
-                        }
-                        
-                        @Override
-                        public void sendMessage(@Nonnull Message message) {
-                            // Log console output in debug mode
-                            if (configManager.isDebugEnabled()) {
-                                logger.info("[PlayTimeReward-Console] " + message.toString());
-                            }
-                        }
-                        
-                        @Override
-                        public boolean hasPermission(@Nonnull String permission) {
-                            return true; // Console has all permissions
-                        }
-                        
-                        @Override
-                        public boolean hasPermission(@Nonnull String permission, boolean defaultValue) {
-                            return true; // Console has all permissions
-                        }
-                    };
-                    
-                    if (configManager.isDebugEnabled()) {
-                        logger.info("[PlayTimeReward] Executing command: " + finalCommand);
-                    }
-                    
-                    cm.handleCommand(consoleSender, finalCommand);
-                    
-                } catch (Exception e) {
-                    logger.warning("[PlayTimeReward] Failed to execute command '" + finalCommand + "': " + e.getMessage());
-                }
-            });
-            
-        } catch (Exception e) {
-            logger.warning("Failed to process reward command '" + command + "': " + e.getMessage());
-        }
-    }
-
     /**
      * Broadcast a milestone achievement to all players.
      */

@@ -2,6 +2,72 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
+## [Unreleased]
+
+(No changes currently.)
+
+## [1.1.8] - 2026-02-08
+
+### Added
+
+**Kit Commands** - Kits can now execute server commands when claimed
+* Add a `commands` list to any kit in `kits.json` to run commands on claim
+* Commands execute as console with full permissions, just like PlayTime Rewards
+* Supports `{player}` and `%player%` placeholders for the claiming player's name
+* Works from all claim paths: `/kit <name>`, the kit GUI, and starter kits on first join
+* Can run ANY registered server command, including commands from other plugins
+* Example: give items, set permissions, add to groups, grant economy rewards, trigger other plugin commands
+
+**Example kits.json with commands:**
+```json
+{
+  "id": "vip",
+  "displayName": "VIP Kit",
+  "commands": [
+    "eco add {player} 500",
+    "lp user {player} group add vip",
+    "broadcast {player} claimed the VIP kit!"
+  ]
+}
+```
+
+**Shared Command Executor** - Centralized command execution utility
+* New `CommandExecutor` utility class used by both kits and PlayTime Rewards
+* Consistent placeholder handling, thread-safe world execution, and debug logging
+* PlayTimeRewardService refactored to use the shared utility (no behavior change)
+
+### Changed
+
+**Vanish Fake Messages** - Now uses standard join/leave messages
+* Vanish fake join/leave messages now use the same `joinMessage` and `leaveMessage` as regular player joins/leaves
+* Removed separate `vanishFakeJoin` and `vanishFakeLeave` config messages for consistency
+* No functional change - vanish still broadcasts fake messages when `mimicJoinLeave` is enabled
+
+### Fixed
+
+**Vanish Performance Optimization** - Fixed lag spike when admin uses `/vanish` on 50+ player servers
+* Toggling vanish with all hide settings enabled (hideFromList, hideFromMap, mimicJoinLeave, mobImmunity) previously ran 5 separate full iterations over all online players, causing a noticeable lag spike
+* Merged visibility and player list updates into a single pass over all players instead of 3 separate loops
+* Pre-build `RemoveFromServerPlayerList` packet once and reuse it for all players instead of creating a new packet per player
+* Removed redundant `updateMapFiltersForAll()` call - the map filter lambda already captures the live `vanishedPlayers` set by reference, so it picks up changes automatically each tick without needing to be re-applied
+* Replaced player-search loop in `updateMobImmunity()` with direct O(1) lookup from the stored `playerStoreRefs` map
+* Net result: vanish toggle goes from ~250+ iterations with packet I/O down to ~50 (single pass) for a 50-player server
+
+**Economy ClassNotFoundException Fix** - Graceful handling when VaultUnlocked classes are missing
+* Fixed crash when using commands with costs (e.g., `/rtp`) without VaultUnlocked installed
+* Added defensive error handling in `EconomyAPI` to catch `NoClassDefFoundError`
+* Commands now gracefully fall back to internal economy when external economy classes are unavailable
+* Added warning logs to help diagnose economy integration issues
+* Affects: `/rtp`, `/home`, `/warp`, `/kit`, and any command with configured costs
+
+**Spawn protection – F-key item pickup (flowers, pebbles, etc.)**
+* Item pickup protection in spawn now correctly blocks picking up world-placed items (flowers, pebbles, mushrooms, etc.) when using the F (interact) key
+* Previously the "Item pickups are disabled in spawn" message appeared but the item was still picked up and removed from the world
+* Root cause: `InteractivelyPickupItemEvent.setCancelled(true)` is ignored by the Hytale API
+* Fix: Registered a custom `UseBlockInteraction` that intercepts at the interaction level before the event fires; in protected spawn areas the interaction is not executed, so the pickup never occurs
+* When only `disableItemPickup` is enabled, functional blocks (doors, chests, benches, etc.) remain usable in spawn; only "pickup" blocks (flowers, pebbles, mushrooms) are blocked
+* New file: `SpawnUseBlockInteraction.java` in `interactions` package; registered in plugin setup via Interaction codec registry
+
 ## [1.1.7] - 2026-02-04
 
 Special thanks to PiggyPiglet for PlaceholderAPI integration and L8-Alphine for fixes on respawn after death.
@@ -492,9 +558,8 @@ Special thanks to AfkF24 for making changes to the GUI system and making it look
 **Vanish Command Enhancements** - True invisibility with full stealth features
 * Players are now hidden from the Server Players list (tab list)
 * Players are hidden from the world map
-* Fake join/leave messages broadcast when vanishing/unvanishing
+* Fake join/leave messages broadcast when vanishing/unvanishing (uses standard join/leave messages)
 * Config options: `hideFromList`, `hideFromMap`, `mimicJoinLeave`
-* Messages: `vanishFakeLeave`, `vanishFakeJoin`
 
 **Repair Command** - `/repair` and `/repair all` (alias: `/fix`)
 * Repairs item in hand or all items in inventory

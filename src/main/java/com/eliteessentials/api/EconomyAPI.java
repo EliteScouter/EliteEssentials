@@ -62,17 +62,22 @@ public final class EconomyAPI {
      * 2. Config has useExternalEconomy=true (even if detection hasn't completed yet)
      */
     public static boolean isUsingExternalEconomy() {
-        // First check if VaultUnlocked integration has confirmed external economy
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return true;
-        }
-        
-        // Also check config - if useExternalEconomy is true, we should try to use it
-        // even if detection hasn't completed yet (will fail gracefully)
-        EliteEssentials plugin = EliteEssentials.getInstance();
-        if (plugin != null && plugin.getConfigManager() != null) {
-            return plugin.getConfigManager().getConfig().economy.useExternalEconomy;
+        try {
+            // First check if VaultUnlocked integration has confirmed external economy
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return true;
+            }
+            
+            // Also check config - if useExternalEconomy is true, we should try to use it
+            // even if detection hasn't completed yet (will fail gracefully)
+            EliteEssentials plugin = EliteEssentials.getInstance();
+            if (plugin != null && plugin.getConfigManager() != null) {
+                return plugin.getConfigManager().getConfig().economy.useExternalEconomy;
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found - using internal economy. Error: " + e.getMessage());
         }
         
         return false;
@@ -113,10 +118,15 @@ public final class EconomyAPI {
     public static double getBalance(UUID playerId) {
         if (!isEnabled()) return 0.0;
         
-        // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return vault.getExternalBalance(playerId);
+        try {
+            // Check for external economy first
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return vault.getExternalBalance(playerId);
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during getBalance - using internal economy");
         }
         
         PlayerService service = getPlayerService();
@@ -134,10 +144,15 @@ public final class EconomyAPI {
     public static boolean has(UUID playerId, double amount) {
         if (!isEnabled()) return false;
         
-        // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return vault.externalHas(playerId, amount);
+        try {
+            // Check for external economy first
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return vault.externalHas(playerId, amount);
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during has() check - using internal economy");
         }
         
         return getBalance(playerId) >= amount;
@@ -152,10 +167,15 @@ public final class EconomyAPI {
     public static boolean withdraw(UUID playerId, double amount) {
         if (!isEnabled() || amount <= 0) return false;
         
-        // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return vault.externalWithdraw(playerId, amount);
+        try {
+            // Check for external economy first
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return vault.externalWithdraw(playerId, amount);
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during withdraw - using internal economy");
         }
         
         PlayerService service = getPlayerService();
@@ -173,10 +193,15 @@ public final class EconomyAPI {
     public static boolean deposit(UUID playerId, double amount) {
         if (!isEnabled() || amount <= 0) return false;
         
-        // Check for external economy first
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return vault.externalDeposit(playerId, amount);
+        try {
+            // Check for external economy first
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return vault.externalDeposit(playerId, amount);
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during deposit - using internal economy");
         }
         
         PlayerService service = getPlayerService();
@@ -195,11 +220,16 @@ public final class EconomyAPI {
     public static boolean setBalance(UUID playerId, double amount) {
         if (!isEnabled() || amount < 0) return false;
         
-        // External economy doesn't support direct balance setting
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            logger.warning("setBalance() not supported with external economy");
-            return false;
+        try {
+            // External economy doesn't support direct balance setting
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                logger.warning("setBalance() not supported with external economy");
+                return false;
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during setBalance - using internal economy");
         }
         
         PlayerService service = getPlayerService();
@@ -282,10 +312,15 @@ public final class EconomyAPI {
      * @return Optional containing PlayerFile if found
      */
     public static Optional<PlayerFile> getPlayerData(UUID playerId) {
-        // External economy doesn't expose player data
-        VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
-        if (vault != null && vault.isUsingExternalEconomy()) {
-            return Optional.empty();
+        try {
+            // External economy doesn't expose player data
+            VaultUnlockedIntegration vault = VaultUnlockedIntegration.get();
+            if (vault != null && vault.isUsingExternalEconomy()) {
+                return Optional.empty();
+            }
+        } catch (NoClassDefFoundError e) {
+            // VaultUnlocked classes not available - fall back to internal economy
+            logger.warning("[Economy] VaultUnlocked classes not found during getPlayerData - using internal economy");
         }
         
         PlayerService service = getPlayerService();

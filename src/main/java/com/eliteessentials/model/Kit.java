@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a kit configuration with items, cooldown, and display settings.
+ * Represents a kit configuration with items, cooldown, display settings, and commands.
+ * Commands are executed as console when the kit is claimed, supporting {player} placeholder.
  */
 public class Kit {
     private final String id;
@@ -16,6 +17,7 @@ public class Kit {
     private final boolean onetime; // true = can only be claimed once ever
     private final boolean starterKit; // true = auto-given to new players
     private final List<KitItem> items;
+    private List<String> commands; // commands to execute on claim, supports {player}
 
     public Kit(String id, String displayName, String description, String icon, 
                int cooldown, boolean replaceInventory, List<KitItem> items) {
@@ -33,6 +35,7 @@ public class Kit {
         this.onetime = onetime;
         this.starterKit = starterKit;
         this.items = new ArrayList<>(items);
+        this.commands = new ArrayList<>();
     }
 
     public String getId() { return id; }
@@ -44,4 +47,17 @@ public class Kit {
     public boolean isOnetime() { return onetime; }
     public boolean isStarterKit() { return starterKit; }
     public List<KitItem> getItems() { return items; }
+
+    public List<String> getCommands() {
+        if (commands == null) commands = new ArrayList<>();
+        return commands;
+    }
+
+    public void setCommands(List<String> commands) {
+        this.commands = commands != null ? commands : new ArrayList<>();
+    }
+
+    public boolean hasCommands() {
+        return commands != null && !commands.isEmpty();
+    }
 }
