@@ -52,6 +52,11 @@ public class EliteEssentialsExpansion extends PlaceholderExpansion {
     }
 
     @Override
+    public boolean persist() {
+        return true;
+    }
+
+    @Override
     public @Nullable String onPlaceholderRequest(final PlayerRef playerRef, @NotNull final String input) {
         final HomeService homes = main.getHomeService();
         final KitService kits = main.getKitService();
