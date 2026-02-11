@@ -325,7 +325,7 @@ public class VanishService {
             if (universe == null) return;
             
             // Get the appropriate message (use standard join/leave messages)
-            String messageKey = vanished ? "leaveMessage" : "joinMessage";
+            String messageKey = vanished ? "quitMessage" : "joinMessage";
             String message = configManager.getMessage(messageKey, "player", playerName);
             
             // Broadcast to all players

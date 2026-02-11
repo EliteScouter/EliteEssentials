@@ -6,6 +6,27 @@ All notable changes to EliteEssentials will be documented in this file.
 
 (No changes currently.)
 
+## [1.1.9] - 2026-02-10
+
+### Added
+
+**Safe Teleport Utility** - New `TeleportUtil` class for chunk-safe teleportation
+* New shared utility `TeleportUtil.safeTeleport()` ensures the destination chunk is loaded before moving a player
+* Fast path: if the chunk is already loaded, teleports immediately with no delay
+* Slow path: loads the chunk asynchronously via `world.getChunkAsync()`, then teleports on completion
+* If the chunk fails to load, the player receives an error message instead of crashing the world
+* Debug logging shows chunk load status when debug mode is enabled
+
+### Fixed
+
+**World Crash on Teleport to Unloaded Chunks** - Critical server stability fix
+* Fixed `ArrayIndexOutOfBoundsException` in `ArchetypeChunk.removeEntity` when teleporting players to locations where the destination chunk was not loaded
+* This caused the world to shut down and players to fall into the void on reconnect
+* Root cause: `/home`, `/warp`, `/spawn`, `/back`, `/top`, and `/tpaccept` all applied the `Teleport` component without first ensuring the target chunk was loaded, unlike `/rtp` which already handled this correctly
+* All teleport commands now pre-load the destination chunk before moving the player
+* Affected commands: `/home`, `/warp`, `/spawn`, `/back`, `/top`, `/tpaccept` (both same-world and cross-world), and all alias-based teleports (spawn, back, top via custom aliases)
+* Fixed double `world.execute()` wrapping in alias-based `/back` command
+
 ## [1.1.8] - 2026-02-08
 
 ### Added

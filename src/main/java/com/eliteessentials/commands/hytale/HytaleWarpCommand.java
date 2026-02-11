@@ -14,6 +14,7 @@ import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -26,7 +27,6 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayer
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -268,25 +268,23 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
             Vector3d targetPos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             Vector3f targetRot = new Vector3f(0, loc.getYaw(), 0);
             
-            // Execute on the CURRENT world's thread (where player is now)
-            world.execute(() -> {
-                if (!ref.isValid()) return;
-                
-                // ALWAYS include world in Teleport constructor (even for same-world)
-                Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
-                
-                // Use the CURRENT world's store (where player is now)
-                store.putComponent(ref, Teleport.getComponentType(), teleport);
-                
-                if (finalCostService != null) {
-                    finalCostService.charge(ctx, player, "warp", finalCost);
+            // Pre-load destination chunk before teleporting to prevent
+            // "entity moved into unloaded chunk" crash
+            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, store, ref,
+                () -> {
+                    if (finalCostService != null) {
+                        finalCostService.charge(ctx, player, "warp", finalCost);
+                    }
+                    
+                    // Only suppress success message when silent
+                    if (!finalSilent) {
+                        player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warpTeleported", "name", finalWarpName), "#55FF55"));
+                    }
+                },
+                () -> {
+                    player.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
                 }
-                
-                // Only suppress success message when silent
-                if (!finalSilent) {
-                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warpTeleported", "name", finalWarpName), "#55FF55"));
-                }
-            });
+            );
         };
 
         int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, config.warps.warmupSeconds);

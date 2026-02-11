@@ -11,6 +11,7 @@ import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -19,7 +20,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -128,21 +128,19 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             // Save location for /back
             backService.pushLocation(playerId, currentLoc);
 
-            // Execute on the CURRENT world's thread (where player is now)
-            world.execute(() -> {
-                if (!ref.isValid()) return;
-                
-                // ALWAYS include world in Teleport constructor (even for same-world)
-                Teleport teleport = new Teleport(finalTargetWorld, spawnPos, spawnRot);
-                
-                // Use the CURRENT world's store (where player is now)
-                store.putComponent(ref, Teleport.getComponentType(), teleport);
-                
-                // Charge cost AFTER successful teleport
-                CommandPermissionUtil.chargeCost(ctx, player, "spawn", config.spawn.cost);
-                
-                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
-            });
+            // Pre-load destination chunk before teleporting to prevent
+            // "entity moved into unloaded chunk" crash
+            TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, store, ref,
+                () -> {
+                    // Charge cost AFTER successful teleport
+                    CommandPermissionUtil.chargeCost(ctx, player, "spawn", config.spawn.cost);
+                    
+                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
+                },
+                () -> {
+                    player.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
+                }
+            );
             
             // Set cooldown
             cooldownService.setCooldown(COMMAND_NAME, playerId, config.spawn.cooldownSeconds);

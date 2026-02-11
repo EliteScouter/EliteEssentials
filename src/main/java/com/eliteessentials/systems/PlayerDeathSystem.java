@@ -74,7 +74,7 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
 
             PlayerRef playerRef = store.getComponent(ref, playerRefType);
             if (playerRef == null) {
-                logger.info("[PlayerDeathSystem] Ref " + ref + " has no PlayerRef component");
+                // Non-player entity died (mob, NPC, etc.) - skip silently
                 return;
             }
 

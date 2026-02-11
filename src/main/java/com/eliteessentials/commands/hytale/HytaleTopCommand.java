@@ -9,6 +9,7 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -131,15 +132,20 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
         float cardinalYaw = roundToCardinalYaw(yaw);
         Vector3f targetRotation = new Vector3f(0, cardinalYaw, 0);
 
-        Teleport teleport = new Teleport(world, targetPos, targetRotation);
-        store.putComponent(ref, Teleport.getComponentType(), teleport);
-
-        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
-        
-        // Set cooldown after successful teleport
-        if (effectiveCooldown > 0) {
-            cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
-        }
+        // Use safe teleport to ensure chunk is loaded (should be fast since player is in same chunk)
+        TeleportUtil.safeTeleport(world, world, targetPos, targetRotation, store, ref,
+            () -> {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
+                
+                // Set cooldown after successful teleport
+                if (effectiveCooldown > 0) {
+                    cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
+                }
+            },
+            () -> {
+                ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - chunk could not be loaded.", "#FF5555"));
+            }
+        );
     }
 
     /**

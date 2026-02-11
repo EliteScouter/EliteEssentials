@@ -10,6 +10,7 @@ import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -212,14 +213,18 @@ public class AliasService {
             
             Runnable doTeleport = () -> {
                 backService.pushLocation(playerId, currentLoc);
-                world.execute(() -> {
-                    if (!ref.isValid()) return;
-                    store.putComponent(ref, Teleport.getComponentType(), new Teleport(finalTargetWorld, spawnPos, spawnRot));
-                    // Only suppress success message when silent
-                    if (!finalSilent) {
-                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
+                // Pre-load destination chunk before teleporting
+                TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, store, ref,
+                    () -> {
+                        // Only suppress success message when silent
+                        if (!finalSilent) {
+                            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
+                        }
+                    },
+                    () -> {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
                     }
-                });
+                );
                 cooldownService.setCooldown("spawn", playerId, config.spawn.cooldownSeconds);
             };
             
@@ -421,15 +426,19 @@ public class AliasService {
             if (targetWorld == null) targetWorld = world;
             final World finalWorld = targetWorld;
             
-            world.execute(() -> {
-                if (!ref.isValid()) return;
-                Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
-                Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
-                store.putComponent(ref, Teleport.getComponentType(), new Teleport(finalWorld, pos, rot));
-                if (!silent) {
-                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
+            Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
+            Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
+            // Pre-load destination chunk before teleporting
+            TeleportUtil.safeTeleport(world, finalWorld, pos, rot, store, ref,
+                () -> {
+                    if (!silent) {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
+                    }
+                },
+                () -> {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
                 }
-            });
+            );
         }
 
         private void doTop(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, boolean silent) {
@@ -471,16 +480,20 @@ public class AliasService {
                 return;
             }
             final int finalY = topY;
-            world.execute(() -> {
-                if (!ref.isValid()) return;
-                Vector3d newPos = new Vector3d(pos.getX(), finalY, pos.getZ());
-                HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
-                Vector3f rot = hr != null ? new Vector3f(0, hr.getRotation().y, 0) : new Vector3f(0, 0, 0);
-                store.putComponent(ref, Teleport.getComponentType(), new Teleport(world, newPos, rot));
-                if (!silent) {
-                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
+            // Pre-load destination chunk before teleporting
+            Vector3d newPos = new Vector3d(pos.getX(), finalY, pos.getZ());
+            HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
+            Vector3f rot = hr != null ? new Vector3f(0, hr.getRotation().y, 0) : new Vector3f(0, 0, 0);
+            TeleportUtil.safeTeleport(world, world, newPos, rot, store, ref,
+                () -> {
+                    if (!silent) {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
+                    }
+                },
+                () -> {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - chunk could not be loaded.", "#FF5555"));
                 }
-            });
+            );
         }
 
         private void doList(CommandContext ctx, PlayerRef player) {

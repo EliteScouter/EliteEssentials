@@ -11,6 +11,7 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -18,7 +19,6 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -130,28 +130,24 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
             // Always use pitch=0 to keep player upright, preserve yaw for direction
             Vector3f targetRot = new Vector3f(0, destination.getYaw(), 0);
             
-            // CRITICAL: For cross-world teleports, execute on the CURRENT world's thread
-            // and use the CURRENT world's store, but include the TARGET world in the Teleport constructor.
-            // This is how Hytale handles cross-world teleportation.
-            world.execute(() -> {
-                if (!ref.isValid()) return;
-                
-                // ALWAYS include world in Teleport constructor (even for same-world)
-                Teleport teleport = new Teleport(finalWorld, targetPos, targetRot);
-                
-                // Use the CURRENT world's store (where player is now)
-                store.putComponent(ref, Teleport.getComponentType(), teleport);
-                
-                // Charge cost AFTER successful teleport
-                CommandPermissionUtil.chargeCost(ctx, player, "back", config.back.cost);
-                
-                // Set cooldown after successful teleport
-                if (finalEffectiveCooldown > 0) {
-                    cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
+            // Pre-load destination chunk before teleporting to prevent
+            // "entity moved into unloaded chunk" crash
+            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, store, ref,
+                () -> {
+                    // Charge cost AFTER successful teleport
+                    CommandPermissionUtil.chargeCost(ctx, player, "back", config.back.cost);
+                    
+                    // Set cooldown after successful teleport
+                    if (finalEffectiveCooldown > 0) {
+                        cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
+                    }
+                    
+                    player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
+                },
+                () -> {
+                    player.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
                 }
-                
-                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
-            });
+            );
         };
 
         // Get effective warmup (check bypass permission)

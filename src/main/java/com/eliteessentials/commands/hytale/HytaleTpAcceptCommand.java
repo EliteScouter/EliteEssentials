@@ -11,6 +11,7 @@ import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -19,7 +20,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -176,28 +176,34 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
             if (request.getType() == TpaRequest.Type.TPA) {
                 // Requester teleports to acceptor
                 backService.pushLocation(request.getRequesterId(), requesterLoc);
-                // Execute on acceptor's world (where requester is going)
-                world.execute(() -> {
-                    if (!requesterRef.isValid()) return;
-                    Teleport teleport = new Teleport(world, targetPos, new Vector3f(0, targetYaw, 0));
-                    requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
-                    // Charge cost AFTER successful teleport
-                    CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
-                    requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
-                });
+                // Pre-load destination chunk before teleporting
+                TeleportUtil.safeTeleport(world, world, targetPos, new Vector3f(0, targetYaw, 0),
+                    requesterStore, requesterRef,
+                    () -> {
+                        // Charge cost AFTER successful teleport
+                        CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
+                        requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                    },
+                    () -> {
+                        requester.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
+                    }
+                );
             } else {
                 // Acceptor teleports to requester (TPAHERE)
                 backService.pushLocation(playerId, targetLoc);
-                // Execute on requester's world (where acceptor is going)
-                world.execute(() -> {
-                    if (!ref.isValid()) return;
-                    Teleport teleport = new Teleport(world, requesterPos, new Vector3f(0, reqRot.y, 0));
-                    store.putComponent(ref, Teleport.getComponentType(), teleport);
-                    // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
-                    CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
-                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
-                    requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
-                });
+                // Pre-load destination chunk before teleporting
+                TeleportUtil.safeTeleport(world, world, requesterPos, new Vector3f(0, reqRot.y, 0),
+                    store, ref,
+                    () -> {
+                        // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
+                        CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
+                        requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                    },
+                    () -> {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
+                    }
+                );
             }
         };
         
@@ -264,25 +270,33 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     if (request.getType() == TpaRequest.Type.TPA) {
                         // Requester teleports to acceptor (cross-world)
                         backService.pushLocation(request.getRequesterId(), requesterLoc);
-                        requesterWorld.execute(() -> {
-                            if (!requesterRef.isValid()) return;
-                            Teleport teleport = new Teleport(acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0));
-                            requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
-                            // Charge cost AFTER successful teleport
-                            CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
-                            requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
-                        });
+                        // Pre-load destination chunk before teleporting
+                        TeleportUtil.safeTeleport(requesterWorld, acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0),
+                            requesterStore, requesterRef,
+                            () -> {
+                                // Charge cost AFTER successful teleport
+                                CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
+                                requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                            },
+                            () -> {
+                                requester.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
+                            }
+                        );
                     } else {
                         // Acceptor teleports to requester (TPAHERE cross-world)
                         backService.pushLocation(playerId, targetLoc);
-                        acceptorWorld.execute(() -> {
-                            if (!ref.isValid()) return;
-                            Teleport teleport = new Teleport(requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0));
-                            store.putComponent(ref, Teleport.getComponentType(), teleport);
-                            // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
-                            CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
-                            player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
-                        });
+                        // Pre-load destination chunk before teleporting
+                        TeleportUtil.safeTeleport(acceptorWorld, requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0),
+                            store, ref,
+                            () -> {
+                                // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
+                                CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
+                                player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
+                            },
+                            () -> {
+                                player.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
+                            }
+                        );
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
                     }
                 };
