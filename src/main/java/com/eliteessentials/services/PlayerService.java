@@ -6,6 +6,9 @@ import com.eliteessentials.storage.PlayerFileStorage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -21,10 +24,23 @@ public class PlayerService {
     
     // Track session start times for play time calculation
     private final Map<UUID, Long> sessionStartTimes = new ConcurrentHashMap<>();
+    
+    // Periodic save scheduler for crash protection
+    private ScheduledExecutorService periodicSaveScheduler;
+    
+    // Reference to reward service for session sync during periodic flush
+    private PlayTimeRewardService playTimeRewardService;
 
     public PlayerService(PlayerFileStorage storage, ConfigManager configManager) {
         this.storage = storage;
         this.configManager = configManager;
+    }
+    
+    /**
+     * Set the play time reward service for session sync during periodic flushes.
+     */
+    public void setPlayTimeRewardService(PlayTimeRewardService service) {
+        this.playTimeRewardService = service;
     }
 
     /**
@@ -215,6 +231,91 @@ public class PlayerService {
         long days = hours / 24;
         hours = hours % 24;
         return days + "d " + hours + "h";
+    }
+
+    /**
+     * Start periodic play time flushing to protect against crash data loss.
+     * Snapshots each online player's session time, persists it, and resets the session timer.
+     */
+    public void startPeriodicSave() {
+        stopPeriodicSave();
+        
+        int intervalMinutes = configManager.getConfig().playTimeRewards.periodicSaveMinutes;
+        if (intervalMinutes <= 0) {
+            return;
+        }
+        
+        periodicSaveScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "EliteEssentials-PeriodicPlayTimeSave");
+            t.setDaemon(true);
+            return t;
+        });
+        
+        periodicSaveScheduler.scheduleAtFixedRate(this::flushPlayTime,
+                intervalMinutes, intervalMinutes, TimeUnit.MINUTES);
+        
+        logger.info("Periodic play time save started (every " + intervalMinutes + " minutes)");
+    }
+    
+    /**
+     * Stop the periodic save scheduler.
+     */
+    public void stopPeriodicSave() {
+        if (periodicSaveScheduler != null) {
+            periodicSaveScheduler.shutdown();
+            try {
+                if (!periodicSaveScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    periodicSaveScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                periodicSaveScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            periodicSaveScheduler = null;
+        }
+    }
+    
+    /**
+     * Flush accumulated session play time for all online players to disk.
+     * Resets session start times so the next flush only captures the delta.
+     */
+    private void flushPlayTime() {
+        try {
+            long now = System.currentTimeMillis();
+            int flushed = 0;
+            
+            for (Map.Entry<UUID, Long> entry : sessionStartTimes.entrySet()) {
+                UUID playerId = entry.getKey();
+                long sessionStart = entry.getValue();
+                long sessionSeconds = (now - sessionStart) / 1000;
+                
+                if (sessionSeconds <= 0) {
+                    continue;
+                }
+                
+                PlayerFile data = storage.getPlayer(playerId);
+                if (data != null) {
+                    data.addPlayTime(sessionSeconds);
+                    data.updateLastSeen();
+                    storage.saveAndMarkDirty(playerId);
+                    flushed++;
+                }
+                
+                // Reset session start to now so next flush only captures the delta
+                entry.setValue(now);
+            }
+            
+            // Keep reward service session tracking in sync to prevent double-counting
+            if (playTimeRewardService != null) {
+                playTimeRewardService.resetSessionStarts(now);
+            }
+            
+            if (configManager.isDebugEnabled()) {
+                logger.info("[PeriodicSave] Flushed play time for " + flushed + " online player(s)");
+            }
+        } catch (Exception e) {
+            logger.warning("Error during periodic play time save: " + e.getMessage());
+        }
     }
 
     /**

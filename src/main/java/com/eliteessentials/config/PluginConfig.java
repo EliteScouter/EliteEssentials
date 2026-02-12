@@ -1184,5 +1184,13 @@ public class PluginConfig {
          * Do not modify manually unless you know what you're doing.
          */
         public long enabledTimestamp = 0;
+        
+        /**
+         * Periodically save online players' play time to disk (in minutes).
+         * Protects against play time loss during server crashes.
+         * Set to 0 to disable (play time only saves on disconnect).
+         * Recommended: 5-10 minutes.
+         */
+        public int periodicSaveMinutes = 5;
     }
 }

@@ -14,7 +14,8 @@ import java.util.logging.Logger;
 
 /**
  * Handles loading and saving discord information from discord.json.
- * Stores multi-line discord info with color code support and clickable links.
+ * Stores multi-line discord info with color code support, clickable links,
+ * and labeled links using [display text](url) syntax.
  */
 public class DiscordStorage {
     
@@ -92,6 +93,8 @@ public class DiscordStorage {
     /**
      * Create default discord info with attractive formatting.
      * THIS IS AN EXAMPLE - server owners should customize this!
+     * 
+     * Supports labeled links: [Display Text](https://url) for clickable text.
      */
     private void createDefaultDiscord() {
         discordLines = new ArrayList<>();
@@ -104,10 +107,9 @@ public class DiscordStorage {
         discordLines.add("");
         discordLines.add("&aWELCOME TO EliteEssentials!");
         discordLines.add("");
-        discordLines.add("&7Please join our discord at:");
-        discordLines.add("&bhttps://discord.gg/CEP7XuH2D2");
+        discordLines.add("&7Join our community: &b[CLICK HERE](https://discord.gg/CEP7XuH2D2)");
         discordLines.add("");
-        discordLines.add("&7Click the link above to join!");
+        discordLines.add("&7You can also use plain URLs: &bhttps://discord.gg/CEP7XuH2D2");
         discordLines.add("");
     }
     

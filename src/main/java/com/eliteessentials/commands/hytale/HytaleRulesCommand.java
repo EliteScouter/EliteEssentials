@@ -21,7 +21,7 @@ import javax.annotation.Nonnull;
 /**
  * /rules - Display the server rules.
  * 
- * Supports color codes (&0-f, &l, &o, &r) and clickable URLs.
+ * Supports color codes (&0-f, &l, &o, &r), clickable URLs, and labeled links [text](url).
  * 
  * Usage: /rules
  * Permission: eliteessentials.command.misc.rules (Everyone)

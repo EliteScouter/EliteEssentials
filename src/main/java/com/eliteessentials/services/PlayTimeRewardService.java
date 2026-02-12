@@ -124,6 +124,17 @@ public class PlayTimeRewardService {
     public void onPlayerQuit(UUID playerId) {
         sessionStartTimes.remove(playerId);
     }
+    
+    /**
+     * Reset session start times after a periodic play time flush.
+     * Called by PlayerService to keep reward session tracking in sync
+     * when accumulated play time is flushed to disk mid-session.
+     */
+    public void resetSessionStarts(long newStartTime) {
+        for (UUID playerId : sessionStartTimes.keySet()) {
+            sessionStartTimes.put(playerId, newStartTime);
+        }
+    }
 
     /**
      * Check all online players for eligible rewards.

@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 /**
  * /motd - Display the Message of the Day.
  * 
- * Supports color codes (&0-f, &l, &o, &r) and clickable URLs.
+ * Supports color codes (&0-f, &l, &o, &r), clickable URLs, and labeled links [text](url).
  * Placeholders: {player}, {server}, {world}, {playercount}
  * 
  * Usage: /motd

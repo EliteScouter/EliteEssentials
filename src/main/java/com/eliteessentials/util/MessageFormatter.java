@@ -13,11 +13,17 @@ import java.util.regex.Pattern;
 
 /**
  * Utility for formatting messages with Minecraft-style color codes and clickable links.
- * Supports color codes (&0-f), hex colors (&#RRGGBB), formatting codes, and automatic URL detection.
+ * Supports color codes (&0-f), hex colors (&#RRGGBB), formatting codes, automatic URL detection,
+ * and labeled links with [display text](url) syntax.
  * 
  * IMPORTANT: Hytale chat only supports &l (bold) and &r (reset) for formatting.
  * Other formatting codes (&o italic, &m strikethrough, &n underline, &k obfuscated) 
  * are parsed but DO NOT render in Hytale's chat system.
+ * 
+ * Labeled link syntax:
+ * - [DISCORD](https://discord.gg/invite) = Shows "DISCORD" as clickable text
+ * - &b[Click Here](https://example.com) = Colored clickable text
+ * - Color codes inside display text are supported: [&bClick &aHere](https://example.com)
  * 
  * Hex color examples:
  * - &#FF0000 = Red
@@ -30,6 +36,9 @@ public class MessageFormatter {
     private static final Map<Character, Color> COLOR_MAP = new HashMap<>();
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(?:https?://|www\\.)[\\w\\-._~:/?#\\[\\]@!'()*+,;=%]+", Pattern.CASE_INSENSITIVE);
+    // Labeled link syntax: [display text](url)
+    private static final Pattern LABELED_LINK_PATTERN = Pattern.compile(
+            "\\[([^\\]]+)\\]\\((https?://[^)]+)\\)");
     private static final Color DEFAULT_COLOR = Color.WHITE;
     
     static {
@@ -52,10 +61,11 @@ public class MessageFormatter {
     }
     
     /**
-     * Formats text with color codes and converts URLs to clickable links.
+     * Formats text with color codes, converts URLs to clickable links,
+     * and supports labeled links with [text](url) syntax.
      * Supports multi-line text with \n separator.
      * 
-     * @param text Text with color codes (& prefix)
+     * @param text Text with color codes (& prefix) and optional labeled links
      * @return Formatted Message object (never null)
      */
     @Nonnull
@@ -107,6 +117,205 @@ public class MessageFormatter {
     
     @Nonnull
     private static Message processLine(String line) {
+        if (line == null || line.isEmpty()) {
+            return Message.raw("");
+        }
+        
+        // Check for labeled links [text](url) - process these first by splitting the line
+        Matcher labeledMatcher = LABELED_LINK_PATTERN.matcher(line);
+        if (labeledMatcher.find()) {
+            return processLineWithLabeledLinks(line);
+        }
+        
+        return processLineSimple(line);
+    }
+    
+    /**
+     * Process a line that contains labeled links like [DISCORD](https://discord.gg/xyz).
+     * Splits the line around labeled links, processes each text segment for color codes
+     * and bare URLs, then assembles the final message with labeled links properly linked.
+     */
+    @Nonnull
+    private static Message processLineWithLabeledLinks(String line) {
+        List<Message> messages = new ArrayList<>();
+        Matcher matcher = LABELED_LINK_PATTERN.matcher(line);
+        
+        // Track the current color/formatting state across segments so labeled links
+        // inherit the color codes that precede them
+        Color currentColor = DEFAULT_COLOR;
+        boolean bold = false;
+        boolean italic = false;
+        
+        int lastEnd = 0;
+        while (matcher.find()) {
+            // Process text before this labeled link (may contain color codes and bare URLs)
+            String before = line.substring(lastEnd, matcher.start());
+            if (!before.isEmpty()) {
+                // Parse color state from this segment to carry forward
+                ColorState state = parseColorState(before, currentColor, bold, italic);
+                currentColor = state.color;
+                bold = state.bold;
+                italic = state.italic;
+                
+                messages.add(processLineSimple(before));
+            }
+            
+            // Build the labeled link message with current formatting state
+            String displayText = matcher.group(1);
+            String url = matcher.group(2);
+            
+            // The display text itself may contain color codes, so process it
+            // but we need to apply the link to the whole thing
+            messages.add(processLabeledLinkText(displayText, url, currentColor, bold, italic));
+            
+            lastEnd = matcher.end();
+        }
+        
+        // Process remaining text after last labeled link
+        String remaining = line.substring(lastEnd);
+        if (!remaining.isEmpty()) {
+            messages.add(processLineSimple(remaining));
+        }
+        
+        return messages.isEmpty() ? Message.raw("") : Message.join(messages.toArray(new Message[0]));
+    }
+    
+    /**
+     * Process the display text of a labeled link, applying color codes within it
+     * and attaching the link URL to each segment.
+     */
+    @Nonnull
+    private static Message processLabeledLinkText(String displayText, String url, 
+                                                   Color inheritedColor, boolean inheritedBold, boolean inheritedItalic) {
+        // Parse color codes within the display text
+        List<ColorSegment> segments = parseColorSegments(displayText, inheritedColor, inheritedBold, inheritedItalic);
+        
+        if (segments.isEmpty()) {
+            return buildMessage(displayText, inheritedColor, inheritedBold, inheritedItalic, url);
+        }
+        
+        // Build each segment with the link attached
+        List<Message> messages = new ArrayList<>();
+        for (ColorSegment seg : segments) {
+            if (!seg.text.isEmpty()) {
+                messages.add(buildMessage(seg.text, seg.color, seg.bold, seg.italic, url));
+            }
+        }
+        
+        return messages.isEmpty() ? Message.raw("") : Message.join(messages.toArray(new Message[0]));
+    }
+    
+    /**
+     * Parse color codes in text and return segments, without handling URLs.
+     * Used for labeled link display text where we don't want URL auto-detection.
+     */
+    private static List<ColorSegment> parseColorSegments(String text, Color startColor, boolean startBold, boolean startItalic) {
+        List<ColorSegment> segments = new ArrayList<>();
+        Color currentColor = startColor;
+        boolean bold = startBold;
+        boolean italic = startItalic;
+        int textStart = 0;
+        
+        int i = 0;
+        while (i < text.length()) {
+            if ((text.charAt(i) == '&' || text.charAt(i) == '§') && i + 1 < text.length()) {
+                // Check for hex color: &#RRGGBB
+                if (i + 7 < text.length() && text.charAt(i + 1) == '#') {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        if (i > textStart) {
+                            segments.add(new ColorSegment(text.substring(textStart, i), currentColor, bold, italic));
+                        }
+                        currentColor = new Color(Integer.parseInt(hexPart, 16));
+                        i += 8;
+                        textStart = i;
+                        continue;
+                    }
+                }
+                // Check for simple color code: &X
+                char code = Character.toLowerCase(text.charAt(i + 1));
+                if (COLOR_MAP.containsKey(code) || code == 'r' || code == 'l' || code == 'o' || code == 'k' || code == 'm' || code == 'n') {
+                    if (i > textStart) {
+                        segments.add(new ColorSegment(text.substring(textStart, i), currentColor, bold, italic));
+                    }
+                    if (COLOR_MAP.containsKey(code)) {
+                        currentColor = COLOR_MAP.get(code);
+                    } else if (code == 'r') {
+                        currentColor = DEFAULT_COLOR;
+                        bold = false;
+                        italic = false;
+                    } else if (code == 'l') {
+                        bold = true;
+                    } else if (code == 'o') {
+                        italic = true;
+                    }
+                    i += 2;
+                    textStart = i;
+                    continue;
+                }
+            }
+            i++;
+        }
+        
+        if (textStart < text.length()) {
+            segments.add(new ColorSegment(text.substring(textStart), currentColor, bold, italic));
+        }
+        
+        return segments;
+    }
+    
+    /**
+     * Parse color codes in text and return the final color/formatting state.
+     * Used to carry formatting across labeled link boundaries.
+     */
+    private static ColorState parseColorState(String text, Color startColor, boolean startBold, boolean startItalic) {
+        Color currentColor = startColor;
+        boolean bold = startBold;
+        boolean italic = startItalic;
+        
+        int i = 0;
+        while (i < text.length()) {
+            if ((text.charAt(i) == '&' || text.charAt(i) == '§') && i + 1 < text.length()) {
+                if (i + 7 < text.length() && text.charAt(i + 1) == '#') {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        currentColor = new Color(Integer.parseInt(hexPart, 16));
+                        i += 8;
+                        continue;
+                    }
+                }
+                char code = Character.toLowerCase(text.charAt(i + 1));
+                if (COLOR_MAP.containsKey(code)) {
+                    currentColor = COLOR_MAP.get(code);
+                    i += 2;
+                    continue;
+                } else if (code == 'r') {
+                    currentColor = DEFAULT_COLOR;
+                    bold = false;
+                    italic = false;
+                    i += 2;
+                    continue;
+                } else if (code == 'l') {
+                    bold = true;
+                    i += 2;
+                    continue;
+                } else if (code == 'o') {
+                    italic = true;
+                    i += 2;
+                    continue;
+                }
+            }
+            i++;
+        }
+        
+        return new ColorState(currentColor, bold, italic);
+    }
+    
+    /**
+     * Process a line with no labeled links - handles color codes and bare URL auto-detection.
+     */
+    @Nonnull
+    private static Message processLineSimple(String line) {
         if (line == null || line.isEmpty()) {
             return Message.raw("");
         }
@@ -322,6 +531,21 @@ public class MessageFormatter {
     }
     
     /**
+     * Helper class to track color/formatting state across labeled link boundaries.
+     */
+    private static class ColorState {
+        final Color color;
+        final boolean bold;
+        final boolean italic;
+        
+        ColorState(Color color, boolean bold, boolean italic) {
+            this.color = color;
+            this.bold = bold;
+            this.italic = italic;
+        }
+    }
+    
+    /**
      * Converts text with color codes to a plain string, stripping all formatting.
      * Used for translation overrides where color codes may not be supported.
      * 
@@ -333,6 +557,9 @@ public class MessageFormatter {
         if (text == null || text.isEmpty()) {
             return "";
         }
+        
+        // Replace labeled links [text](url) with just the display text
+        text = LABELED_LINK_PATTERN.matcher(text).replaceAll("$1");
         
         StringBuilder result = new StringBuilder();
         int i = 0;

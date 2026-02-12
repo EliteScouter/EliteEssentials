@@ -21,7 +21,7 @@ import javax.annotation.Nonnull;
 /**
  * /discord - Display the server's discord information.
  * 
- * Supports color codes (&0-f, &l, &o, &r) and clickable URLs.
+ * Supports color codes (&0-f, &l, &o, &r), clickable URLs, and labeled links [text](url).
  * 
  * Usage: /discord
  * Permission: eliteessentials.command.misc.discord (Everyone)

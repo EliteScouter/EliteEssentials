@@ -206,6 +206,9 @@ public class EliteEssentials extends JavaPlugin {
         playTimeRewardService = new PlayTimeRewardService(playTimeRewardStorage, playerService, configManager);
         playTimeRewardService.setPlayerFileStorage(playerFileStorage);
         
+        // Cross-link for session sync during periodic play time flushes
+        playerService.setPlayTimeRewardService(playTimeRewardService);
+        
         // Initialize VaultUnlocked integration (optional - for cross-plugin economy support)
         try {
             vaultUnlockedIntegration = new VaultUnlockedIntegration(configManager, playerService);
@@ -333,6 +336,9 @@ public class EliteEssentials extends JavaPlugin {
             getLogger().at(Level.INFO).log("PlayTime Rewards service started.");
         }
         
+        // Start periodic play time save (crash protection)
+        playerService.startPeriodicSave();
+        
         // Initialize VaultUnlocked integration (economy cross-plugin support)
         if (configManager.getConfig().economy.enabled && vaultUnlockedIntegration != null) {
             vaultUnlockedIntegration.initialize();
@@ -403,6 +409,9 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (playTimeRewardService != null) {
             playTimeRewardService.stop();
+        }
+        if (playerService != null) {
+            playerService.stopPeriodicSave();
         }
         if (vaultUnlockedIntegration != null) {
             vaultUnlockedIntegration.shutdown();
@@ -794,6 +803,11 @@ public class EliteEssentials extends JavaPlugin {
         // Reload playtime rewards
         if (playTimeRewardService != null) {
             playTimeRewardService.reload();
+        }
+        
+        // Restart periodic play time save (interval may have changed)
+        if (playerService != null) {
+            playerService.startPeriodicSave();
         }
         
         getLogger().at(Level.INFO).log("Configuration reloaded.");

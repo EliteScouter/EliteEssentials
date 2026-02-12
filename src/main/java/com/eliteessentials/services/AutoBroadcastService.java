@@ -263,7 +263,7 @@ public class AutoBroadcastService {
         example.setRandom(false);
         example.setRequirePlayers(true);
         List<String> exampleMessages = new ArrayList<>();
-        exampleMessages.add("&5&l[Discord]&7 - &fJoin our community!\n&7Chat, updates, events & support.\n&bhttps://discord.gg/CEP7XuH2D2");
+        exampleMessages.add("&5&l[Discord]&7 - &fJoin our community!\n&7Chat, updates, events & support.\n&7Join: &b[CLICK HERE](https://discord.gg/CEP7XuH2D2)");
         exampleMessages.add("&6&l[Tip]&7 - &fNeed help getting started?\n&7Check out our commands with &e/help\n&7Set your home with &e/sethome");
         exampleMessages.add("&a&l[Rules]&7 - &fRemember to follow the rules!\n&7Type &e/rules &7to view them.\n&7Be respectful and have fun!");
         example.setMessages(exampleMessages);

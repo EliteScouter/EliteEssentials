@@ -6,9 +6,17 @@ All notable changes to EliteEssentials will be documented in this file.
 
 (No changes currently.)
 
-## [1.1.9] - 2026-02-10
+## [1.1.9] - 2026-02-11
 
 ### Added
+
+**Periodic Play Time Save** - Crash protection for player play time
+* New `periodicPlayTimeSaveMinutes` config option (under General settings, default: `0` = disabled)
+* When enabled, flushes accumulated session play time to disk at the configured interval for all online players
+* Protects against play time loss during server crashes (previously, the entire session was lost if the server crashed before a clean disconnect)
+* Automatically syncs with PlayTime Reward Service session tracking to prevent double-counting
+* Supports `/ee reload` to change the interval without restarting
+* Recommended value: `5` to `10` minutes
 
 **Safe Teleport Utility** - New `TeleportUtil` class for chunk-safe teleportation
 * New shared utility `TeleportUtil.safeTeleport()` ensures the destination chunk is loaded before moving a player
@@ -16,6 +24,15 @@ All notable changes to EliteEssentials will be documented in this file.
 * Slow path: loads the chunk asynchronously via `world.getChunkAsync()`, then teleports on completion
 * If the chunk fails to load, the player receives an error message instead of crashing the world
 * Debug logging shows chunk load status when debug mode is enabled
+
+**Labeled Link Syntax** - Clickable display text with custom URLs
+* New `[display text](url)` syntax for all formatted messages
+* Shows custom text (e.g., "DISCORD") that opens a URL when clicked, instead of showing the raw URL
+* Works everywhere `MessageFormatter` is used: autobroadcasts, `/discord`, `/motd`, `/rules`, `/broadcast`, join messages, death messages, and more
+* Color codes work both outside and inside the brackets: `&b[DISCORD](https://discord.gg/xyz)` or `[&b&lClick Here](https://example.com)`
+* Inherits surrounding color/formatting state so links blend naturally into styled messages
+* Plain URL auto-linking still works as before alongside the new syntax
+* Updated default examples in `autobroadcast.json` and `discord.json` to showcase the new syntax
 
 ### Fixed
 
