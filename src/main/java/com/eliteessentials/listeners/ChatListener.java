@@ -5,6 +5,8 @@ import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.services.IgnoreService;
+import com.eliteessentials.services.MuteService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
@@ -23,9 +25,19 @@ public class ChatListener {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final ConfigManager configManager;
+    private IgnoreService ignoreService;
+    private MuteService muteService;
     
     public ChatListener(ConfigManager configManager) {
         this.configManager = configManager;
+    }
+    
+    public void setIgnoreService(IgnoreService ignoreService) {
+        this.ignoreService = ignoreService;
+    }
+    
+    public void setMuteService(MuteService muteService) {
+        this.muteService = muteService;
     }
     
     /**
@@ -72,6 +84,13 @@ public class ChatListener {
         // This must happen before any processing to ensure no other handlers see it
         event.setCancelled(true);
         
+        // Block muted players from chatting
+        if (muteService != null && muteService.isMuted(sender.getUuid())) {
+            sender.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("mutedBlocked"), "#FF5555"));
+            return;
+        }
+        
         String playerName = sender.getUsername();
         String originalMessage = event.getContent();
         
@@ -102,6 +121,11 @@ public class ChatListener {
         
         // Broadcast the formatted message to all players
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+            // Skip players who are ignoring the sender
+            if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
+                continue;
+            }
+            
             String playerFormattedMessage = formattedMessage;
             
             if (isPapiAvailable) {

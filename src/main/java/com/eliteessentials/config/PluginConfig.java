@@ -65,6 +65,8 @@ public class PluginConfig {
     public AfkConfig afk = new AfkConfig();
     public JoindateConfig joindate = new JoindateConfig();
     public PlaytimeConfig playtime = new PlaytimeConfig();
+    public IgnoreConfig ignore = new IgnoreConfig();
+    public MuteConfig mute = new MuteConfig();
     
     // ==================== MESSAGES ====================
     
@@ -444,6 +446,31 @@ public class PluginConfig {
         messages.put("playtimeSelf", "&7Your total playtime: &e{time}&7.");
         messages.put("playtimeOther", "&f{player}&7's total playtime: &e{time}&7.");
         messages.put("playtimeNeverJoined", "&c{player} &7has never joined this server.");
+        
+        // ==================== IGNORE ====================
+        messages.put("ignoreUsage", "&cUsage: &e/ignore <player> &7or &e/ignore list");
+        messages.put("ignoreSelf", "&cYou cannot ignore yourself.");
+        messages.put("ignoreAdded", "&aYou are now ignoring &f{player}&a.");
+        messages.put("ignoreAlready", "&cYou are already ignoring &f{player}&c.");
+        messages.put("ignoreListEmpty", "&7You are not ignoring anyone.");
+        messages.put("ignoreListHeader", "&b=== &fIgnored Players &7({count}) &b===");
+        messages.put("unignoreUsage", "&cUsage: &e/unignore <player> &7or &e/unignore all");
+        messages.put("unignoreRemoved", "&aYou are no longer ignoring &f{player}&a.");
+        messages.put("unignoreNotIgnored", "&cYou are not ignoring &f{player}&c.");
+        messages.put("unignoreAll", "&aUnignored &e{count} &aplayer(s).");
+        
+        // ==================== MUTE ====================
+        messages.put("muteUsage", "&cUsage: &e/mute <player> [reason]");
+        messages.put("muteSelf", "&cYou cannot mute yourself.");
+        messages.put("muteSuccess", "&a{player} &ahas been muted.");
+        messages.put("muteAlready", "&c{player} &cis already muted.");
+        messages.put("mutedNotify", "&cYou have been muted by an administrator.");
+        messages.put("mutedNotifyReason", "&cYou have been muted. Reason: &e{reason}");
+        messages.put("mutedBlocked", "&cYou are muted and cannot send messages.");
+        messages.put("unmuteUsage", "&cUsage: &e/unmute <player>");
+        messages.put("unmuteSuccess", "&a{player} &ahas been unmuted.");
+        messages.put("unmuteNotMuted", "&c{player} &cis not muted.");
+        messages.put("unmutedNotify", "&aYou have been unmuted.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -1197,6 +1224,20 @@ public class PluginConfig {
     
     public static class PlaytimeConfig {
         /** Enable/disable the /playtime command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== IGNORE ====================
+    
+    public static class IgnoreConfig {
+        /** Enable/disable the /ignore and /unignore commands */
+        public boolean enabled = true;
+    }
+    
+    // ==================== MUTE ====================
+    
+    public static class MuteConfig {
+        /** Enable/disable the /mute and /unmute commands */
         public boolean enabled = true;
     }
     

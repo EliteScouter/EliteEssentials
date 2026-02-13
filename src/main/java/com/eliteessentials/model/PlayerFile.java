@@ -38,6 +38,9 @@ public class PlayerFile {
     // Playtime reward claims
     private PlaytimeClaims playtimeClaims = new PlaytimeClaims();
     
+    // Ignored players (UUIDs of players whose messages are hidden)
+    private Set<UUID> ignoredPlayers = new HashSet<>();
+    
     // Mail inbox
     private List<MailMessage> mailbox = new ArrayList<>();
     
@@ -300,6 +303,39 @@ public class PlayerFile {
     
     public void clearMailbox() {
         getMailbox().clear();
+    }
+    
+    // ==================== Ignored Players ====================
+    
+    public Set<UUID> getIgnoredPlayers() {
+        if (ignoredPlayers == null) {
+            ignoredPlayers = new HashSet<>();
+        }
+        return ignoredPlayers;
+    }
+    
+    public void setIgnoredPlayers(Set<UUID> ignoredPlayers) {
+        this.ignoredPlayers = ignoredPlayers != null ? ignoredPlayers : new HashSet<>();
+    }
+    
+    public boolean isIgnoring(UUID playerId) {
+        return getIgnoredPlayers().contains(playerId);
+    }
+    
+    public boolean addIgnored(UUID playerId) {
+        return getIgnoredPlayers().add(playerId);
+    }
+    
+    public boolean removeIgnored(UUID playerId) {
+        return getIgnoredPlayers().remove(playerId);
+    }
+    
+    public void clearIgnored() {
+        getIgnoredPlayers().clear();
+    }
+    
+    public int getIgnoredCount() {
+        return getIgnoredPlayers().size();
     }
     
     // ==================== Inner Classes ====================

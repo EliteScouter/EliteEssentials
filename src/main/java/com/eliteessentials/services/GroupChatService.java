@@ -43,11 +43,21 @@ public class GroupChatService {
     private final Object fileLock = new Object();
     
     private List<GroupChat> groupChats = new ArrayList<>();
+    private MuteService muteService;
+    private IgnoreService ignoreService;
     
     public GroupChatService(File dataFolder, ConfigManager configManager) {
         this.dataFolder = dataFolder;
         this.configManager = configManager;
         load();
+    }
+    
+    public void setMuteService(MuteService muteService) {
+        this.muteService = muteService;
+    }
+    
+    public void setIgnoreService(IgnoreService ignoreService) {
+        this.ignoreService = ignoreService;
     }
     
     /**
@@ -276,6 +286,10 @@ public class GroupChatService {
                                     if (!isPlayerInRange(player, worldName, senderWorldName, senderPos, groupChat.getRange())) {
                                         continue;
                                     }
+                                }
+                                // Skip recipients who are ignoring the sender
+                                if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
+                                    continue;
                                 }
                                 recipients.add(player);
                             }

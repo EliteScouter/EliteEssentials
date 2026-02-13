@@ -6,7 +6,7 @@ All notable changes to EliteEssentials will be documented in this file.
 
 (No changes currently.)
 
-## [1.1.9] - 2026-02-12
+## [1.1.9] - UPCOMING
 
 ### Added
 
@@ -57,6 +57,30 @@ All notable changes to EliteEssentials will be documented in this file.
 * Slow path: loads the chunk asynchronously via `world.getChunkAsync()`, then teleports on completion
 * If the chunk fails to load, the player receives an error message instead of crashing the world
 * Debug logging shows chunk load status when debug mode is enabled
+
+**Ignore System** - Block messages from specific players
+* `/ignore <player>` - Ignore a player (blocks their public and private messages)
+* `/ignore list` - View all players you are currently ignoring
+* `/unignore <player>` - Stop ignoring a specific player
+* `/unignore all` - Stop ignoring all players (reset)
+* Ignored players' public chat messages are hidden only for you (other players still see them)
+* Private messages from ignored players are silently blocked (sender sees it as "sent" but you don't receive it)
+* Ignore data stored per-player in `players/<uuid>.json` (persists across restarts)
+* Permissions: `eliteessentials.command.misc.ignore` (Everyone)
+* Config section: `ignore.enabled` (default: true)
+* Configurable messages: `ignoreUsage`, `ignoreSelf`, `ignoreAdded`, `ignoreAlready`, `ignoreListEmpty`, `ignoreListHeader`, `unignoreUsage`, `unignoreRemoved`, `unignoreNotIgnored`, `unignoreAll`
+
+**Mute System** - Admin command to mute players server-wide
+* `/mute <player> [reason]` - Mute a player with optional reason
+* `/unmute <player>` - Unmute a player
+* Muted players cannot send public chat messages or private messages
+* Muted players are notified when they are muted/unmuted
+* Optional reason displayed to the muted player
+* Mute data stored server-wide in `mutes.json` (persists across restarts)
+* Supports `/ee reload` to reload mute data
+* Permissions: `eliteessentials.admin.mute` (Admin), `eliteessentials.admin.unmute` (Admin)
+* Config section: `mute.enabled` (default: true)
+* Configurable messages: `muteUsage`, `muteSelf`, `muteSuccess`, `muteAlready`, `mutedNotify`, `mutedNotifyReason`, `mutedBlocked`, `unmuteUsage`, `unmuteSuccess`, `unmuteNotMuted`, `unmutedNotify`
 
 **Labeled Link Syntax** - Clickable display text with custom URLs
 * New `[display text](url)` syntax for all formatted messages

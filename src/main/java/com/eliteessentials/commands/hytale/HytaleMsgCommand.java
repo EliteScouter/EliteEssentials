@@ -1,6 +1,7 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
+import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.MessageService;
 import com.eliteessentials.util.CommandPermissionUtil;
@@ -82,6 +83,25 @@ public class HytaleMsgCommand extends AbstractPlayerCommand {
 
         if (target.getUuid().equals(senderId)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("msgSelf"), "#FF5555"));
+            return;
+        }
+
+        // Block muted players from sending private messages
+        var muteService = EliteEssentials.getInstance().getMuteService();
+        if (muteService != null && muteService.isMuted(senderId)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("mutedBlocked"), "#FF5555"));
+            return;
+        }
+
+        // Check if the target is ignoring the sender
+        var ignoreService = EliteEssentials.getInstance().getIgnoreService();
+        if (ignoreService != null && ignoreService.isIgnoring(target.getUuid(), senderId)) {
+            // Silently fail - sender sees their message as sent but target doesn't receive it
+            String toSender = configManager.getMessage("msgSent",
+                "player", target.getUsername(), "message", message);
+            ctx.sendMessage(MessageFormatter.formatWithFallback(toSender, "#D8BFD8"));
+            messageService.recordMessage(senderId, target.getUuid());
             return;
         }
 

@@ -112,6 +112,22 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - Fully customizable in config
   - Option to suppress default Hytale join messages
 
+### Ignore System
+- **`/ignore <player>`** - Block a player's public and private messages
+- **`/ignore list`** - View all players you are currently ignoring
+- **`/unignore <player>`** - Stop ignoring a specific player
+- **`/unignore all`** - Stop ignoring all players (reset)
+- Ignored players' chat messages are hidden only for you
+- Private messages from ignored players are silently blocked
+- Data stored per-player (persists across restarts)
+
+### Mute System (Admin)
+- **`/mute <player> [reason]`** - Mute a player server-wide with optional reason
+- **`/unmute <player>`** - Unmute a player
+- Muted players cannot send public chat or private messages
+- Muted players are notified when muted/unmuted
+- Mute data stored in `mutes.json` (persists across restarts)
+
 ### Player Info Commands
 - **`/seen <player>`** - Check when a player was last online
 - **`/joindate [player]`** - View when a player first joined the server
@@ -205,6 +221,10 @@ Config file is automatically created on first server start with sensible default
 | `/tphere <player>` | Teleport player to you | Admin |
 | `/list` | Show online players | Everyone |
 | `/afk` | Toggle AFK status | Everyone |
+| `/ignore <player>` | Ignore a player's messages | Everyone |
+| `/ignore list` | List ignored players | Everyone |
+| `/unignore <player>` | Stop ignoring a player | Everyone |
+| `/unignore all` | Stop ignoring all players | Everyone |
 | `/joindate [player]` | View first join date | Everyone |
 | `/playtime [player]` | View total play time | Everyone |
 | `/warp [name]` | Teleport to warp | Everyone |
@@ -220,6 +240,8 @@ Config file is automatically created on first server start with sensible default
 | `/motd` | Display MOTD | Everyone |
 | `/rules` | Display server rules | Everyone |
 | `/broadcast <message>` | Broadcast to all players | Admin |
+| `/mute <player> [reason]` | Mute a player | Admin |
+| `/unmute <player>` | Unmute a player | Admin |
 | `/clearinv` | Clear all inventory items | Admin |
 | `/clearchat` | Clear chat for all players | Admin |
 | `/setwarp <name> [perm]` | Create warp | Admin |
@@ -255,6 +277,8 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Warp | `command.warp.use`, `command.warp.<warpname>`, `command.warp.warmup.0` |
 | Spawn | `command.spawn.use`, `command.spawn.protection.bypass`, `command.spawn.warmup.0` |
 | Kit | `command.kit.use`, `command.kit.<kitname>`, `command.kit.bypass.cooldown` |
+| Ignore | `command.misc.ignore` |
+| Admin | `admin.mute`, `admin.unmute` |
 | Bypass | `command.home.bypass.cooldown`, `command.tp.bypass.warmup`, `bypass.cost` |
 
 See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.

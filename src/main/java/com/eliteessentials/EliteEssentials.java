@@ -22,9 +22,11 @@ import com.eliteessentials.services.DeathTrackingService;
 import com.eliteessentials.services.GodService;
 import com.eliteessentials.services.GroupChatService;
 import com.eliteessentials.services.HomeService;
+import com.eliteessentials.services.IgnoreService;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.MessageService;
+import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.services.RtpService;
@@ -97,6 +99,8 @@ public class EliteEssentials extends JavaPlugin {
     private PlayTimeRewardStorage playTimeRewardStorage;
     private PlayTimeRewardService playTimeRewardService;
     private AfkService afkService;
+    private IgnoreService ignoreService;
+    private MuteService muteService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -202,6 +206,12 @@ public class EliteEssentials extends JavaPlugin {
         costService = new CostService(configManager);
         mailService = new MailService(playerFileStorage, configManager);
         afkService = new AfkService(configManager);
+        ignoreService = new IgnoreService(playerFileStorage);
+        muteService = new MuteService(this.dataFolder);
+        
+        // Wire mute/ignore services into group chat for filtering
+        groupChatService.setMuteService(muteService);
+        groupChatService.setIgnoreService(ignoreService);
         
         // Initialize playtime rewards
         playTimeRewardStorage = new PlayTimeRewardStorage(this.dataFolder);
@@ -266,6 +276,8 @@ public class EliteEssentials extends JavaPlugin {
         
         // Register chat listener for group-based chat formatting
         chatListener = new ChatListener(configManager);
+        chatListener.setIgnoreService(ignoreService);
+        chatListener.setMuteService(muteService);
         chatListener.registerEvents(getEventRegistry());
         if (configManager.getConfig().chatFormat.enabled) {
             getLogger().at(Level.INFO).log("Chat formatting system registered.");
@@ -516,7 +528,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // Group chat command
         if (config.groupChat.enabled) {
-            getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager));
+            getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager, muteService));
             getCommandRegistry().registerCommand(new HytaleChatsCommand(groupChatService, configManager));
             registeredCommands.append("/gc, /g, /chats, ");
         }
@@ -648,6 +660,20 @@ public class EliteEssentials extends JavaPlugin {
             registeredCommands.append(", /afk");
         }
         
+        // Ignore commands
+        if (config.ignore.enabled) {
+            getCommandRegistry().registerCommand(new HytaleIgnoreCommand(ignoreService, configManager));
+            getCommandRegistry().registerCommand(new HytaleUnignoreCommand(ignoreService, configManager, playerFileStorage));
+            registeredCommands.append(", /ignore, /unignore");
+        }
+        
+        // Mute commands (admin only)
+        if (config.mute.enabled) {
+            getCommandRegistry().registerCommand(new HytaleMuteCommand(muteService, configManager));
+            getCommandRegistry().registerCommand(new HytaleUnmuteCommand(muteService, configManager));
+            registeredCommands.append(", /mute, /unmute");
+        }
+        
         getLogger().at(Level.INFO).log("Commands registered: " + registeredCommands.toString());
     }
 
@@ -767,6 +793,14 @@ public class EliteEssentials extends JavaPlugin {
         return afkService;
     }
     
+    public IgnoreService getIgnoreService() {
+        return ignoreService;
+    }
+    
+    public MuteService getMuteService() {
+        return muteService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -842,6 +876,11 @@ public class EliteEssentials extends JavaPlugin {
         // Reload AFK service
         if (afkService != null) {
             afkService.reload();
+        }
+        
+        // Reload mute service
+        if (muteService != null) {
+            muteService.reload();
         }
         
         // Restart periodic play time save (interval may have changed)

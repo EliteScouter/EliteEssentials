@@ -143,6 +143,7 @@ public final class Permissions {
     public static final String REPAIR_BYPASS_COOLDOWN = MISC_CATEGORY + ".repair.bypass.cooldown";
     public static final String REPAIR_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.cooldown.";
     public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
+    public static final String IGNORE = MISC_CATEGORY + ".ignore";
     public static final String AFK = MISC_CATEGORY + ".afk";
     public static final String JOINDATE = MISC_CATEGORY + ".joindate";
     public static final String JOINDATE_OTHERS = MISC_CATEGORY + ".joindate.others";
@@ -210,6 +211,8 @@ public final class Permissions {
     public static final String ADMIN_ALIAS = ADMIN_BASE + ".alias";
     public static final String ADMIN_SENDMESSAGE = ADMIN_BASE + ".sendmessage";
     public static final String ADMIN_RTP = ADMIN_BASE + ".rtp";
+    public static final String ADMIN_MUTE = ADMIN_BASE + ".mute";
+    public static final String ADMIN_UNMUTE = ADMIN_BASE + ".unmute";
 
     // ==================== ECONOMY CATEGORY ====================
     // eliteessentials.command.economy.*

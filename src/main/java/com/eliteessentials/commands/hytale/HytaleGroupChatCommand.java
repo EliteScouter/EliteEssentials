@@ -5,6 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.GroupChat;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.GroupChatService;
+import com.eliteessentials.services.MuteService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -38,11 +39,13 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
     
     private final GroupChatService groupChatService;
     private final ConfigManager configManager;
+    private final MuteService muteService;
     
-    public HytaleGroupChatCommand(GroupChatService groupChatService, ConfigManager configManager) {
+    public HytaleGroupChatCommand(GroupChatService groupChatService, ConfigManager configManager, MuteService muteService) {
         super("gc", "Send a message to a private chat channel");
         this.groupChatService = groupChatService;
         this.configManager = configManager;
+        this.muteService = muteService;
         this.addAliases("groupchat", "gchat", "g");
         this.setAllowsExtraArguments(true);
     }
@@ -59,6 +62,13 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
         // Permission check
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.GROUP_CHAT, 
                 configManager.getConfig().groupChat.enabled)) {
+            return;
+        }
+        
+        // Block muted players from sending group chat messages
+        if (muteService != null && muteService.isMuted(player.getUuid())) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("mutedBlocked"), "#FF5555"));
             return;
         }
         
