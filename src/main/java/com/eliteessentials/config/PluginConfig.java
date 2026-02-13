@@ -62,6 +62,7 @@ public class PluginConfig {
     public AliasConfig aliases = new AliasConfig();
     public EconomyConfig economy = new EconomyConfig();
     public MailConfig mail = new MailConfig();
+    public AfkConfig afk = new AfkConfig();
     
     // ==================== MESSAGES ====================
     
@@ -423,6 +424,14 @@ public class PluginConfig {
         // ==================== PLAYTIME REWARDS ====================
         messages.put("playTimeRewardReceived", "&a[Reward] &fYou received: &e{reward}");
         messages.put("playTimeMilestoneBroadcast", "&6[Milestone] &f{player} &7reached &e{reward} &7({time} playtime)!");
+        
+        // ==================== AFK ====================
+        messages.put("afkOn", "&7{player} is now AFK.");
+        messages.put("afkOff", "&7{player} is no longer AFK.");
+        messages.put("afkOnSelf", "&7You are now AFK.");
+        messages.put("afkOffSelf", "&aYou are no longer AFK.");
+        messages.put("afkPrefix", "[AFK] {player}");
+        messages.put("afkListPrefix", "[AFK] {player}");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -1138,6 +1147,31 @@ public class PluginConfig {
         
         /** Delay in seconds before showing mail notification on login */
         public int notifyDelaySeconds = 3;
+    }
+    
+    // ==================== AFK ====================
+    
+    public static class AfkConfig {
+        /** Enable/disable the AFK system */
+        public boolean enabled = true;
+        
+        /**
+         * Minutes of inactivity before a player is automatically marked AFK.
+         * Set to 0 to disable automatic AFK detection (only /afk command).
+         */
+        public int inactivityTimeoutMinutes = 5;
+        
+        /** Broadcast AFK status changes to chat */
+        public boolean broadcastAfk = true;
+        
+        /** Show [AFK] prefix in the tab player list */
+        public boolean showInTabList = true;
+        
+        /**
+         * Exclude AFK players from playtime reward checks.
+         * When true, AFK players won't accumulate reward time.
+         */
+        public boolean excludeFromRewards = true;
     }
     
     // ==================== PLAYTIME REWARDS ====================

@@ -10,6 +10,20 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ### Added
 
+**AFK System** - Automatic and manual AFK detection with full integration
+* `/afk` command to manually toggle AFK status
+* Automatic inactivity detection - players marked AFK after configurable timeout (default: 300 seconds)
+* Movement detection removes AFK status automatically (same polling approach as warmup system)
+* AFK players show `[AFK]` prefix in the tab player list via packet updates
+* AFK players show `[AFK]` prefix in `/list` command output
+* Optional chat broadcast when players go AFK or return (configurable)
+* PlayTime Rewards integration - admins can choose whether AFK players count toward rewards (`excludeFromRewards` config option, default: true)
+* Full config section: `afk.enabled`, `afk.inactivityTimeoutSeconds`, `afk.broadcastAfk`, `afk.showInTabList`, `afk.excludeFromRewards`
+* Configurable messages: `afkOn`, `afkOff`, `afkOnSelf`, `afkOffSelf`
+* Permission: `eliteessentials.command.misc.afk` (Everyone)
+* Supports `/ee reload` - AFK service restarts with new config values
+* Clean shutdown - all AFK state cleared on plugin disable
+
 **Periodic Play Time Save** - Crash protection for player play time
 * New `periodicPlayTimeSaveMinutes` config option (under General settings, default: `0` = disabled)
 * When enabled, flushes accumulated session play time to disk at the configured interval for all online players

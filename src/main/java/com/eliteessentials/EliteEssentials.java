@@ -10,6 +10,7 @@ import com.eliteessentials.integration.VaultUnlockedIntegration;
 import com.eliteessentials.listeners.ChatListener;
 import com.eliteessentials.listeners.JoinQuitListener;
 import com.eliteessentials.listeners.RespawnListener;
+import com.eliteessentials.services.AfkService;
 import com.eliteessentials.services.AliasService;
 import com.eliteessentials.services.AutoBroadcastService;
 import com.eliteessentials.services.BackService;
@@ -95,6 +96,7 @@ public class EliteEssentials extends JavaPlugin {
     private MailService mailService;
     private PlayTimeRewardStorage playTimeRewardStorage;
     private PlayTimeRewardService playTimeRewardService;
+    private AfkService afkService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -199,6 +201,7 @@ public class EliteEssentials extends JavaPlugin {
         playerService = new PlayerService(playerFileStorage, configManager);
         costService = new CostService(configManager);
         mailService = new MailService(playerFileStorage, configManager);
+        afkService = new AfkService(configManager);
         
         // Initialize playtime rewards
         playTimeRewardStorage = new PlayTimeRewardStorage(this.dataFolder);
@@ -330,6 +333,12 @@ public class EliteEssentials extends JavaPlugin {
             aliasService.load();
         }
         
+        // Start AFK detection service
+        if (configManager.getConfig().afk.enabled) {
+            afkService.start();
+            getLogger().at(Level.INFO).log("AFK detection service started.");
+        }
+        
         // Start playtime rewards service
         if (configManager.getConfig().playTimeRewards.enabled) {
             playTimeRewardService.start();
@@ -409,6 +418,9 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (playTimeRewardService != null) {
             playTimeRewardService.stop();
+        }
+        if (afkService != null) {
+            afkService.stop();
         }
         if (playerService != null) {
             playerService.stopPeriodicSave();
@@ -618,6 +630,12 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleHelpCommand());
         registeredCommands.append("/eehelp");
         
+        // AFK command
+        if (config.afk.enabled) {
+            getCommandRegistry().registerCommand(new HytaleAfkCommand(afkService, configManager));
+            registeredCommands.append(", /afk");
+        }
+        
         getLogger().at(Level.INFO).log("Commands registered: " + registeredCommands.toString());
     }
 
@@ -733,6 +751,10 @@ public class EliteEssentials extends JavaPlugin {
         return playTimeRewardService;
     }
     
+    public AfkService getAfkService() {
+        return afkService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -803,6 +825,11 @@ public class EliteEssentials extends JavaPlugin {
         // Reload playtime rewards
         if (playTimeRewardService != null) {
             playTimeRewardService.reload();
+        }
+        
+        // Reload AFK service
+        if (afkService != null) {
+            afkService.reload();
         }
         
         // Restart periodic play time save (interval may have changed)

@@ -112,6 +112,15 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - Fully customizable in config
   - Option to suppress default Hytale join messages
 
+### AFK System
+- **`/afk`** - Toggle AFK (Away From Keyboard) status
+- Automatic inactivity detection after configurable timeout (default: 5 minutes)
+- Players automatically exit AFK when they move
+- AFK players show `[AFK]` prefix in tab list and `/list`
+- Optional chat broadcast when players go AFK or return
+- PlayTime Rewards integration - admins can exclude AFK players from earning rewards
+- Configurable: timeout, broadcast, tab list display, reward exclusion
+
 ### Sleep Percentage (Admin)
 - **`/sleeppercent <0-100>`** - Set percentage of players needed to skip the night
 - **Configurable sleep times** - Control when players can sleep (`nightStartHour`) and wake up (`morningHour`)
@@ -185,6 +194,7 @@ Config file is automatically created on first server start with sensible default
 | `/tpdeny` | Deny teleport request | Everyone |
 | `/tphere <player>` | Teleport player to you | Admin |
 | `/list` | Show online players | Everyone |
+| `/afk` | Toggle AFK status | Everyone |
 | `/warp [name]` | Teleport to warp | Everyone |
 | `/warps` | List all warps | Everyone |
 | `/kit [name]` | Open kit GUI or claim kit | Everyone |
@@ -241,7 +251,6 @@ See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
 
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
 - **Player Nicknames** - Allow players to set display names.
-- **AFK Detection** - Auto-kick or mark players as AFK after inactivity.
 - **Vanish** - Allow admins to go invisible to players.
 - **Invsee** - View and edit other players' inventories.
 - **Trashcan** - Dispose of unwanted items.

@@ -4,6 +4,7 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.services.AfkService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -84,9 +85,16 @@ public class HytaleListCommand extends CommandBase {
         
         int playerCount = visiblePlayers.size();
         
-        // Get player names sorted alphabetically
+        // Get player names sorted alphabetically, with configurable AFK prefix
+        AfkService afkService = EliteEssentials.getInstance().getAfkService();
         List<String> playerNames = visiblePlayers.stream()
-            .map(PlayerRef::getUsername)
+            .map(p -> {
+                String name = p.getUsername();
+                if (afkService != null && afkService.isAfk(p.getUuid())) {
+                    return configManager.getMessage("afkListPrefix", "player", name);
+                }
+                return name;
+            })
             .sorted(String.CASE_INSENSITIVE_ORDER)
             .collect(Collectors.toList());
         

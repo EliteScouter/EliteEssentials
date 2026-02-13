@@ -3,6 +3,7 @@ package com.eliteessentials.services;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
+import com.eliteessentials.services.AfkService;
 import com.eliteessentials.model.PlayTimeReward;
 import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.storage.PlayTimeRewardStorage;
@@ -109,10 +110,31 @@ public class PlayTimeRewardService {
         if (config.playTimeRewards.onlyCountNewPlaytime && !playerBaselines.containsKey(playerId)) {
             Optional<PlayerFile> playerOpt = playerService.getPlayer(playerId);
             if (playerOpt.isPresent()) {
-                long storedSeconds = playerOpt.get().getPlayTime();
+                PlayerFile playerData = playerOpt.get();
+                long storedSeconds = playerData.getPlayTime();
+                long playerFirstJoin = playerData.getFirstJoin();
                 playerBaselines.put(playerId, storedSeconds);
                 if (configManager.isDebugEnabled()) {
-                    logger.info("[PlayTimeRewards] Recorded baseline for " + playerOpt.get().getName() + ": " + storedSeconds + "s");
+                    logger.info("[PlayTimeRewards] Recorded baseline for " + playerData.getName() + ": " + storedSeconds + "s");
+                }
+                
+                // If this player joined before the reward system was enabled,
+                // reset their repeatable claim counts so they start fresh.
+                // Without this, old claim counts block new rewards since the
+                // effective playtime is reset to 0 by the baseline.
+                if (playerFirstJoin < config.playTimeRewards.enabledTimestamp && playerFirstJoin > 0) {
+                    if (playerFileStorage != null) {
+                        PlayerFile pf = playerFileStorage.getPlayer(playerId);
+                        if (pf != null && pf.getPlaytimeClaims() != null 
+                                && !pf.getPlaytimeClaims().repeatableCounts.isEmpty()) {
+                            if (configManager.isDebugEnabled()) {
+                                logger.info("[PlayTimeRewards] Resetting repeatable claim counts for " + playerData.getName() + 
+                                        " (had " + pf.getPlaytimeClaims().repeatableCounts + ") - baseline active, counts would block new rewards");
+                            }
+                            pf.getPlaytimeClaims().repeatableCounts.clear();
+                            playerFileStorage.saveAndMarkDirty(playerId);
+                        }
+                    }
                 }
             }
         }
@@ -144,9 +166,21 @@ public class PlayTimeRewardService {
             Universe universe = Universe.get();
             if (universe == null) return;
             
+            // Get AFK service for exclusion check
+            AfkService afkService = com.eliteessentials.EliteEssentials.getInstance().getAfkService();
+            PluginConfig config = configManager.getConfig();
+            
             for (PlayerRef playerRef : universe.getPlayers()) {
                 if (playerRef != null && playerRef.isValid()) {
                     UUID playerId = playerRef.getUuid();
+                    
+                    // Skip AFK players if configured to exclude them
+                    if (config.afk.excludeFromRewards && afkService != null && afkService.isAfk(playerId)) {
+                        if (configManager.isDebugEnabled()) {
+                            logger.info("[PlayTimeRewards] Skipping AFK player " + playerRef.getUsername());
+                        }
+                        continue;
+                    }
                     
                     // Ensure session tracking exists (in case player joined before service started)
                     if (!sessionStartTimes.containsKey(playerId)) {
@@ -167,17 +201,11 @@ public class PlayTimeRewardService {
     public void checkPlayerRewards(UUID playerId) {
         PluginConfig config = configManager.getConfig();
         if (!config.playTimeRewards.enabled) {
-            if (configManager.isDebugEnabled()) {
-                logger.info("[PlayTimeRewards] System is disabled in config");
-            }
             return;
         }
         
         Optional<PlayerFile> playerOpt = playerService.getPlayer(playerId);
         if (playerOpt.isEmpty()) {
-            if (configManager.isDebugEnabled()) {
-                logger.info("[PlayTimeRewards] No player data found for " + playerId);
-            }
             return;
         }
         
@@ -186,14 +214,10 @@ public class PlayTimeRewardService {
         
         if (configManager.isDebugEnabled()) {
             logger.info("[PlayTimeRewards] Checking rewards for " + playerData.getName() + 
-                    " - Total playtime: " + totalPlayTimeMinutes + " minutes");
+                    " - totalMinutes=" + totalPlayTimeMinutes + ", enabledRewards=" + storage.getEnabledRewards().size());
         }
         
         List<PlayTimeReward> rewards = storage.getEnabledRewards();
-        
-        if (configManager.isDebugEnabled()) {
-            logger.info("[PlayTimeRewards] Found " + rewards.size() + " enabled rewards");
-        }
         
         for (PlayTimeReward reward : rewards) {
             if (reward.isRepeatable()) {
@@ -221,20 +245,13 @@ public class PlayTimeRewardService {
         
         // If onlyCountNewPlaytime is enabled, subtract time before the system was enabled
         if (config.playTimeRewards.onlyCountNewPlaytime && config.playTimeRewards.enabledTimestamp > 0) {
-            // Calculate how much playtime the player had BEFORE the system was enabled
             long enabledTimestamp = config.playTimeRewards.enabledTimestamp;
             long playerFirstJoin = playerData.getFirstJoin();
             
             // If player joined before the system was enabled, subtract their pre-existing playtime
             if (playerFirstJoin < enabledTimestamp && playerFirstJoin > 0) {
-                // Estimate pre-existing playtime: stored playtime at the time of enabling
-                // We use the player's stored playtime minus current session as a baseline
-                // This isn't perfect but prevents the flood of catch-up rewards
-                
-                // Get the player's baseline (what they had when system was enabled)
                 Long baseline = playerBaselines.get(playerId);
                 if (baseline == null) {
-                    // First time checking this player - record their current stored time as baseline
                     baseline = storedSeconds;
                     playerBaselines.put(playerId, baseline);
                     

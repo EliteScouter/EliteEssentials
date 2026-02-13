@@ -4,6 +4,7 @@ import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.integration.PAPIIntegration;
+import com.eliteessentials.services.AfkService;
 import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
@@ -305,6 +306,12 @@ public class JoinQuitListener {
             PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();
             if (rewardService != null) {
                 rewardService.onPlayerJoin(playerId);
+            }
+            
+            // Notify AFK service (track player position for inactivity detection)
+            AfkService afkService = EliteEssentials.getInstance().getAfkService();
+            if (afkService != null) {
+                afkService.onPlayerJoin(playerId, store, ref);
             }
 
             // Check if first join by checking if player file existed on disk before this session
@@ -611,6 +618,12 @@ public class JoinQuitListener {
         PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();
         if (rewardService != null) {
             rewardService.onPlayerQuit(playerId);
+        }
+        
+        // Clean up AFK state
+        AfkService afkService = EliteEssentials.getInstance().getAfkService();
+        if (afkService != null) {
+            afkService.onPlayerQuit(playerId);
         }
 
         // Update player cache (last seen, play time)

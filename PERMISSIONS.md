@@ -56,6 +56,7 @@ Commands are either available to Everyone or Admin only:
 | `/baltop` | View richest players | Everyone |
 | `/eco` | Economy admin | Admin |
 | `/alias` | Manage command aliases | Admin |
+| `/afk` | Toggle AFK status | Everyone |
 | `/eliteessentials reload` | Reload config | Admin |
 
 In simple mode, "Admin" means players in the OP group or with `eliteessentials.admin.*` permission.
@@ -166,7 +167,9 @@ eliteessentials
 │   │   ├── broadcast               # /broadcast command (Admin)
 │   │   ├── clearchat               # /clearchat command (Admin)
 │   │   ├── clearinv                # /clearinv command (Admin)
-│   │   └── sleeppercent            # /sleeppercent command (Admin)
+│   │   ├── sleeppercent            # /sleeppercent command (Admin)
+│   │   ├── afk                     # /afk command (Everyone)
+│   │   └── groupchat               # /gc command
 │   │
 │   └── economy                     # Economy commands
 │       ├── wallet                  # /wallet (own balance)
@@ -294,6 +297,7 @@ eliteessentials
 | `eliteessentials.command.misc.repair.bypass.cooldown` | Bypass repair cooldown |
 | `eliteessentials.command.misc.repair.cooldown.<seconds>` | Custom repair cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.sleeppercent` | Set sleep percentage (Admin) |
+| `eliteessentials.command.misc.afk` | Toggle AFK status |
 
 ### Economy Commands
 
