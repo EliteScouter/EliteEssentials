@@ -112,6 +112,16 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - Fully customizable in config
   - Option to suppress default Hytale join messages
 
+### Player Info Commands
+- **`/seen <player>`** - Check when a player was last online
+- **`/joindate [player]`** - View when a player first joined the server
+  - No argument shows your own join date
+  - Separate permission for viewing other players' join dates
+- **`/playtime [player]`** - View total play time on the server
+  - No argument shows your own playtime
+  - Includes current session for accurate live totals
+  - Separate permission for viewing other players' playtime
+
 ### AFK System
 - **`/afk`** - Toggle AFK (Away From Keyboard) status
 - Automatic inactivity detection after configurable timeout (default: 5 minutes)
@@ -195,6 +205,8 @@ Config file is automatically created on first server start with sensible default
 | `/tphere <player>` | Teleport player to you | Admin |
 | `/list` | Show online players | Everyone |
 | `/afk` | Toggle AFK status | Everyone |
+| `/joindate [player]` | View first join date | Everyone |
+| `/playtime [player]` | View total play time | Everyone |
 | `/warp [name]` | Teleport to warp | Everyone |
 | `/warps` | List all warps | Everyone |
 | `/kit [name]` | Open kit GUI or claim kit | Everyone |

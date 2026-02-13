@@ -41,6 +41,10 @@ Commands are either available to Everyone or Admin only:
 | `/list` | View online players | Everyone |
 | `/eehelp` | View available commands | Everyone |
 | `/seen <player>` | Check player info | Everyone |
+| `/joindate [player]` | View first join date | Everyone |
+| `/joindate <player>` | View other's join date | Everyone |
+| `/playtime [player]` | View own playtime | Everyone |
+| `/playtime <player>` | View other's playtime | Everyone |
 | `/god` | Toggle invincibility | Admin |
 | `/heal` | Restore full health | Admin |
 | `/fly` | Toggle flight mode | Admin |
@@ -169,6 +173,10 @@ eliteessentials
 │   │   ├── clearinv                # /clearinv command (Admin)
 │   │   ├── sleeppercent            # /sleeppercent command (Admin)
 │   │   ├── afk                     # /afk command (Everyone)
+│   │   ├── joindate                # /joindate command (Everyone)
+│   │   │   └── others              # View other players' join date
+│   │   ├── playtime                # /playtime command (Everyone)
+│   │   │   └── others              # View other players' playtime
 │   │   └── groupchat               # /gc command
 │   │
 │   └── economy                     # Economy commands
@@ -283,6 +291,10 @@ eliteessentials
 | `eliteessentials.command.misc.list` | View online players |
 | `eliteessentials.command.misc.eehelp` | View available commands |
 | `eliteessentials.command.misc.seen` | Check player info |
+| `eliteessentials.command.misc.joindate` | View own join date |
+| `eliteessentials.command.misc.joindate.others` | View other players' join date |
+| `eliteessentials.command.misc.playtime` | View own playtime |
+| `eliteessentials.command.misc.playtime.others` | View other players' playtime |
 | `eliteessentials.command.misc.god` | Toggle god mode (Admin) |
 | `eliteessentials.command.misc.heal` | Heal to full health (Admin) |
 | `eliteessentials.command.misc.heal.bypass.cooldown` | Bypass heal cooldown |
@@ -298,6 +310,10 @@ eliteessentials
 | `eliteessentials.command.misc.repair.cooldown.<seconds>` | Custom repair cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.sleeppercent` | Set sleep percentage (Admin) |
 | `eliteessentials.command.misc.afk` | Toggle AFK status |
+| `eliteessentials.command.misc.joindate` | View own join date |
+| `eliteessentials.command.misc.joindate.others` | View other players' join date |
+| `eliteessentials.command.misc.playtime` | View own playtime |
+| `eliteessentials.command.misc.playtime.others` | View other players' playtime |
 
 ### Economy Commands
 
@@ -377,6 +393,8 @@ eliteessentials.command.tp.bypass.cooldown
 eliteessentials.command.tp.bypass.warmup
 eliteessentials.command.warp.use
 eliteessentials.command.economy.wallet.others
+eliteessentials.command.misc.joindate.others
+eliteessentials.command.misc.playtime.others
 eliteessentials.command.home.limit.20
 ```
 

@@ -63,6 +63,8 @@ public class PluginConfig {
     public EconomyConfig economy = new EconomyConfig();
     public MailConfig mail = new MailConfig();
     public AfkConfig afk = new AfkConfig();
+    public JoindateConfig joindate = new JoindateConfig();
+    public PlaytimeConfig playtime = new PlaytimeConfig();
     
     // ==================== MESSAGES ====================
     
@@ -432,6 +434,16 @@ public class PluginConfig {
         messages.put("afkOffSelf", "&aYou are no longer AFK.");
         messages.put("afkPrefix", "[AFK] {player}");
         messages.put("afkListPrefix", "[AFK] {player}");
+        
+        // ==================== JOINDATE ====================
+        messages.put("joindateSelf", "&7You first joined on &e{date}&7.");
+        messages.put("joindateOther", "&f{player} &7first joined on &e{date}&7.");
+        messages.put("joindateNeverJoined", "&c{player} &7has never joined this server.");
+        
+        // ==================== PLAYTIME ====================
+        messages.put("playtimeSelf", "&7Your total playtime: &e{time}&7.");
+        messages.put("playtimeOther", "&f{player}&7's total playtime: &e{time}&7.");
+        messages.put("playtimeNeverJoined", "&c{player} &7has never joined this server.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -1172,6 +1184,20 @@ public class PluginConfig {
          * When true, AFK players won't accumulate reward time.
          */
         public boolean excludeFromRewards = true;
+    }
+    
+    // ==================== JOINDATE ====================
+    
+    public static class JoindateConfig {
+        /** Enable/disable the /joindate command */
+        public boolean enabled = true;
+    }
+    
+    // ==================== PLAYTIME ====================
+    
+    public static class PlaytimeConfig {
+        /** Enable/disable the /playtime command */
+        public boolean enabled = true;
     }
     
     // ==================== PLAYTIME REWARDS ====================

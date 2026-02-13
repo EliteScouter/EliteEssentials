@@ -6,9 +6,28 @@ All notable changes to EliteEssentials will be documented in this file.
 
 (No changes currently.)
 
-## [1.1.9] - 2026-02-11
+## [1.1.9] - 2026-02-12
 
 ### Added
+
+**Join Date Command** - View when a player first joined the server
+* `/joindate` - View your own join date
+* `/joindate <player>` - View another player's join date
+* Displays formatted date (e.g., "Jan 15, 2026 at 14:30")
+* Separate permissions for checking self vs others (great for rank perks)
+* Permissions: `eliteessentials.command.misc.joindate` (Everyone), `eliteessentials.command.misc.joindate.others` (Everyone)
+* Config section: `joindate.enabled` (default: true)
+* Configurable messages: `joindateSelf`, `joindateOther`, `joindateNeverJoined`
+
+**Playtime Command** - View total play time on the server
+* `/playtime` - View your own total playtime
+* `/playtime <player>` - View another player's playtime
+* Includes current session time for accurate live totals (not just last-saved value)
+* Formatted output (e.g., "2d 3h", "45m", "12s")
+* Separate permissions for checking self vs others (great for rank perks)
+* Permissions: `eliteessentials.command.misc.playtime` (Everyone), `eliteessentials.command.misc.playtime.others` (Everyone)
+* Config section: `playtime.enabled` (default: true)
+* Configurable messages: `playtimeSelf`, `playtimeOther`, `playtimeNeverJoined`
 
 **AFK System** - Automatic and manual AFK detection with full integration
 * `/afk` command to manually toggle AFK status

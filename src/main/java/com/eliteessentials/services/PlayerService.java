@@ -123,6 +123,17 @@ public class PlayerService {
     public Optional<PlayerFile> getPlayerByName(String name) {
         return Optional.ofNullable(storage.getPlayerByName(name));
     }
+    /**
+     * Get the current session play time in seconds for an online player.
+     * Returns 0 if the player has no active session.
+     */
+    public long getCurrentSessionSeconds(UUID playerId) {
+        Long sessionStart = sessionStartTimes.get(playerId);
+        if (sessionStart == null) {
+            return 0;
+        }
+        return (System.currentTimeMillis() - sessionStart) / 1000;
+    }
 
     /**
      * Get wallet balance for a player.

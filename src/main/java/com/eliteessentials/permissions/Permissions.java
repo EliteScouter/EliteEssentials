@@ -144,6 +144,10 @@ public final class Permissions {
     public static final String REPAIR_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.cooldown.";
     public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
     public static final String AFK = MISC_CATEGORY + ".afk";
+    public static final String JOINDATE = MISC_CATEGORY + ".joindate";
+    public static final String JOINDATE_OTHERS = MISC_CATEGORY + ".joindate.others";
+    public static final String PLAYTIME = MISC_CATEGORY + ".playtime";
+    public static final String PLAYTIME_OTHERS = MISC_CATEGORY + ".playtime.others";
 
     // ==================== CHAT CATEGORY ====================
     // eliteessentials.chat.*

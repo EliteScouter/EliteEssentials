@@ -620,6 +620,18 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleSeenCommand(configManager, playerService));
         registeredCommands.append("/seen, ");
         
+        // Joindate command
+        if (config.joindate.enabled) {
+            getCommandRegistry().registerCommand(new HytaleJoindateCommand(configManager, playerService));
+            registeredCommands.append("/joindate, ");
+        }
+        
+        // Playtime command
+        if (config.playtime.enabled) {
+            getCommandRegistry().registerCommand(new HytalePlaytimeCommand(configManager, playerService));
+            registeredCommands.append("/playtime, ");
+        }
+        
         // Mail command
         if (config.mail.enabled) {
             getCommandRegistry().registerCommand(new HytaleMailCommand(mailService, configManager, playerFileStorage));
