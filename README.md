@@ -38,6 +38,11 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **`/rtp`** - Teleport to a random location in the world
 - Safe landing detection (avoids spawning underground)
 - Configurable min/max range, cooldown, and warmup
+- **Force World Mode** - Optionally restrict RTP to a specific world
+  - `rtp.forceWorldEnabled: false` (default) - RTP within current world
+  - `rtp.forceWorldEnabled: true` - Always RTP to specified world
+  - `rtp.forceWorld` - Specify which world to force (e.g., "main", "explore")
+  - Perfect for servers with multiple worlds where you want RTP only in one
 
 ### Teleport Requests
 - **`/tpa <player>`** - Request to teleport to another player

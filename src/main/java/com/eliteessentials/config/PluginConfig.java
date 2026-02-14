@@ -517,6 +517,20 @@ public class PluginConfig {
         /** Cost to use this command (0 = free, requires economy enabled) */
         public double cost = 0.0;
         
+        /**
+         * Force RTP to always teleport to a specific world, regardless of player's current world.
+         * When false (default): RTP teleports within the player's current world.
+         * When true: RTP always teleports to the world specified in forceWorld.
+         */
+        public boolean forceWorldEnabled = false;
+        
+        /**
+         * The world name to force RTP to when forceWorldEnabled is true.
+         * Example: "main" or "explore"
+         * This is case-sensitive and must match the exact world name.
+         */
+        public String forceWorld = "";
+        
         private static Map<String, WorldRtpRange> createDefaultWorldRanges() {
             Map<String, WorldRtpRange> ranges = new HashMap<>();
             // Example configurations - server owners can customize these

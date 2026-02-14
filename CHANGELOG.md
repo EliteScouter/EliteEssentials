@@ -10,6 +10,14 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ### Added
 
+**RTP Force World** - Restrict RTP to a specific world
+* New config options: `rtp.forceWorldEnabled` (default: false) and `rtp.forceWorld` (default: "")
+* When enabled, `/rtp` always teleports players to the specified world regardless of their current world
+* Example: Set `forceWorldEnabled: true` and `forceWorld: "main"` to force all RTP to the "main" world
+* Only applies to self-RTP - admin RTP with explicit world argument still works normally
+* Thread-safe cross-world teleportation with proper /back location saving
+* Helpful error messages if configured world doesn't exist
+
 **Join Date Command** - View when a player first joined the server
 * `/joindate` - View your own join date
 * `/joindate <player>` - View another player's join date

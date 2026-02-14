@@ -92,6 +92,7 @@ public class HytaleRtpCommand extends CommandBase {
         // Always log that we reached this point (helps diagnose if Hytale is intercepting)
         if (configManager.isDebugEnabled()) {
             logger.info("[RTP] Command executeSync reached");
+            logger.info("[RTP] Config - forceWorldEnabled: " + rtpConfig.forceWorldEnabled + ", forceWorld: '" + rtpConfig.forceWorld + "'");
         }
         
         // Parse arguments: /rtp [player] [world]
@@ -188,13 +189,48 @@ public class HytaleRtpCommand extends CommandBase {
         World targetWorld;
         if (targetWorldName != null) {
             // Admin specified a world
+            if (configManager.isDebugEnabled()) {
+                logger.info("[RTP] Admin specified world: " + targetWorldName);
+            }
             targetWorld = findWorld(targetWorldName);
             if (targetWorld == null) {
                 ctx.sendMessage(Message.raw("World '" + targetWorldName + "' not found.").color("#FF5555"));
                 return;
             }
+        } else if (rtpConfig.forceWorldEnabled && !rtpConfig.forceWorld.isEmpty()) {
+            // Force RTP to specific world (only for self-RTP, not admin RTP)
+            if (configManager.isDebugEnabled()) {
+                logger.info("[RTP] Force world check - enabled: " + rtpConfig.forceWorldEnabled + 
+                           ", world: '" + rtpConfig.forceWorld + "', isSelfRtp: " + isSelfRtp);
+            }
+            if (isSelfRtp) {
+                targetWorld = findWorld(rtpConfig.forceWorld);
+                if (targetWorld == null) {
+                    ctx.sendMessage(Message.raw("Configured RTP world '" + rtpConfig.forceWorld + "' not found. Contact an administrator.").color("#FF5555"));
+                    if (configManager.isDebugEnabled()) {
+                        logger.severe("[RTP] forceWorld is enabled but world '" + rtpConfig.forceWorld + "' does not exist!");
+                    }
+                    return;
+                }
+                if (configManager.isDebugEnabled()) {
+                    logger.info("[RTP] Force world enabled - teleporting to: " + rtpConfig.forceWorld);
+                }
+            } else {
+                // Admin RTP without world specified - use player's current world
+                if (configManager.isDebugEnabled()) {
+                    logger.info("[RTP] Admin RTP without world - using player's current world");
+                }
+                targetWorld = findPlayerWorld(targetPlayer);
+                if (targetWorld == null) {
+                    ctx.sendMessage(Message.raw("Could not determine player's world.").color("#FF5555"));
+                    return;
+                }
+            }
         } else {
             // Use player's current world
+            if (configManager.isDebugEnabled()) {
+                logger.info("[RTP] Using player's current world (force world not enabled or empty)");
+            }
             targetWorld = findPlayerWorld(targetPlayer);
             if (targetWorld == null) {
                 ctx.sendMessage(Message.raw("Could not determine player's world.").color("#FF5555"));
