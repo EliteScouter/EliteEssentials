@@ -146,6 +146,27 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - Muted players are notified when muted/unmuted
 - Mute data stored in `mutes.json` (persists across restarts)
 
+### Ban System (Admin)
+- **`/ban <player> [reason]`** - Permanently ban a player with optional reason
+- **`/tempban <player> <time> [reason]`** - Temporarily ban a player
+  - Time format: `1d` (1 day), `2h` (2 hours), `30m` (30 minutes), `1d12h` (1 day 12 hours)
+  - Supports days (d), hours (h), minutes (m), seconds (s)
+- **`/ipban <player> [reason]`** - Ban a player's IP address to prevent alt accounts
+- **`/unban <player>`** - Remove a permanent or temporary ban
+- **`/unipban <player>`** - Remove an IP ban
+- Banned players are immediately kicked from the server
+- Ban data persists across restarts in `bans.json`, `tempbans.json`, and `ipbans.json`
+- Temporary bans automatically expire and are cleaned up on server start
+- IP bans work with both TCP and QUIC connections
+- Supports offline player unbanning by name
+
+### Freeze System (Admin)
+- **`/freeze <player>`** - Toggle freeze on a player (prevents all movement)
+- Frozen players cannot move, jump, or fly
+- Freeze state persists across restarts in `freezes.json`
+- Frozen players are notified when frozen/unfrozen
+- Perfect for moderating rule-breakers or conducting investigations
+
 ### Player Info Commands
 - **`/seen <player>`** - Check when a player was last online
 - **`/joindate [player]`** - View when a player first joined the server
@@ -260,6 +281,12 @@ Config file is automatically created on first server start with sensible default
 | `/broadcast <message>` | Broadcast to all players | Admin |
 | `/mute <player> [reason]` | Mute a player | Admin |
 | `/unmute <player>` | Unmute a player | Admin |
+| `/ban <player> [reason]` | Permanently ban a player | Admin |
+| `/tempban <player> <time> [reason]` | Temporarily ban a player | Admin |
+| `/ipban <player> [reason]` | Ban a player's IP address | Admin |
+| `/unban <player>` | Unban a player | Admin |
+| `/unipban <player>` | Remove an IP ban | Admin |
+| `/freeze <player>` | Toggle freeze on a player | Admin |
 | `/clearinv` | Clear all inventory items | Admin |
 | `/clearchat` | Clear chat for all players | Admin |
 | `/setwarp <name> [perm]` | Create warp | Admin |

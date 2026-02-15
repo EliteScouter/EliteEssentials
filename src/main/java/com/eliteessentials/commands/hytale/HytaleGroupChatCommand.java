@@ -6,6 +6,7 @@ import com.eliteessentials.model.GroupChat;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.GroupChatService;
 import com.eliteessentials.services.MuteService;
+import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -40,12 +41,15 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
     private final GroupChatService groupChatService;
     private final ConfigManager configManager;
     private final MuteService muteService;
+    private final PlayerService playerService;
     
-    public HytaleGroupChatCommand(GroupChatService groupChatService, ConfigManager configManager, MuteService muteService) {
+    public HytaleGroupChatCommand(GroupChatService groupChatService, ConfigManager configManager, 
+                                  MuteService muteService, PlayerService playerService) {
         super("gc", "Send a message to a private chat channel");
         this.groupChatService = groupChatService;
         this.configManager = configManager;
         this.muteService = muteService;
+        this.playerService = playerService;
         this.addAliases("groupchat", "gchat", "g");
         this.setAllowsExtraArguments(true);
     }
@@ -94,28 +98,27 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
         GroupChat targetChat;
         String message;
         
-        // Only check for chat name prefix if player has access to multiple chats
-        if (playerChats.size() > 1) {
-            String[] messageParts = remainder.split("\\s+", 2);
-            GroupChat specifiedChat = groupChatService.getGroupChat(messageParts[0]);
-            
-            if (specifiedChat != null && playerChats.contains(specifiedChat)) {
-                // Player specified a chat they have access to
-                if (messageParts.length < 2 || messageParts[1].isBlank()) {
-                    ctx.sendMessage(MessageFormatter.format(
-                        configManager.getMessage("groupChatUsageGroup", "group", specifiedChat.getGroupName())));
-                    return;
-                }
-                targetChat = specifiedChat;
-                message = messageParts[1];
-            } else {
-                // First word isn't a valid chat, use default chat with full message
-                targetChat = playerChats.get(0);
-                message = remainder;
+        // Check if first word is a chat name they have access to
+        String[] messageParts = remainder.split("\\s+", 2);
+        GroupChat specifiedChat = groupChatService.getGroupChat(messageParts[0]);
+        
+        if (specifiedChat != null && playerChats.contains(specifiedChat)) {
+            // Player specified a chat they have access to
+            if (messageParts.length < 2 || messageParts[1].isBlank()) {
+                ctx.sendMessage(MessageFormatter.format(
+                    configManager.getMessage("groupChatUsageGroup", "group", specifiedChat.getGroupName())));
+                return;
             }
+            targetChat = specifiedChat;
+            message = messageParts[1];
         } else {
-            // Player only has one chat, use it with full message
-            targetChat = playerChats.get(0);
+            // First word isn't a valid chat, use default chat with full message
+            targetChat = groupChatService.getDefaultChat(player.getUuid(), playerService);
+            if (targetChat == null) {
+                ctx.sendMessage(MessageFormatter.format(
+                    configManager.getMessage("groupChatNoAccess")));
+                return;
+            }
             message = remainder;
         }
         

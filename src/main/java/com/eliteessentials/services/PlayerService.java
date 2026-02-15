@@ -349,4 +349,23 @@ public class PlayerService {
     public PlayerFileStorage getStorage() {
         return storage;
     }
+    
+    /**
+     * Get the player's default group chat preference.
+     */
+    public String getDefaultGroupChat(UUID playerId) {
+        PlayerFile playerFile = storage.getPlayer(playerId);
+        return playerFile != null ? playerFile.getDefaultGroupChat() : null;
+    }
+    
+    /**
+     * Set the player's default group chat preference.
+     */
+    public void setDefaultGroupChat(UUID playerId, String chatName) {
+        PlayerFile playerFile = storage.getPlayer(playerId);
+        if (playerFile != null) {
+            playerFile.setDefaultGroupChat(chatName);
+            storage.markDirty(playerId);
+        }
+    }
 }

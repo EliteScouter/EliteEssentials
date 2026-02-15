@@ -132,6 +132,9 @@ public final class Permissions {
     public static final String CLEARINV = MISC_CATEGORY + ".clearinv";
     public static final String CLEARINV_BYPASS_COOLDOWN = MISC_CATEGORY + ".clearinv.bypass.cooldown";
     public static final String CLEARINV_COOLDOWN_PREFIX = MISC_CATEGORY + ".clearinv.cooldown.";
+    public static final String TRASH = MISC_CATEGORY + ".trash";
+    public static final String TRASH_BYPASS_COOLDOWN = MISC_CATEGORY + ".trash.bypass.cooldown";
+    public static final String TRASH_COOLDOWN_PREFIX = MISC_CATEGORY + ".trash.cooldown.";
     public static final String LIST = MISC_CATEGORY + ".list";
     public static final String DISCORD = MISC_CATEGORY + ".discord";
     public static final String SEEN = MISC_CATEGORY + ".seen";
@@ -214,6 +217,12 @@ public final class Permissions {
     public static final String ADMIN_RTP = ADMIN_BASE + ".rtp";
     public static final String ADMIN_MUTE = ADMIN_BASE + ".mute";
     public static final String ADMIN_UNMUTE = ADMIN_BASE + ".unmute";
+    public static final String ADMIN_BAN = ADMIN_BASE + ".ban";
+    public static final String ADMIN_UNBAN = ADMIN_BASE + ".unban";
+    public static final String ADMIN_TEMPBAN = ADMIN_BASE + ".tempban";
+    public static final String ADMIN_IPBAN = ADMIN_BASE + ".ipban";
+    public static final String ADMIN_UNIPBAN = ADMIN_BASE + ".unipban";
+    public static final String ADMIN_FREEZE = ADMIN_BASE + ".freeze";
 
     // ==================== ECONOMY CATEGORY ====================
     // eliteessentials.command.economy.*
@@ -313,6 +322,15 @@ public final class Permissions {
      */
     public static String clearinvCooldown(int seconds) {
         return CLEARINV_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
+     * Get trash cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.trash.cooldown.<seconds>
+     */
+    public static String trashCooldown(int seconds) {
+        return TRASH_COOLDOWN_PREFIX + seconds;
     }
     
     /**

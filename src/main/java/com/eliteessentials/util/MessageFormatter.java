@@ -693,4 +693,42 @@ public class MessageFormatter {
         }
         return result.toString();
     }
+
+    /**
+     * Strips all color and formatting codes from text, returning plain text.
+     * Used for disconnect messages where color codes aren't rendered.
+     * 
+     * @param text Text with color codes (& or § prefix)
+     * @return Plain text with all color/formatting codes removed
+     */
+    @Nonnull
+    public static String stripColorCodes(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        StringBuilder result = new StringBuilder();
+        int i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            if ((c == '&' || c == '\u00A7') && i + 1 < text.length()) {
+                char next = Character.toLowerCase(text.charAt(i + 1));
+                // Skip hex colors: &#RRGGBB
+                if (next == '#' && i + 7 < text.length()) {
+                    String hexPart = text.substring(i + 2, i + 8);
+                    if (hexPart.matches("[0-9A-Fa-f]{6}")) {
+                        i += 8;
+                        continue;
+                    }
+                }
+                // Skip any known color/format code
+                if ("0123456789abcdefklmnor".indexOf(next) >= 0) {
+                    i += 2;
+                    continue;
+                }
+            }
+            result.append(c);
+            i++;
+        }
+        return result.toString();
+    }
 }

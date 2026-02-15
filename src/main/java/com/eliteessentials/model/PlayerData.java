@@ -15,6 +15,7 @@ public class PlayerData {
     private double wallet;
     private long playTime;  // Total play time in seconds
     private String lastKnownIp;  // For admin reference (optional)
+    private String defaultGroupChat;  // Default group chat for /gc command
     
     public PlayerData() {
         // Default constructor for Gson
@@ -112,5 +113,13 @@ public class PlayerData {
      */
     public void updateLastSeen() {
         this.lastSeen = System.currentTimeMillis();
+    }
+    
+    public String getDefaultGroupChat() {
+        return defaultGroupChat;
+    }
+    
+    public void setDefaultGroupChat(String defaultGroupChat) {
+        this.defaultGroupChat = defaultGroupChat;
     }
 }

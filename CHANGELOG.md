@@ -10,6 +10,27 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ### Added
 
+**Trash Command** - Disposal window for unwanted items
+* `/trash` - Opens an inventory window where you can drag in items to delete
+* `/trash <size>` - Open trash window with custom slot count (1-45)
+* Items placed in the window are permanently deleted when the window is closed
+* Uses Hytale's ContainerWindow system for a native inventory feel
+* Configurable default size (default: 27 slots) and max size (default: 45 slots)
+* Aliases: `/dispose`, `/disposal`
+* Permission: `eliteessentials.command.misc.trash` (Everyone)
+* Cooldown support with permission-based overrides
+* Config section: `trash.enabled`, `trash.defaultSize`, `trash.maxSize`, `trash.cooldownSeconds`
+* Configurable messages: `trashOpened`, `trashFailed`
+
+**Group Chat Default Selection** - Set your preferred default chat channel
+* `/gcset <chat>` - Set your default chat for `/gc` and `/g` commands
+* `/gcset` - View your current default chat
+* When you have multiple chat channels, `/gc <message>` now uses your set default instead of always using the first one
+* Default preference persists across server restarts (stored in player data)
+* Automatically falls back to first available chat if you lose access to your default
+* You can still override by specifying the chat: `/gc staff Hello everyone`
+* Configurable messages: `groupChatDefaultSet`, `groupChatDefaultCurrent`, `groupChatDefaultNone`, `groupChatNotFound`, `groupChatNoAccessSpecific`
+
 **RTP Force World** - Restrict RTP to a specific world
 * New config options: `rtp.forceWorldEnabled` (default: false) and `rtp.forceWorld` (default: "")
 * When enabled, `/rtp` always teleports players to the specified world regardless of their current world
@@ -98,6 +119,34 @@ All notable changes to EliteEssentials will be documented in this file.
 * Mute data stored server-wide in `mutes.json` (persists across restarts)
 * Supports `/ee reload` to reload mute data
 * Permissions: `eliteessentials.admin.mute` (Admin), `eliteessentials.admin.unmute` (Admin)
+* Config section: `mute.enabled` (default: true)
+* Configurable messages: `muteUsage`, `muteSelf`, `muteSuccess`, `muteAlready`, `mutedNotify`, `mutedNotifyReason`, `mutedBlocked`, `unmuteUsage`, `unmuteSuccess`, `unmuteNotMuted`, `unmutedNotify`
+
+**Ban System** - Comprehensive player ban management with multiple ban types
+* `/ban <player> [reason]` - Permanently ban a player with optional reason
+* `/tempban <player> <time> [reason]` - Temporarily ban a player (e.g., `1d`, `2h`, `30m`, `1d12h`)
+* `/ipban <player> [reason]` - Ban a player's IP address to prevent alt accounts
+* `/unban <player>` - Remove a permanent or temporary ban
+* `/unipban <player>` - Remove an IP ban
+* Banned players are immediately kicked from the server
+* Ban data persists across restarts in `bans.json`, `tempbans.json`, and `ipbans.json`
+* Temporary bans automatically expire and are cleaned up on server start
+* IP bans work with both TCP and QUIC connections via Netty channel extraction
+* Supports offline player unbanning by name
+* Permissions: `eliteessentials.admin.ban`, `eliteessentials.admin.tempban`, `eliteessentials.admin.ipban`, `eliteessentials.admin.unban`, `eliteessentials.admin.unipban` (Admin)
+* Config section: `ban.enabled` (default: true)
+* Configurable messages: `banUsage`, `banSelf`, `banSuccess`, `banAlready`, `banKick`, `banKickReason`, `tempbanUsage`, `tempbanSelf`, `tempbanSuccess`, `tempbanAlready`, `tempbanInvalidTime`, `tempbanKick`, `tempbanKickReason`, `ipbanUsage`, `ipbanSuccess`, `ipbanAlready`, `ipbanNoIp`, `ipbanKick`, `ipbanKickReason`, `unbanUsage`, `unbanSuccess`, `unbanNotBanned`, `unipbanUsage`, `unipbanSuccess`, `unipbanNotBanned`
+
+**Freeze System** - Admin command to freeze players in place
+* `/freeze <player>` - Toggle freeze on a player (prevents all movement)
+* Frozen players cannot move, jump, or fly
+* Works by setting all movement speeds to 0 via MovementSettings
+* Freeze state persists across restarts in `freezes.json`
+* Frozen players are notified when frozen/unfrozen
+* Permission: `eliteessentials.admin.freeze` (Admin)
+* Config section: `freeze.enabled` (default: true)
+* Configurable messages: `freezeUsage`, `freezeSuccess`, `freezeNotify`, `unfreezeSuccess`, `unfreezeNotify`, `freezeError`
+* Supports `/ee reload` to reload freeze data
 * Config section: `mute.enabled` (default: true)
 * Configurable messages: `muteUsage`, `muteSelf`, `muteSuccess`, `muteAlready`, `mutedNotify`, `mutedNotifyReason`, `mutedBlocked`, `unmuteUsage`, `unmuteSuccess`, `unmuteNotMuted`, `unmutedNotify`
 

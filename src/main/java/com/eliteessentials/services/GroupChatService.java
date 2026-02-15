@@ -614,4 +614,34 @@ public class GroupChatService {
         
         return format;
     }
+
+
+    /**
+     * Get the default chat for a player, or their first available chat if no default is set.
+     *
+     * @param playerId Player UUID
+     * @param playerService PlayerService to retrieve default chat preference
+     * @return The default chat, or null if player has no chat access
+     */
+    public GroupChat getDefaultChat(UUID playerId, PlayerService playerService) {
+        List<GroupChat> playerChats = getPlayerGroupChats(playerId);
+        if (playerChats.isEmpty()) {
+            return null;
+        }
+
+        // Check if player has a default chat set
+        String defaultChatName = playerService.getDefaultGroupChat(playerId);
+        if (defaultChatName != null) {
+            // Find the chat and verify player still has access
+            for (GroupChat chat : playerChats) {
+                if (chat.getGroupName().equalsIgnoreCase(defaultChatName)) {
+                    return chat;
+                }
+            }
+        }
+
+        // No default set or player lost access - return first available
+        return playerChats.get(0);
+    }
+
 }

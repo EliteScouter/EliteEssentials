@@ -55,6 +55,7 @@ public class PluginConfig {
     public BroadcastConfig broadcast = new BroadcastConfig();
     public ClearChatConfig clearChat = new ClearChatConfig();
     public ClearInvConfig clearInv = new ClearInvConfig();
+    public TrashConfig trash = new TrashConfig();
     public ListConfig list = new ListConfig();
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
     public DiscordConfig discord = new DiscordConfig();
@@ -67,6 +68,8 @@ public class PluginConfig {
     public PlaytimeConfig playtime = new PlaytimeConfig();
     public IgnoreConfig ignore = new IgnoreConfig();
     public MuteConfig mute = new MuteConfig();
+    public BanConfig ban = new BanConfig();
+    public FreezeConfig freeze = new FreezeConfig();
     
     // ==================== MESSAGES ====================
     
@@ -237,6 +240,11 @@ public class PluginConfig {
         messages.put("groupChatSpyEnabled", "&aGroup chat spy &2enabled&a. You will see all group chat messages.");
         messages.put("groupChatSpyDisabled", "&aGroup chat spy &cdisabled&a.");
         messages.put("groupChatDisabled", "&cGroup chat is disabled.");
+        messages.put("groupChatDefaultSet", "&aDefault chat set to &e{chat}&a.");
+        messages.put("groupChatDefaultCurrent", "&aYour default chat is &e{chat}&a.");
+        messages.put("groupChatDefaultNone", "&7No default chat set. Using &e{chat}&7.");
+        messages.put("groupChatNotFound", "&cChat &e{chat} &cdoes not exist.");
+        messages.put("groupChatNoAccessSpecific", "&cYou don't have access to chat &e{chat}&c.");
         
         // ==================== CHATS LIST ====================
         messages.put("chatsNoAccess", "&cYou don't have access to any chat channels.");
@@ -293,6 +301,10 @@ public class PluginConfig {
         // ==================== CLEAR INVENTORY ====================
         messages.put("clearInvSuccess", "&aCleared &e{count} &aitems from your inventory.");
         messages.put("clearInvFailed", "&cCould not clear inventory.");
+        
+        // ==================== TRASH ====================
+        messages.put("trashOpened", "&aTrash window opened. Items placed here will be deleted when closed.");
+        messages.put("trashFailed", "&cCould not open trash window.");
         
         // ==================== LIST (Online Players) ====================
         messages.put("listHeader", "&aOnline Players &7({count}/{max})&a:");
@@ -474,6 +486,51 @@ public class PluginConfig {
         messages.put("unmuteSuccess", "&a{player} &ahas been unmuted.");
         messages.put("unmuteNotMuted", "&c{player} &cis not muted.");
         messages.put("unmutedNotify", "&aYou have been unmuted.");
+        
+        // ==================== BAN ====================
+        messages.put("banUsage", "&cUsage: &e/ban <player> [reason]");
+        messages.put("banSelf", "&cYou cannot ban yourself.");
+        messages.put("banSuccess", "&a{player} &ahas been permanently banned.");
+        messages.put("banAlready", "&c{player} &cis already banned.");
+        messages.put("banKick", "&cYou have been banned by {bannedBy}.");
+        messages.put("banKickReason", "&cYou have been banned by {bannedBy}. Reason: &e{reason}");
+        messages.put("banConnectDenied", "You are permanently banned. Reason: {reason} - Banned by: {bannedBy}");
+        messages.put("unbanUsage", "&cUsage: &e/unban <player>");
+        messages.put("unbanSuccess", "&a{player} &ahas been unbanned.");
+        messages.put("unbanNotBanned", "&c{player} &cis not banned.");
+        
+        // ==================== TEMPBAN ====================
+        messages.put("tempbanUsage", "&cUsage: &e/tempban <player> <time> [reason] &7(e.g. 1d, 2h, 30m)");
+        messages.put("tempbanSelf", "&cYou cannot temp ban yourself.");
+        messages.put("tempbanInvalidTime", "&cInvalid time format. Use: &e1d, 2h, 30m, 1d12h");
+        messages.put("tempbanSuccess", "&a{player} &ahas been temp banned for &e{time}&a.");
+        messages.put("tempbanAlready", "&c{player} &cis already temp banned.");
+        messages.put("tempbanKick", "&cYou have been temp banned for {time} by {bannedBy}.");
+        messages.put("tempbanKickReason", "&cYou have been temp banned for {time} by {bannedBy}. Reason: &e{reason}");
+        messages.put("tempbanConnectDenied", "You are temporarily banned. Time remaining: {time} - Reason: {reason} - Banned by: {bannedBy}");
+        
+        // ==================== IPBAN ====================
+        messages.put("ipbanUsage", "&cUsage: &e/ipban <player> [reason]");
+        messages.put("ipbanNoIp", "&cCould not determine IP address for &e{player}&c.");
+        messages.put("ipbanAlready", "&c{player}'s &cIP is already banned.");
+        messages.put("ipbanSuccess", "&a{player}'s &aIP (&e{ip}&a) has been banned.");
+        messages.put("ipbanKick", "&cYour IP has been banned by {bannedBy}.");
+        messages.put("ipbanKickReason", "&cYour IP has been banned by {bannedBy}. Reason: &e{reason}");
+        messages.put("ipbanConnectDenied", "Your IP is banned. Reason: {reason} - Banned by: {bannedBy}");
+        messages.put("unipbanUsage", "&cUsage: &e/unipban <ip or player>");
+        messages.put("unipbanSuccess", "&aIP &e{ip} &ahas been unbanned.");
+        messages.put("unipbanNotBanned", "&cIP &e{ip} &cis not banned.");
+        messages.put("unipbanSuccessName", "&a{player}'s &aIP (&e{ip}&a) has been unbanned.");
+        messages.put("unipbanNotBannedName", "&cNo IP ban found for &e{player}&c.");
+        
+        // ==================== FREEZE ====================
+        messages.put("freezeUsage", "&cUsage: &e/freeze <player>");
+        messages.put("freezeSuccess", "&a{player} &ahas been frozen.");
+        messages.put("freezeNotify", "&cYou have been frozen by an administrator. You cannot move.");
+        messages.put("freezeError", "&cCould not toggle freeze state.");
+        messages.put("unfreezeSuccess", "&a{player} &ahas been unfrozen.");
+        messages.put("unfreezeNotify", "&aYou have been unfrozen.");
+        messages.put("freezeStillFrozen", "&cYou are still frozen. You cannot move.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -1048,6 +1105,22 @@ public class PluginConfig {
         public int cooldownSeconds = 0;
     }
     
+    // ==================== TRASH ====================
+    
+    public static class TrashConfig {
+        /** Enable/disable the /trash command */
+        public boolean enabled = true;
+        
+        /** Cooldown in seconds between uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
+        
+        /** Default number of slots in the trash window */
+        public int defaultSize = 27;
+        
+        /** Maximum number of slots allowed (1-45) */
+        public int maxSize = 45;
+    }
+    
     // ==================== LIST (Online Players) ====================
     
     public static class ListConfig {
@@ -1296,6 +1369,20 @@ public class PluginConfig {
     
     public static class MuteConfig {
         /** Enable/disable the /mute and /unmute commands */
+        public boolean enabled = true;
+    }
+    
+    // ==================== BAN ====================
+    
+    public static class BanConfig {
+        /** Enable/disable ban commands (/ban, /unban, /tempban, /ipban) */
+        public boolean enabled = true;
+    }
+    
+    // ==================== FREEZE ====================
+    
+    public static class FreezeConfig {
+        /** Enable/disable the /freeze command */
         public boolean enabled = true;
     }
     

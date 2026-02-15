@@ -8,6 +8,7 @@ import com.eliteessentials.integration.LuckPermsIntegration;
 import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.integration.VaultUnlockedIntegration;
 import com.eliteessentials.listeners.ChatListener;
+import com.eliteessentials.listeners.ConnectListener;
 import com.eliteessentials.listeners.JoinQuitListener;
 import com.eliteessentials.listeners.RespawnListener;
 import com.eliteessentials.services.AfkService;
@@ -27,6 +28,10 @@ import com.eliteessentials.services.KitService;
 import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.MessageService;
 import com.eliteessentials.services.MuteService;
+import com.eliteessentials.services.BanService;
+import com.eliteessentials.services.TempBanService;
+import com.eliteessentials.services.IpBanService;
+import com.eliteessentials.services.FreezeService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.services.RtpService;
@@ -101,6 +106,10 @@ public class EliteEssentials extends JavaPlugin {
     private AfkService afkService;
     private IgnoreService ignoreService;
     private MuteService muteService;
+    private BanService banService;
+    private TempBanService tempBanService;
+    private IpBanService ipBanService;
+    private FreezeService freezeService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -109,6 +118,7 @@ public class EliteEssentials extends JavaPlugin {
     private StarterKitEvent starterKitEvent;
     private JoinQuitListener joinQuitListener;
     private ChatListener chatListener;
+    private ConnectListener connectListener;
     private VaultUnlockedIntegration vaultUnlockedIntegration;
     private File dataFolder;
 
@@ -208,6 +218,10 @@ public class EliteEssentials extends JavaPlugin {
         afkService = new AfkService(configManager);
         ignoreService = new IgnoreService(playerFileStorage);
         muteService = new MuteService(this.dataFolder);
+        banService = new BanService(this.dataFolder);
+        tempBanService = new TempBanService(this.dataFolder);
+        ipBanService = new IpBanService(this.dataFolder);
+        freezeService = new FreezeService(this.dataFolder);
         
         // Wire mute/ignore services into group chat for filtering
         groupChatService.setMuteService(muteService);
@@ -282,6 +296,15 @@ public class EliteEssentials extends JavaPlugin {
         if (configManager.getConfig().chatFormat.enabled) {
             getLogger().at(Level.INFO).log("Chat formatting system registered.");
         }
+        
+        // Register connect listener for ban/tempban/ipban/freeze enforcement
+        connectListener = new ConnectListener(configManager);
+        connectListener.setBanService(banService);
+        connectListener.setTempBanService(tempBanService);
+        connectListener.setIpBanService(ipBanService);
+        connectListener.setFreezeService(freezeService);
+        connectListener.registerEvents(getEventRegistry());
+        getLogger().at(Level.INFO).log("Connect listener registered (ban/freeze enforcement).");
         
         // Register the death tracking ECS system (hooks into Hytale's death events)
         if (configManager.isBackOnDeathEnabled() || configManager.getConfig().deathMessages.enabled) {
@@ -528,10 +551,11 @@ public class EliteEssentials extends JavaPlugin {
         
         // Group chat command
         if (config.groupChat.enabled) {
-            getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager, muteService));
+            getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager, muteService, playerService));
             getCommandRegistry().registerCommand(new HytaleChatsCommand(groupChatService, configManager));
             getCommandRegistry().registerCommand(new HytaleGcSpyCommand(groupChatService, configManager));
-            registeredCommands.append("/gc, /g, /chats, /gcspy, ");
+            getCommandRegistry().registerCommand(new HytaleGcSetCommand(groupChatService, playerService, configManager));
+            registeredCommands.append("/gc, /g, /chats, /gcspy, /gcset, ");
         }
         
         // Send message command (admin - works from console)
@@ -607,6 +631,12 @@ public class EliteEssentials extends JavaPlugin {
             registeredCommands.append("/clearinv, ");
         }
         
+        // Trash command
+        if (config.trash.enabled) {
+            getCommandRegistry().registerCommand(new HytaleTrashCommand(configManager, cooldownService));
+            registeredCommands.append("/trash, ");
+        }
+        
         // List command
         if (config.list.enabled) {
             getCommandRegistry().registerCommand(new HytaleListCommand(configManager));
@@ -673,6 +703,22 @@ public class EliteEssentials extends JavaPlugin {
             getCommandRegistry().registerCommand(new HytaleMuteCommand(muteService, configManager));
             getCommandRegistry().registerCommand(new HytaleUnmuteCommand(muteService, configManager));
             registeredCommands.append(", /mute, /unmute");
+        }
+        
+        // Ban commands (admin only)
+        if (config.ban.enabled) {
+            getCommandRegistry().registerCommand(new HytaleBanCommand(banService, configManager));
+            getCommandRegistry().registerCommand(new HytaleUnbanCommand(banService, configManager));
+            getCommandRegistry().registerCommand(new HytaleTempBanCommand(tempBanService, configManager));
+            getCommandRegistry().registerCommand(new HytaleIpBanCommand(ipBanService, configManager));
+            getCommandRegistry().registerCommand(new HytaleUnIpBanCommand(ipBanService, configManager));
+            registeredCommands.append(", /ban, /unban, /tempban, /ipban, /unipban");
+        }
+        
+        // Freeze command (admin only)
+        if (config.freeze.enabled) {
+            getCommandRegistry().registerCommand(new HytaleFreezeCommand(freezeService, configManager));
+            registeredCommands.append(", /freeze");
         }
         
         getLogger().at(Level.INFO).log("Commands registered: " + registeredCommands.toString());
@@ -802,6 +848,22 @@ public class EliteEssentials extends JavaPlugin {
         return muteService;
     }
     
+    public BanService getBanService() {
+        return banService;
+    }
+    
+    public TempBanService getTempBanService() {
+        return tempBanService;
+    }
+    
+    public IpBanService getIpBanService() {
+        return ipBanService;
+    }
+    
+    public FreezeService getFreezeService() {
+        return freezeService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -882,6 +944,20 @@ public class EliteEssentials extends JavaPlugin {
         // Reload mute service
         if (muteService != null) {
             muteService.reload();
+        }
+        
+        // Reload ban services
+        if (banService != null) {
+            banService.reload();
+        }
+        if (tempBanService != null) {
+            tempBanService.reload();
+        }
+        if (ipBanService != null) {
+            ipBanService.reload();
+        }
+        if (freezeService != null) {
+            freezeService.reload();
         }
         
         // Restart periodic play time save (interval may have changed)

@@ -23,6 +23,9 @@ public class PlayerFile {
     // Admin state
     private boolean vanished;  // Whether player is in vanish mode
     
+    // Group chat preference
+    private String defaultGroupChat;  // Default group chat for /gc command
+    
     // Homes: name -> Home
     private Map<String, Home> homes = new LinkedHashMap<>();
     
@@ -137,6 +140,16 @@ public class PlayerFile {
     
     public void setVanished(boolean vanished) {
         this.vanished = vanished;
+    }
+    
+    // ==================== Group Chat ====================
+    
+    public String getDefaultGroupChat() {
+        return defaultGroupChat;
+    }
+    
+    public void setDefaultGroupChat(String defaultGroupChat) {
+        this.defaultGroupChat = defaultGroupChat;
     }
     
     // ==================== Homes ====================
