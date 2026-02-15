@@ -59,6 +59,10 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - `spawn.perWorld: false` (default) - Always teleport to main world spawn
   - `spawn.perWorld: true` - Teleport to current world's spawn
   - `spawn.mainWorld` - Specify which world is the main world
+- **Spawn teleport delay**: Configure delay before teleporting players to spawn on join
+  - `spawn.teleportDelaySeconds: 2` (default) - Delay in seconds before teleporting
+  - Increase this value if players experience client crashes or timeouts during login
+  - Applies to both first-join and every-login teleport features
 
 ### Kit System
 - **`/kit [name]`** - Open kit GUI or claim a specific kit

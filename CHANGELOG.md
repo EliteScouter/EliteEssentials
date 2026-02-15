@@ -8,7 +8,19 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ## [1.1.9] - UPCOMING
 
+### Developer Note
+
+Thank you all for your continued support and for using EliteEssentials! I'm working hard to add new features and fix bugs - some take longer than others, but I'm committed to delivering quality updates and making EliteEssentials the best server management mod for Hytale.
+
 ### Added
+
+**Configurable Spawn Teleport Delay** - Delay before teleporting players to spawn on join
+* New config option: `spawn.teleportDelaySeconds` (default: 2)
+* Allows server owners to adjust the delay before teleporting players to `/setspawn` on join
+* Prevents client crashes and timeouts during player login by giving more time for full load
+* Applies to both `teleportOnFirstJoin` and `teleportOnEveryLogin` features
+* Cross-world and same-world teleports both use the configurable delay
+* Supports `/ee reload` to change the delay without restarting
 
 **Trash Command** - Disposal window for unwanted items
 * `/trash` - Opens an inventory window where you can drag in items to delete

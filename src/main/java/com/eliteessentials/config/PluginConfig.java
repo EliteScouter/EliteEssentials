@@ -758,6 +758,13 @@ public class PluginConfig {
          * Note: Uses mainWorld spawn when perWorld=false, or current world spawn when perWorld=true.
          */
         public boolean teleportOnEveryLogin = false;
+        
+        /**
+         * Delay in seconds before teleporting players to spawn after joining.
+         * This delay allows the player to fully load before teleporting.
+         * Default is 2 seconds.
+         */
+        public int teleportDelaySeconds = 2;
     }
 
     // ==================== WARPS ====================

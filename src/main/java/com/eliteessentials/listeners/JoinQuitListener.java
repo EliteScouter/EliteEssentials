@@ -381,10 +381,10 @@ public class JoinQuitListener {
                                             logger.warning("[FirstJoin] Failed cross-world teleport for " + finalPlayerName + ": " + e.getMessage());
                                         }
                                     });
-                                }, 2, TimeUnit.SECONDS);
+                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
                                 
                                 logger.info("[FirstJoin] Scheduled cross-world teleport for " + playerName + 
-                                    " to world '" + targetWorldName + "' in 2 seconds");
+                                    " to world '" + targetWorldName + "' in " + config.spawn.teleportDelaySeconds + " seconds");
                             } else {
                                 // Same world teleport - still needs delay to let player fully load
                                 final String finalPlayerName = playerName;
@@ -422,9 +422,9 @@ public class JoinQuitListener {
                                             logger.warning("[FirstJoin] Failed to teleport " + finalPlayerName + " to spawn: " + e.getMessage());
                                         }
                                     });
-                                }, 2, TimeUnit.SECONDS);
+                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
                                 
-                                logger.info("[FirstJoin] Scheduled same-world spawn teleport for " + playerName + " in 2 seconds");
+                                logger.info("[FirstJoin] Scheduled same-world spawn teleport for " + playerName + " in " + config.spawn.teleportDelaySeconds + " seconds");
                             }
                         } catch (Exception e) {
                             logger.warning("[FirstJoin] Failed to teleport " + playerName + " to spawn: " + e.getMessage());
@@ -492,11 +492,11 @@ public class JoinQuitListener {
                                             logger.warning("[SpawnOnLogin] Failed cross-world teleport for " + finalPlayerName + ": " + e.getMessage());
                                         }
                                     });
-                                }, 2, TimeUnit.SECONDS);
+                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
                                 
                                 if (configManager.isDebugEnabled()) {
                                     logger.info("[SpawnOnLogin] Scheduled cross-world teleport for " + playerName + 
-                                        " to world '" + targetWorldName + "' in 2 seconds");
+                                        " to world '" + targetWorldName + "' in " + config.spawn.teleportDelaySeconds + " seconds");
                                 }
                             } else {
                                 // Same world teleport - still needs delay to let player fully load
@@ -537,10 +537,10 @@ public class JoinQuitListener {
                                             logger.warning("[SpawnOnLogin] Failed to teleport " + finalPlayerName + " to spawn: " + e.getMessage());
                                         }
                                     });
-                                }, 2, TimeUnit.SECONDS);
+                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
                                 
                                 if (configManager.isDebugEnabled()) {
-                                    logger.info("[SpawnOnLogin] Scheduled same-world spawn teleport for " + playerName + " in 2 seconds");
+                                    logger.info("[SpawnOnLogin] Scheduled same-world spawn teleport for " + playerName + " in " + config.spawn.teleportDelaySeconds + " seconds");
                                 }
                             }
                         } catch (Exception e) {
