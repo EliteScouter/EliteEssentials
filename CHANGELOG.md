@@ -6,11 +6,11 @@ All notable changes to EliteEssentials will be documented in this file.
 
 (No changes currently.)
 
-## [1.1.9] - UPCOMING
+## [1.1.9] - 2026-02-15
 
 ### Developer Note
 
-Thank you all for your continued support and for using EliteEssentials! I'm working hard to add new features and fix bugs - some take longer than others, but I'm committed to delivering quality updates and making EliteEssentials the best server management mod for Hytale.
+Thank you all for your continued support and for using EliteEssentials! I'm working hard to add new features and fix bugs - some take longer than others, but I'm committed to delivering quality updates and making EliteEssentials the best there is!
 
 ### Added
 
