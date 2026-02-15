@@ -88,6 +88,11 @@ public class SpawnUseBlockInteraction extends UseBlockInteraction {
         SpawnProtectionService service = EliteEssentials.getInstance().getSpawnProtectionService();
         if (service == null || !service.isEnabled()) return false;
 
+        // Fast world check - skip worlds that have no spawn protection configured
+        // This is critical for arena worlds where spawn protection doesn't apply
+        String worldName = world.getName();
+        if (worldName == null || !service.hasSpawnInWorld(worldName)) return false;
+
         boolean isPickupProtection = service.isItemPickupProtectionEnabled();
         boolean isInteractionProtection = service.isInteractionProtectionEnabled();
 
@@ -106,7 +111,6 @@ public class SpawnUseBlockInteraction extends UseBlockInteraction {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef == null) return false;
 
-        String worldName = world.getName();
         if (!service.isInProtectedArea(worldName, targetBlock)) return false;
         if (service.canBypass(playerRef.getUuid())) return false;
 

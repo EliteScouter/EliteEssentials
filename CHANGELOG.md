@@ -78,6 +78,17 @@ All notable changes to EliteEssentials will be documented in this file.
 * Config section: `ignore.enabled` (default: true)
 * Configurable messages: `ignoreUsage`, `ignoreSelf`, `ignoreAdded`, `ignoreAlready`, `ignoreListEmpty`, `ignoreListHeader`, `unignoreUsage`, `unignoreRemoved`, `unignoreNotIgnored`, `unignoreAll`
 
+**Group Chat Enhancements** - Chat formatting, global toggle, and admin spy mode
+* New `groupChat.useChatFormatting` config option (default: `false`) - when enabled, player names in group chat use the same prefix/color formatting as regular chat (from `chatFormat` config)
+* Supports LuckPerms prefixes/suffixes, group priorities, and PlaceholderAPI in group chat messages
+* New `groupChat.formattedMessageFormat` config option to customize how the channel tag combines with the chat format (default: `{channel_color}{channel_prefix} {chat_format}`)
+* New `/gcspy` command - admins can toggle spy mode to see messages from all group chat channels, even ones they don't belong to
+* Spy messages use a distinct dimmed format (configurable via `groupChat.spyFormat`)
+* New `groupChat.allowSpy` config option (default: `true`) to enable/disable the spy feature
+* Permission: `eliteessentials.command.misc.groupchat.spy` (Admin)
+* Thread-safe spy tracking using `ConcurrentHashMap`
+* Configurable messages: `groupChatSpyEnabled`, `groupChatSpyDisabled`, `groupChatDisabled`
+
 **Mute System** - Admin command to mute players server-wide
 * `/mute <player> [reason]` - Mute a player with optional reason
 * `/unmute <player>` - Unmute a player
@@ -108,6 +119,14 @@ All notable changes to EliteEssentials will be documented in this file.
 * All teleport commands now pre-load the destination chunk before moving the player
 * Affected commands: `/home`, `/warp`, `/spawn`, `/back`, `/top`, `/tpaccept` (both same-world and cross-world), and all alias-based teleports (spawn, back, top via custom aliases)
 * Fixed double `world.execute()` wrapping in alias-based `/back` command
+
+**Player Desync in Multi-World Servers** - Critical ECS performance fix
+* Fixed spawn protection ECS systems (PvP, block break/place, damage, interaction, pickup, drop) running on every entity in every world, even worlds with no spawn protection configured
+* All 7 spawn protection systems now use `PlayerRef.getComponentType()` query instead of `Query.any()`, so the ECS only invokes them for player entities (skips mobs, NPCs, items, etc.)
+* Added fast `hasSpawnInWorld()` early-exit check before any component lookups, so arena worlds and other worlds without `/setspawn` bail out immediately with zero overhead
+* The `PvpProtection` system was the primary culprit - it sat in the damage filter group intercepting every damage event server-wide, causing combat desync (attacks not registering, items not pickable)
+* Added the same world-level early-exit to `SpawnUseBlockInteraction` codec override
+* Removed unused `PickupProtectionSystem.java` (dead code, was never registered but duplicated logic from `SpawnProtectionSystem.ItemPickupProtection`)
 
 ## [1.1.8] - 2026-02-08
 

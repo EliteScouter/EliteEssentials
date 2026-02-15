@@ -72,7 +72,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -80,9 +80,11 @@ public class SpawnProtectionSystem {
                           CommandBuffer<EntityStore> buffer, BreakBlockEvent event) {
             if (!service.isEnabled() || event.isCancelled()) return;
             
-            // Get world name for per-world protection check
+            // Fast world check - skip worlds that have no spawn protection configured
             String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, event.getTargetBlock())) return;
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+            
+            if (!service.isInProtectedArea(worldName, event.getTargetBlock())) return;
 
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player != null && service.canBypass(player.getUuid())) return;
@@ -106,7 +108,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -114,9 +116,11 @@ public class SpawnProtectionSystem {
                           CommandBuffer<EntityStore> buffer, PlaceBlockEvent event) {
             if (!service.isEnabled() || event.isCancelled()) return;
             
-            // Get world name for per-world protection check
+            // Fast world check - skip worlds that have no spawn protection configured
             String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, event.getTargetBlock())) return;
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+            
+            if (!service.isInProtectedArea(worldName, event.getTargetBlock())) return;
 
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player != null && service.canBypass(player.getUuid())) return;
@@ -140,7 +144,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -148,9 +152,11 @@ public class SpawnProtectionSystem {
                           CommandBuffer<EntityStore> buffer, DamageBlockEvent event) {
             if (!service.isEnabled() || event.isCancelled()) return;
             
-            // Get world name for per-world protection check
+            // Fast world check - skip worlds that have no spawn protection configured
             String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, event.getTargetBlock())) return;
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+            
+            if (!service.isInProtectedArea(worldName, event.getTargetBlock())) return;
 
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player != null && service.canBypass(player.getUuid())) return;
@@ -176,7 +182,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -192,13 +198,16 @@ public class SpawnProtectionSystem {
                 return;
             }
 
+            // Fast world check - skip worlds that have no spawn protection configured
+            // This is critical for arena worlds where spawn protection doesn't apply
+            String worldName = getWorldName(store);
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) {
+                return;
+            }
+
             // Check if victim is a player
             PlayerRef victim = chunk.getComponent(index, PlayerRef.getComponentType());
             if (victim == null) return;
-
-            // Get world name for per-world protection check
-            String worldName = getWorldName(store);
-            if (worldName == null) return;
 
             // Check if victim is in protected area (world-specific)
             if (!service.isInProtectedArea(worldName, victim.getTransform().getPosition())) {
@@ -251,7 +260,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -260,9 +269,11 @@ public class SpawnProtectionSystem {
             if (!service.isEnabled() || event.isCancelled()) return;
             if (!service.isInteractionProtectionEnabled()) return;
             
-            // Get world name for per-world protection check
+            // Fast world check - skip worlds that have no spawn protection configured
             String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, event.getTargetBlock())) return;
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+            
+            if (!service.isInProtectedArea(worldName, event.getTargetBlock())) return;
 
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player != null && service.canBypass(player.getUuid())) return;
@@ -304,12 +315,14 @@ public class SpawnProtectionSystem {
             if (!service.isEnabled() || event.isCancelled()) return;
             if (!service.isItemPickupProtectionEnabled()) return;
 
+            // Fast world check - skip worlds that have no spawn protection configured
+            String worldName = getWorldName(store);
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player == null) return;
             
-            // Get world name for per-world protection check
-            String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, player.getTransform().getPosition())) return;
+            if (!service.isInProtectedArea(worldName, player.getTransform().getPosition())) return;
             if (service.canBypass(player.getUuid())) return;
 
             event.setCancelled(true);
@@ -333,7 +346,7 @@ public class SpawnProtectionSystem {
 
         @Override
         public Query<EntityStore> getQuery() {
-            return Query.any();
+            return PlayerRef.getComponentType();
         }
 
         @Override
@@ -342,12 +355,14 @@ public class SpawnProtectionSystem {
             if (!service.isEnabled() || event.isCancelled()) return;
             if (!service.isItemDropProtectionEnabled()) return;
 
+            // Fast world check - skip worlds that have no spawn protection configured
+            String worldName = getWorldName(store);
+            if (worldName == null || !service.hasSpawnInWorld(worldName)) return;
+
             PlayerRef player = chunk.getComponent(index, PlayerRef.getComponentType());
             if (player == null) return;
             
-            // Get world name for per-world protection check
-            String worldName = getWorldName(store);
-            if (worldName == null || !service.isInProtectedArea(worldName, player.getTransform().getPosition())) return;
+            if (!service.isInProtectedArea(worldName, player.getTransform().getPosition())) return;
             if (service.canBypass(player.getUuid())) return;
 
             event.setCancelled(true);

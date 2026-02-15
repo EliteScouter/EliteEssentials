@@ -112,6 +112,19 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **Range-Based Group Chat** - Create proximity-based chat channels
   - Configure `range` field in group chats for local/proximity chat
   - Perfect for RP servers where only nearby players should hear you
+- **Group Chat Formatting** - Use the same prefix/color formatting from regular chat in group chat
+  - When enabled, player names in group chat use LuckPerms prefixes/suffixes and group priorities
+  - Configurable format template: `{channel_color}{channel_prefix} {chat_format}`
+  - Admin spy mode to monitor all channels with `/gcspy`
+- **Group Chat Channels** - Create private chat channels for different groups
+  - Group-based chats tied to LuckPerms groups (e.g., admin, moderator)
+  - Permission-based chats tied to permission nodes (e.g., trade chat)
+  - Range-limited chats for proximity-based communication
+  - Configure channels in `groupchat.json`
+- **Group Chat Formatting** - Use the same prefix/color formatting from regular chat in group chat
+  - When enabled, player names in group chat use LuckPerms prefixes/suffixes and group priorities
+  - Configurable format template: `{channel_color}{channel_prefix} {chat_format}`
+  - Admin spy mode to monitor all channels with `/gcspy`
 - **Join Messages** - Automatic messages when players join
   - First join messages broadcast to everyone
   - Fully customizable in config
