@@ -234,6 +234,9 @@ public class PluginConfig {
         messages.put("groupChatUsage", "&cUsage: &e/gc <message>");
         messages.put("groupChatUsageGroup", "&cUsage: &e/gc {group} <message>");
         messages.put("groupChatUsageMultiple", "&cUsage: &e/gc [chat] <message> &7- Chats: {groups}");
+        messages.put("groupChatSpyEnabled", "&aGroup chat spy &2enabled&a. You will see all group chat messages.");
+        messages.put("groupChatSpyDisabled", "&aGroup chat spy &cdisabled&a.");
+        messages.put("groupChatDisabled", "&cGroup chat is disabled.");
         
         // ==================== CHATS LIST ====================
         messages.put("chatsNoAccess", "&cYou don't have access to any chat channels.");
@@ -862,6 +865,47 @@ public class PluginConfig {
          * Requires LuckPerms for group detection.
          */
         public boolean enabled = true;
+        
+        /**
+         * Use the same chat formatting (prefixes, colors, LuckPerms placeholders) from chatFormat
+         * for player names in group chat messages.
+         * 
+         * When false (default): Player names appear as plain white text.
+         * When true: Player names use the same group-based formatting as regular chat.
+         * 
+         * The group chat channel prefix (e.g., [ADMIN]) is always shown before the formatted name.
+         */
+        public boolean useChatFormatting = false;
+        
+        /**
+         * Custom format for group chat messages when useChatFormatting is true.
+         * 
+         * Placeholders:
+         * - {channel_prefix} - The chat channel prefix (e.g., [ADMIN])
+         * - {channel_color} - The chat channel color code
+         * - {chat_format} - The player's full chat format from chatFormat config (with {message} replaced)
+         * - {player} - Player's username
+         * - {message} - The chat message
+         * 
+         * Default puts the channel tag before the player's normal chat format.
+         */
+        public String formattedMessageFormat = "{channel_color}{channel_prefix} {chat_format}";
+        
+        /**
+         * Allow admins to spy on all group chat channels with /gcspy.
+         * Spying admins see messages from channels they don't belong to.
+         */
+        public boolean allowSpy = true;
+        
+        /**
+         * Format for spy messages shown to admins watching channels they're not in.
+         * 
+         * Placeholders:
+         * - {channel} - Channel name
+         * - {player} - Player's username
+         * - {message} - The chat message
+         */
+        public String spyFormat = "&8[GC-SPY] &7[{channel}] {player}: {message}";
     }
 
     // ==================== REPAIR ====================

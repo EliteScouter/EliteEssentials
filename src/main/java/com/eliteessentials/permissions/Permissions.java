@@ -143,6 +143,7 @@ public final class Permissions {
     public static final String REPAIR_BYPASS_COOLDOWN = MISC_CATEGORY + ".repair.bypass.cooldown";
     public static final String REPAIR_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.cooldown.";
     public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
+    public static final String GROUP_CHAT_SPY = MISC_CATEGORY + ".groupchat.spy";
     public static final String IGNORE = MISC_CATEGORY + ".ignore";
     public static final String AFK = MISC_CATEGORY + ".afk";
     public static final String JOINDATE = MISC_CATEGORY + ".joindate";

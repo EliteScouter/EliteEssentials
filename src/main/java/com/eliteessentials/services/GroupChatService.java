@@ -2,7 +2,9 @@ package com.eliteessentials.services;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.model.GroupChat;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
 import com.google.gson.Gson;
@@ -18,6 +20,7 @@ import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
@@ -27,10 +30,15 @@ import java.util.logging.Logger;
  * 1. Group-based (requiresGroup = true): Players in the LuckPerms group can chat
  * 2. Permission-based (requiresGroup = false): Players with eliteessentials.chat.<name> can chat
  * 
+ * Features:
+ * - Optional chat formatting (prefixes/colors from chatFormat config)
+ * - Admin spy mode to monitor all channels
+ * 
  * Usage:
  * - /gc [chat] <message> - Send to a chat channel
  * - /g [chat] <message> - Alias for /gc
  * - /chats - List available chat channels
+ * - /gcspy - Toggle spy mode (admin)
  */
 public class GroupChatService {
     
@@ -41,6 +49,9 @@ public class GroupChatService {
     private final File dataFolder;
     private final ConfigManager configManager;
     private final Object fileLock = new Object();
+    
+    /** Players currently spying on all group chat channels */
+    private final Set<UUID> spyingPlayers = ConcurrentHashMap.newKeySet();
     
     private List<GroupChat> groupChats = new ArrayList<>();
     private MuteService muteService;
@@ -226,23 +237,69 @@ public class GroupChatService {
     /**
      * Broadcast a message to all players who have access to a specific chat.
      * If the chat has a range limit, only players within that range will receive the message.
+     * Optionally applies chat formatting (prefixes/colors) from the chatFormat config.
+     * Sends spy messages to admins with spy mode enabled who aren't in the channel.
      * 
      * @param groupChat The chat channel configuration
      * @param sender The player sending the message
      * @param message The message content
      */
     public void broadcast(GroupChat groupChat, PlayerRef sender, String message) {
-        // Build the formatted message
-        // Format: [PREFIX] PlayerName: message
+        var gcConfig = configManager.getConfig().groupChat;
+        
+        // Build the channel color code
         String colorCode = groupChat.getColor();
         if (colorCode != null && colorCode.startsWith("#") && !colorCode.startsWith("&#")) {
             colorCode = "&" + colorCode;
         }
         
-        String format = colorCode + groupChat.getPrefix() + " &f" + 
-                       sender.getUsername() + "&7: &r" + message;
+        // Build the formatted message based on whether chat formatting is enabled
+        String format;
+        if (gcConfig.useChatFormatting) {
+            // Get the player's chat format from chatFormat config (same as regular chat)
+            String chatFormat = getChatFormatForPlayer(sender);
+            
+            // Replace player placeholders in the chat format
+            String playerFormatted = chatFormat
+                    .replace("{player}", sender.getUsername())
+                    .replace("{displayname}", sender.getUsername());
+            
+            // Replace LuckPerms placeholders if available
+            playerFormatted = replaceLuckPermsPlaceholders(sender, playerFormatted);
+            
+            // Replace PAPI placeholders if available
+            boolean isPapiAvailable = PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi;
+            if (isPapiAvailable) {
+                playerFormatted = PAPIIntegration.setPlaceholders(sender, playerFormatted);
+            }
+            
+            // Replace {message} in the chat format with the actual message
+            playerFormatted = playerFormatted.replace("{message}", message);
+            
+            // Build the final format using the group chat formatted message format
+            format = gcConfig.formattedMessageFormat
+                    .replace("{channel_prefix}", groupChat.getPrefix())
+                    .replace("{channel_color}", colorCode != null ? colorCode : "")
+                    .replace("{chat_format}", playerFormatted)
+                    .replace("{player}", sender.getUsername())
+                    .replace("{message}", message);
+        } else {
+            // Plain format: [PREFIX] PlayerName: message
+            format = colorCode + groupChat.getPrefix() + " &f" + 
+                           sender.getUsername() + "&7: &r" + message;
+        }
         
         Message formattedMessage = MessageFormatter.format(format);
+        
+        // Build spy message for admins not in the channel
+        Message spyMessage = null;
+        if (gcConfig.allowSpy && !spyingPlayers.isEmpty()) {
+            String spyFormat = gcConfig.spyFormat
+                    .replace("{channel}", groupChat.getGroupName())
+                    .replace("{player}", sender.getUsername())
+                    .replace("{message}", message);
+            spyMessage = MessageFormatter.format(spyFormat);
+        }
         
         // Get sender position if range-limited
         Vector3d senderPos = null;
@@ -257,8 +314,9 @@ public class GroupChatService {
             }
         }
         
-        // Find all players with access to this chat
+        // Find all players with access to this chat + spy targets
         List<PlayerRef> recipients = new ArrayList<>();
+        List<PlayerRef> spyRecipients = new ArrayList<>();
         Universe universe = Universe.get();
         
         if (universe != null) {
@@ -280,7 +338,9 @@ public class GroupChatService {
                 if (players != null) {
                     for (PlayerRef player : players) {
                         if (player != null && player.isValid()) {
-                            if (playerHasAccess(player.getUuid(), groupChat)) {
+                            boolean hasAccess = playerHasAccess(player.getUuid(), groupChat);
+                            
+                            if (hasAccess) {
                                 // Check range if applicable
                                 if (groupChat.hasRangeLimit() && senderPos != null && senderWorldName != null) {
                                     if (!isPlayerInRange(player, worldName, senderWorldName, senderPos, groupChat.getRange())) {
@@ -292,6 +352,9 @@ public class GroupChatService {
                                     continue;
                                 }
                                 recipients.add(player);
+                            } else if (spyMessage != null && isSpying(player.getUuid())) {
+                                // Player doesn't have access but is spying
+                                spyRecipients.add(player);
                             }
                         }
                     }
@@ -304,10 +367,18 @@ public class GroupChatService {
             recipient.sendMessage(formattedMessage);
         }
         
+        // Send spy messages
+        if (spyMessage != null) {
+            for (PlayerRef spy : spyRecipients) {
+                spy.sendMessage(spyMessage);
+            }
+        }
+        
         if (configManager.isDebugEnabled()) {
             String rangeInfo = groupChat.hasRangeLimit() ? " (range: " + groupChat.getRange() + " blocks)" : "";
+            String spyInfo = spyRecipients.isEmpty() ? "" : " (+" + spyRecipients.size() + " spies)";
             logger.info("Chat [" + groupChat.getGroupName() + "]" + rangeInfo + " from " + 
-                       sender.getUsername() + " sent to " + recipients.size() + " players.");
+                       sender.getUsername() + " sent to " + recipients.size() + " players" + spyInfo + ".");
         }
     }
     
@@ -376,5 +447,171 @@ public class GroupChatService {
             save();
         }
         return removed;
+    }
+    
+    // ==================== SPY MODE ====================
+    
+    /**
+     * Toggle spy mode for a player.
+     * @return true if spy is now enabled, false if disabled
+     */
+    public boolean toggleSpy(UUID playerId) {
+        if (spyingPlayers.contains(playerId)) {
+            spyingPlayers.remove(playerId);
+            return false;
+        } else {
+            spyingPlayers.add(playerId);
+            return true;
+        }
+    }
+    
+    /**
+     * Check if a player is currently spying on group chats.
+     */
+    public boolean isSpying(UUID playerId) {
+        return spyingPlayers.contains(playerId);
+    }
+    
+    /**
+     * Remove a player from spy mode (e.g., on disconnect).
+     */
+    public void removeSpy(UUID playerId) {
+        spyingPlayers.remove(playerId);
+    }
+    
+    // ==================== CHAT FORMAT HELPERS ====================
+    
+    /**
+     * Get the chat format string for a player based on their highest priority group.
+     * Mirrors the logic from ChatListener.getChatFormat() so group chat can reuse
+     * the same prefix/color formatting as regular chat.
+     */
+    private String getChatFormatForPlayer(PlayerRef playerRef) {
+        var config = configManager.getConfig().chatFormat;
+        
+        String highestPriorityGroup = null;
+        int highestPriority = -1;
+        
+        // Try LuckPerms first if available
+        if (LuckPermsIntegration.isAvailable()) {
+            List<String> groups = LuckPermsIntegration.getGroups(playerRef.getUuid());
+            
+            for (String group : groups) {
+                String matchedConfigKey = findConfigKeyIgnoreCase(config.groupFormats, group);
+                
+                if (matchedConfigKey != null) {
+                    int priority = getGroupPriorityIgnoreCase(config.groupPriorities, group, matchedConfigKey);
+                    if (priority > highestPriority) {
+                        highestPriority = priority;
+                        highestPriorityGroup = matchedConfigKey;
+                    }
+                }
+            }
+            
+            if (highestPriorityGroup != null) {
+                return config.groupFormats.get(highestPriorityGroup);
+            }
+        }
+        
+        // Fall back to simple permission system
+        if (PermissionService.get().isAdmin(playerRef.getUuid())) {
+            for (String groupName : config.groupFormats.keySet()) {
+                int priority = config.groupPriorities.getOrDefault(groupName, 0);
+                if (priority > highestPriority) {
+                    highestPriority = priority;
+                    highestPriorityGroup = groupName;
+                }
+            }
+        }
+        
+        if (highestPriorityGroup != null) {
+            return config.groupFormats.get(highestPriorityGroup);
+        }
+        
+        // Default format
+        String defaultFormat = config.groupFormats.get("default");
+        if (defaultFormat != null) {
+            return defaultFormat;
+        }
+        defaultFormat = config.groupFormats.get("Default");
+        return defaultFormat != null ? defaultFormat : config.defaultFormat;
+    }
+    
+    /**
+     * Find a config key that matches the group name (case-insensitive).
+     */
+    private String findConfigKeyIgnoreCase(Map<String, String> map, String group) {
+        if (map.containsKey(group)) {
+            return group;
+        }
+        for (String key : map.keySet()) {
+            if (key.equalsIgnoreCase(group)) {
+                return key;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get group priority with case-insensitive fallback.
+     */
+    private int getGroupPriorityIgnoreCase(Map<String, Integer> priorities, String group, String matchedConfigKey) {
+        if (priorities.containsKey(matchedConfigKey)) {
+            return priorities.get(matchedConfigKey);
+        }
+        if (priorities.containsKey(group)) {
+            return priorities.get(group);
+        }
+        for (Map.Entry<String, Integer> entry : priorities.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(group)) {
+                return entry.getValue();
+            }
+        }
+        return 0;
+    }
+    
+    /**
+     * Replace LuckPerms placeholders in the format string.
+     * Supports {prefix}, {suffix}, {group} and their %luckperms_*% equivalents.
+     */
+    private String replaceLuckPermsPlaceholders(PlayerRef player, String format) {
+        if (!LuckPermsIntegration.isAvailable()) {
+            return format
+                    .replace("%luckperms_prefix%", "")
+                    .replace("%luckperms_suffix%", "")
+                    .replace("%luckperms_primary_group%", "")
+                    .replace("{prefix}", "")
+                    .replace("{suffix}", "")
+                    .replace("{group}", "");
+        }
+        
+        UUID playerId = player.getUuid();
+        
+        boolean hasPrefix = format.contains("%luckperms_prefix%") || format.contains("{prefix}");
+        boolean hasSuffix = format.contains("%luckperms_suffix%") || format.contains("{suffix}");
+        boolean hasGroup = format.contains("%luckperms_primary_group%") || format.contains("{group}");
+        
+        if (hasPrefix) {
+            String prefix = LuckPermsIntegration.getPrefix(playerId);
+            format = format
+                    .replace("%luckperms_prefix%", prefix)
+                    .replace("{prefix}", prefix);
+        }
+        
+        if (hasSuffix) {
+            String suffix = LuckPermsIntegration.getSuffix(playerId);
+            format = format
+                    .replace("%luckperms_suffix%", suffix)
+                    .replace("{suffix}", suffix);
+        }
+        
+        if (hasGroup) {
+            String group = LuckPermsIntegration.getPrimaryGroupDisplay(playerId);
+            format = format
+                    .replace("%luckperms_primary_group%", group)
+                    .replace("{group}", group);
+        }
+        
+        return format;
     }
 }

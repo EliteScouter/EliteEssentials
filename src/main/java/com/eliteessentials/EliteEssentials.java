@@ -530,7 +530,8 @@ public class EliteEssentials extends JavaPlugin {
         if (config.groupChat.enabled) {
             getCommandRegistry().registerCommand(new HytaleGroupChatCommand(groupChatService, configManager, muteService));
             getCommandRegistry().registerCommand(new HytaleChatsCommand(groupChatService, configManager));
-            registeredCommands.append("/gc, /g, /chats, ");
+            getCommandRegistry().registerCommand(new HytaleGcSpyCommand(groupChatService, configManager));
+            registeredCommands.append("/gc, /g, /chats, /gcspy, ");
         }
         
         // Send message command (admin - works from console)
