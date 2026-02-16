@@ -84,8 +84,13 @@ public class HytaleAliasCommand extends CommandBase {
         // parts[0]=alias, parts[1]=create, parts[2]=name, parts[3+]=command
         if (parts.length < 4) {
             ctx.sendMessage(Message.raw("Usage: /alias create <name> <command> [permission]").color("#FFAA00"));
+            ctx.sendMessage(Message.raw("Works with ANY command - EE or other mods.").color("#AAAAAA"));
             ctx.sendMessage(Message.raw("Example: /alias create explore warp explore").color("#777777"));
+            ctx.sendMessage(Message.raw("Example: /alias create claims sc").color("#777777"));
             ctx.sendMessage(Message.raw("Example: /alias create vipkit kit vip op").color("#777777"));
+            ctx.sendMessage(Message.raw("Example: /alias create chatty /gc alias.chatty").color("#777777"));
+            ctx.sendMessage(Message.raw("Custom permissions auto-generate as eliteessentials.command.alias.<name>").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("Chain commands with ; (e.g., heal;god)").color("#777777"));
             return;
         }
 
@@ -211,17 +216,37 @@ public class HytaleAliasCommand extends CommandBase {
             Message.raw("Command: ").color("#AAAAAA"),
             Message.raw("/" + data.command).color("#FFFFFF")
         ));
+        
+        // Show the actual permission (normalized)
+        String actualPerm = data.permission;
+        String displayPerm = actualPerm;
+        if (actualPerm.startsWith("eliteessentials.command.alias.")) {
+            displayPerm = actualPerm + " (auto-generated)";
+        }
         ctx.sendMessage(Message.join(
             Message.raw("Permission: ").color("#AAAAAA"),
-            Message.raw(data.permission).color("#FFAA00")
+            Message.raw(displayPerm).color("#FFAA00")
         ));
         
-        if ("everyone".equalsIgnoreCase(data.permission)) {
+        if ("everyone".equalsIgnoreCase(actualPerm)) {
             ctx.sendMessage(Message.raw("  (Anyone can use this alias)").color("#777777"));
-        } else if ("op".equalsIgnoreCase(data.permission)) {
+        } else if ("op".equalsIgnoreCase(actualPerm)) {
             ctx.sendMessage(Message.raw("  (Only admins/OPs can use this alias)").color("#777777"));
         } else {
-            ctx.sendMessage(Message.raw("  (Requires permission: " + data.permission + ")").color("#777777"));
+            ctx.sendMessage(Message.raw("  (Requires permission: " + actualPerm + ")").color("#777777"));
+        }
+        
+        // Show dispatch mode for each command in the chain
+        for (String cmd : data.command.split(";")) {
+            cmd = cmd.trim();
+            if (cmd.isEmpty()) continue;
+            if (cmd.startsWith("/")) cmd = cmd.substring(1);
+            String cmdName = cmd.split(" ", 2)[0].toLowerCase();
+            boolean optimized = AliasService.isOptimizedCommand(cmdName);
+            ctx.sendMessage(Message.join(
+                Message.raw("  /" + cmdName + ": ").color("#AAAAAA"),
+                Message.raw(optimized ? "EE optimized (silent/back support)" : "Generic dispatch (runs as player)").color(optimized ? "#55FF55" : "#55FFFF")
+            ));
         }
     }
 
@@ -243,6 +268,8 @@ public class HytaleAliasCommand extends CommandBase {
             Message.raw("/alias info <name>").color("#55FF55"),
             Message.raw(" - Show alias details").color("#777777")
         ));
-        ctx.sendMessage(Message.raw("Permissions: everyone, op, or custom.node").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("Works with ANY command - EE or other mods.").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("Commands run as the player (respects permissions).").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("Permissions: everyone, op, or custom").color("#AAAAAA"));
     }
 }

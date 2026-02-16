@@ -204,6 +204,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
             }
             
             UUID targetId = findPlayerId(targetName, playerService);
+            PlayerRef targetPlayer = findPlayerRef(targetName);
             if (targetId == null) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
@@ -212,7 +213,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
             
             switch (action) {
                 case "set" -> {
-                    if (playerService.setBalance(targetId, amount)) {
+                    if (playerService.setBalance(targetId, amount, targetPlayer)) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletSet",
                                 "player", targetName,
@@ -223,7 +224,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
                     }
                 }
                 case "add" -> {
-                    if (playerService.addMoney(targetId, amount)) {
+                    if (playerService.addMoney(targetId, amount, targetPlayer)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletAdded",
@@ -235,7 +236,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
                     }
                 }
                 case "remove" -> {
-                    if (playerService.removeMoney(targetId, amount)) {
+                    if (playerService.removeMoney(targetId, amount, targetPlayer)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletRemoved",
@@ -263,5 +264,17 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
         }
         // Check offline players in cache
         return playerService.getPlayerByName(name).map(d -> d.getUuid()).orElse(null);
+    }
+    
+    /**
+     * Helper to find player reference by name (online only).
+     */
+    private static PlayerRef findPlayerRef(String name) {
+        for (PlayerRef p : Universe.get().getPlayers()) {
+            if (p.getUsername().equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
     }
 }

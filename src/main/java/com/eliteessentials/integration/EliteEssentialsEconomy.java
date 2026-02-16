@@ -241,7 +241,7 @@ public class EliteEssentialsEconomy implements Economy {
             );
         }
         
-        boolean success = playerService.removeMoney(accountID, amount.doubleValue());
+        boolean success = playerService.removeMoney(accountID, amount.doubleValue(), null);
         EconomyResponse.ResponseType status = success ? 
             EconomyResponse.ResponseType.SUCCESS : 
             EconomyResponse.ResponseType.FAILURE;
@@ -278,7 +278,7 @@ public class EliteEssentialsEconomy implements Economy {
             );
         }
         
-        boolean success = playerService.addMoney(accountID, amount.doubleValue());
+        boolean success = playerService.addMoney(accountID, amount.doubleValue(), null);
         EconomyResponse.ResponseType status = success ? 
             EconomyResponse.ResponseType.SUCCESS : 
             EconomyResponse.ResponseType.FAILURE;

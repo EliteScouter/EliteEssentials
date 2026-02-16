@@ -341,6 +341,7 @@ public class PluginConfig {
         messages.put("paySelf", "&cYou cannot pay yourself.");
         messages.put("payInsufficientFunds", "&cInsufficient funds. Your balance: &e{balance}");
         messages.put("payFailed", "&cPayment failed.");
+        messages.put("balanceChangeNotify", "&a{changeType} &e{amount} &ato/from &f{player}&a. Balance: &e{oldBalance} &7-> &e{newBalance}");
         messages.put("baltopHeader", "&b&l=== &fRichest Players &b&l===");
         messages.put("baltopEntry", "&e{rank}. &f{player} &7- &a{balance}");
         
@@ -1298,6 +1299,15 @@ public class PluginConfig {
          * useExternalEconomy takes precedence (we consume, not provide).
          */
         public boolean useExternalEconomy = false;
+        
+        /**
+         * Notify players when their balance changes.
+         * Options:
+         * - "none" - No notifications
+         * - "chat" - Show notification in chat
+         * - "tooltip" - Show notification in HUD tooltip (when hovering over wallet icon)
+         */
+        public String playerBalanceChangeNotify = "none";
     }
     
     // ==================== MAIL ====================

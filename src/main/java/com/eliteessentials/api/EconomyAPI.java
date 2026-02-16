@@ -181,7 +181,7 @@ public final class EconomyAPI {
         PlayerService service = getPlayerService();
         if (service == null) return false;
         
-        return service.removeMoney(playerId, amount);
+        return service.removeMoney(playerId, amount, null);
     }
 
     /**
@@ -207,7 +207,7 @@ public final class EconomyAPI {
         PlayerService service = getPlayerService();
         if (service == null) return false;
         
-        return service.addMoney(playerId, amount);
+        return service.addMoney(playerId, amount, null);
     }
 
     /**
@@ -235,7 +235,7 @@ public final class EconomyAPI {
         PlayerService service = getPlayerService();
         if (service == null) return false;
         
-        return service.setBalance(playerId, amount);
+        return service.setBalance(playerId, amount, null);
     }
 
     /**

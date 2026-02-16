@@ -175,6 +175,7 @@ public class HytaleEcoCommand extends CommandBase {
             }
             
             UUID targetId = findPlayerId(playerName);
+            PlayerRef targetPlayer = findPlayerRef(playerName);
             if (targetId == null) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("playerNotFound", "player", playerName), "#FF5555"));
@@ -183,7 +184,7 @@ public class HytaleEcoCommand extends CommandBase {
             
             switch (action) {
                 case "set" -> {
-                    if (playerService.setBalance(targetId, amount)) {
+                    if (playerService.setBalance(targetId, amount, targetPlayer)) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletSet",
                                 "player", playerName,
@@ -194,7 +195,7 @@ public class HytaleEcoCommand extends CommandBase {
                     }
                 }
                 case "add" -> {
-                    if (playerService.addMoney(targetId, amount)) {
+                    if (playerService.addMoney(targetId, amount, targetPlayer)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletAdded",
@@ -206,7 +207,7 @@ public class HytaleEcoCommand extends CommandBase {
                     }
                 }
                 case "remove" -> {
-                    if (playerService.removeMoney(targetId, amount)) {
+                    if (playerService.removeMoney(targetId, amount, targetPlayer)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletRemoved",
@@ -228,6 +229,15 @@ public class HytaleEcoCommand extends CommandBase {
                 }
             }
             return playerService.getPlayerByName(name).map(d -> d.getUuid()).orElse(null);
+        }
+        
+        private PlayerRef findPlayerRef(String name) {
+            for (PlayerRef p : Universe.get().getPlayers()) {
+                if (p.getUsername().equalsIgnoreCase(name)) {
+                    return p;
+                }
+            }
+            return null;
         }
     }
 }

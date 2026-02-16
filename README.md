@@ -82,6 +82,21 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **`/reply`** - Reply to the last private message (aliases: /r)
 - **`/clearinv`** - Clear all items from your inventory (Admin, aliases: /clearinventory, /ci)
 
+### Command Aliases
+- **`/alias create <name> <command> [permission]`** - Create custom shortcut commands (Admin)
+- **`/alias delete <name>`** - Delete an alias
+- **`/alias list`** - List all aliases
+- **`/alias info <name>`** - Show alias details
+- **Works with ANY command** - Execute commands from any mod/plugin (e.g., `/alias claims sc` runs `/sc`)
+- **Silent mode** - Add `"silent": true` in aliases.json to suppress teleport messages
+- **Command chains** - Use `;` to execute multiple commands (e.g., `warp spawn; heal; fly`)
+- **Security** - Commands run as the player (respects their permissions), no privilege escalation
+- **Optimized paths** - EE commands (warp, spawn, home, etc.) support silent mode and /back saving
+- **Generic dispatch** - All other commands (including other mods) run via `CommandManager.handleCommand()`
+- **Auto-generated permissions** - Custom permissions auto-generate as `eliteessentials.command.alias.<name>`
+  - Example: `/alias create chatty /gc alias.chatty` creates permission `eliteessentials.command.alias.chatty`
+  - Permissions `everyone` and `op` remain unchanged
+
 ### Communication & Server Management
 - **`/motd`** - Display the Message of the Day
   - Rich formatting with color codes (`&a`, `&c`, `&l`, etc.)

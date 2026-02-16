@@ -47,6 +47,9 @@ public class PlayerFile {
     // Mail inbox
     private List<MailMessage> mailbox = new ArrayList<>();
     
+    // Balance change notification (for tooltip display)
+    private BalanceChangeNotification balanceChangeNotification;
+    
     public PlayerFile() {
         // For Gson deserialization
     }
@@ -59,6 +62,7 @@ public class PlayerFile {
         this.playTime = 0;
         this.wallet = 0.0;
         this.vanished = false;
+        this.balanceChangeNotification = null;
     }
     
     // ==================== Core Identity ====================
@@ -351,7 +355,36 @@ public class PlayerFile {
         return getIgnoredPlayers().size();
     }
     
+    // ==================== Balance Change Notification ====================
+    
+    public BalanceChangeNotification getBalanceChangeNotification() {
+        return balanceChangeNotification;
+    }
+    
+    public void setBalanceChangeNotification(double oldBalance, double newBalance, double diff) {
+        this.balanceChangeNotification = new BalanceChangeNotification(oldBalance, newBalance, diff);
+    }
+    
+    public void clearBalanceChangeNotification() {
+        this.balanceChangeNotification = null;
+    }
+    
     // ==================== Inner Classes ====================
+    
+    /**
+     * Represents a balance change notification for tooltip display.
+     */
+    public static class BalanceChangeNotification {
+        public double oldBalance;
+        public double newBalance;
+        public double diff;
+        
+        public BalanceChangeNotification(double oldBalance, double newBalance, double diff) {
+            this.oldBalance = oldBalance;
+            this.newBalance = newBalance;
+            this.diff = diff;
+        }
+    }
     
     /**
      * Tracks playtime reward claims.

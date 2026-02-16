@@ -3,6 +3,8 @@ package com.eliteessentials.services;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.storage.PlayerFileStorage;
+import com.eliteessentials.util.MessageFormatter;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -147,13 +149,28 @@ public class PlayerService {
      * Add money to a player's wallet.
      */
     public boolean addMoney(UUID playerId, double amount) {
+        return addMoney(playerId, amount, null);
+    }
+    
+    /**
+     * Add money to a player's wallet with optional notification.
+     * @param playerId Player UUID
+     * @param amount Amount to add
+     * @param playerRef Player reference for notifications (null if not available)
+     */
+    public boolean addMoney(UUID playerId, double amount, PlayerRef playerRef) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
         }
         
+        double oldBalance = data.getWallet();
         data.modifyWallet(amount);
         storage.saveAndMarkDirty(playerId);
+        
+        // Notify player of balance change if configured
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        
         return true;
     }
 
@@ -162,16 +179,31 @@ public class PlayerService {
      * Returns false if insufficient funds.
      */
     public boolean removeMoney(UUID playerId, double amount) {
+        return removeMoney(playerId, amount, null);
+    }
+    
+    /**
+     * Remove money from a player's wallet with optional notification.
+     * @param playerId Player UUID
+     * @param amount Amount to remove
+     * @param playerRef Player reference for notifications (null if not available)
+     */
+    public boolean removeMoney(UUID playerId, double amount, PlayerRef playerRef) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
         }
         
+        double oldBalance = data.getWallet();
         if (!data.modifyWallet(-amount)) {
             return false;  // Insufficient funds
         }
         
         storage.saveAndMarkDirty(playerId);
+        
+        // Notify player of balance change if configured
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        
         return true;
     }
 
@@ -179,13 +211,28 @@ public class PlayerService {
      * Set a player's wallet balance directly.
      */
     public boolean setBalance(UUID playerId, double amount) {
+        return setBalance(playerId, amount, null);
+    }
+    
+    /**
+     * Set a player's wallet balance directly with optional notification.
+     * @param playerId Player UUID
+     * @param amount New balance
+     * @param playerRef Player reference for notifications (null if not available)
+     */
+    public boolean setBalance(UUID playerId, double amount, PlayerRef playerRef) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
         }
         
+        double oldBalance = data.getWallet();
         data.setWallet(amount);
         storage.saveAndMarkDirty(playerId);
+        
+        // Notify player of balance change if configured
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        
         return true;
     }
 
@@ -365,6 +412,57 @@ public class PlayerService {
         PlayerFile playerFile = storage.getPlayer(playerId);
         if (playerFile != null) {
             playerFile.setDefaultGroupChat(chatName);
+            storage.markDirty(playerId);
+        }
+    }
+    
+    /**
+     * Notify player of balance changes.
+     * Supports chat notifications and tooltip notifications.
+     */
+    public void notifyBalanceChange(UUID playerId, double oldBalance, double newBalance, PlayerRef playerRef) {
+        String notifyMode = configManager.getConfig().economy.playerBalanceChangeNotify;
+        
+        if ("none".equals(notifyMode)) {
+            return;
+        }
+        
+        // Get player name for display
+        PlayerFile playerData = storage.getPlayer(playerId);
+        if (playerData == null) {
+            return;
+        }
+        
+        String playerName = playerData.getName();
+        String currencyName = configManager.getConfig().economy.currencyNamePlural;
+        String currencySymbol = configManager.getConfig().economy.currencySymbol;
+        
+        // Format amounts
+        String oldFormatted = String.format("%s%.2f", currencySymbol, oldBalance);
+        String newFormatted = String.format("%s%.2f", currencySymbol, newBalance);
+        double diff = newBalance - oldBalance;
+        String diffFormatted = String.format("%s%.2f", currencySymbol, Math.abs(diff));
+        
+        // Determine change type
+        String changeType = diff > 0 ? "added" : "removed";
+        String changeColor = diff > 0 ? "#55FF55" : "#FF5555";
+        
+        if ("chat".equals(notifyMode)) {
+            // Send chat notification
+            if (playerRef != null && playerRef.isValid()) {
+                String message = configManager.getMessage("balanceChangeNotify",
+                    "player", playerName,
+                    "oldBalance", oldFormatted,
+                    "newBalance", newFormatted,
+                    "amount", diffFormatted,
+                    "changeType", changeType,
+                    "currency", currencyName);
+                playerRef.sendMessage(MessageFormatter.formatWithFallback(message, changeColor));
+            }
+        } else if ("tooltip".equals(notifyMode)) {
+            // Tooltip notification - store in player data for UI to read
+            // The UI system can read this and display it in the tooltip
+            playerData.setBalanceChangeNotification(oldBalance, newBalance, diff);
             storage.markDirty(playerId);
         }
     }

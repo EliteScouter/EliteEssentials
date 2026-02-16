@@ -2,9 +2,44 @@
 
 All notable changes to EliteEssentials will be documented in this file.
 
-## [Unreleased]
+## [1.1.10] - 2026-02-15
 
-(No changes currently.)
+### Added
+
+**Player Balance Change Notifications** - Notify players when their wallet balance changes
+* New config option: `economy.playerBalanceChangeNotify` with three modes:
+  - `"none"` - No notifications (default)
+  - `"chat"` - Show balance change in chat with color-coded messages
+  - `"tooltip"` - Show balance change in HUD tooltip (when hovering over wallet icon)
+* Chat notifications show: old balance, new balance, amount changed, and change type (added/removed)
+* Tooltip notifications store the change data in player data for UI to display
+* Works with all balance-changing operations: /eco, /wallet, /pay, command costs
+* Configurable message format: `balanceChangeNotify` with placeholders `{player}`, `{oldBalance}`, `{newBalance}`, `{amount}`, `{changeType}`, `{currency}`
+
+**Overhauled Command Aliases** - Aliases now work with ANY command on the server
+* `/alias` now supports any command from any mod/plugin, not just EliteEssentials commands
+* Commands execute in the player's security context - no privilege escalation possible
+* Two-layer security: alias permission check + target command's own permission check
+* Optimized paths for EE commands (warp, spawn, home, etc.) that support silent mode and /back saving
+* Generic dispatch for all other commands (including other mods) via `CommandManager.handleCommand()`
+* Works with command chains using `;` separator (e.g., `warp spawn; heal; fly`)
+* `/alias info` now shows whether each command uses optimized EE path or generic dispatch
+* Existing aliases in `aliases.json` continue to work without any changes
+* New `PlayerCommandSender` utility class for safe player-impersonating command dispatch
+
+**Auto-Generated Permission Nodes** - Custom alias permissions now auto-generate as `eliteessentials.command.alias.<name>`
+* When you specify a custom permission (e.g., `alias.chatty`), it automatically becomes `eliteessentials.command.alias.chatty`
+* This provides a consistent permission structure for all aliases
+* Example: `/alias create chatty /gc alias.chatty` creates permission `eliteessentials.command.alias.chatty`
+* Existing aliases with custom permissions continue to work - they just get the new normalized format
+* Permissions `everyone` and `op` remain unchanged
+
+### Changed
+
+**Alias Command Help Text** - Updated to reflect new capabilities
+* `/alias create` now shows that any command works (EE or other mods)
+* `/alias info` displays dispatch mode for each command in the chain
+* `/alias list` shows permission levels for all aliases
 
 ## [1.1.9] - 2026-02-15
 

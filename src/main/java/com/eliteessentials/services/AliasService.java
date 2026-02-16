@@ -7,9 +7,9 @@ import com.eliteessentials.commands.hytale.HytaleWarpCommand;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.storage.AliasStorage;
 import com.eliteessentials.storage.AliasStorage.AliasData;
-import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.PlayerCommandSender;
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -20,6 +20,7 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -41,11 +42,35 @@ import java.io.File;
 import java.util.*;
 import java.util.logging.Logger;
 
+/**
+ * Service for managing command aliases.
+ * 
+ * Aliases can target ANY command on the server (EliteEssentials or other mods).
+ * Commands are dispatched through CommandManager using a PlayerCommandSender,
+ * so the player's own permissions gate what they can actually execute.
+ * 
+ * Security model (two gates):
+ * 1. Alias permission check (everyone/op/custom node) - can the player USE this alias?
+ * 2. Target command permission check (via PlayerCommandSender) - can the player RUN the target?
+ * 
+ * EliteEssentials commands that benefit from silent mode and /back saving are handled
+ * through optimized paths. All other commands use generic dispatch.
+ */
 public class AliasService {
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final AliasStorage storage;
     private final CommandRegistry commandRegistry;
     private final Map<String, AbstractPlayerCommand> registeredCommands = new HashMap<>();
+
+    /**
+     * Set of EE commands that have optimized handling (silent mode, /back saving, etc.).
+     * Any command NOT in this set goes through generic dispatch.
+     */
+    private static final Set<String> OPTIMIZED_COMMANDS = Set.of(
+        "warp", "spawn", "home", "homes", "heal", "god", "fly",
+        "rules", "motd", "discord", "kit", "back", "top", "list",
+        "clearinv", "repair", "vanish"
+    );
 
     public AliasService(File dataFolder, CommandRegistry commandRegistry) {
         this.storage = new AliasStorage(dataFolder);
@@ -71,7 +96,9 @@ public class AliasService {
     }
 
     public boolean createAlias(String name, String command, String permission) {
-        boolean isNew = storage.createAlias(name, command, permission);
+        // Auto-generate permission node for custom permissions
+        String normalizedPermission = normalizePermission(name, permission);
+        boolean isNew = storage.createAlias(name, command, normalizedPermission);
         if (isNew && !registeredCommands.containsKey(name.toLowerCase())) {
             AliasData data = storage.getAlias(name);
             if (data != null) {
@@ -85,10 +112,33 @@ public class AliasService {
         return isNew;
     }
 
+    /**
+     * Normalize permission string for aliases.
+     * - "everyone" -> "everyone" (no change)
+     * - "op" -> "op" (no change)
+     * - custom permission -> "eliteessentials.command.alias.<name>"
+     */
+    public static String normalizePermission(String aliasName, String permission) {
+        if ("everyone".equalsIgnoreCase(permission) || "op".equalsIgnoreCase(permission)) {
+            return permission;
+        }
+        // Custom permission - auto-generate eliteessentials.command.alias.<name>
+        return "eliteessentials.command.alias." + aliasName.toLowerCase();
+    }
+
     public boolean deleteAlias(String name) { return storage.deleteAlias(name); }
     public Map<String, AliasData> getAllAliases() { return storage.getAllAliases(); }
     public boolean hasAlias(String name) { return storage.hasAlias(name); }
     public AliasStorage getStorage() { return storage; }
+
+    /**
+     * Check if a command name has an optimized EE handler.
+     */
+    public static boolean isOptimizedCommand(String commandName) {
+        return OPTIMIZED_COMMANDS.contains(commandName.toLowerCase());
+    }
+
+    // ==================== ALIAS COMMAND IMPLEMENTATION ====================
 
     private static class AliasPlayerCommand extends AbstractPlayerCommand {
         private final String aliasName;
@@ -100,21 +150,88 @@ public class AliasService {
                               @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
             AliasData data = EliteEssentials.getInstance().getAliasService().getStorage().getAlias(aliasName);
             if (data == null) { ctx.sendMessage(Message.raw("Alias no longer exists.").color("#FF5555")); return; }
+
+            // Gate 1: Check alias-level permission
             if (!checkPerm(player.getUuid(), data.permission)) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(EliteEssentials.getInstance().getConfigManager().getMessage("noPermission"), "#FF5555"));
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    EliteEssentials.getInstance().getConfigManager().getMessage("noPermission"), "#FF5555"));
                 return;
             }
+
+            boolean debugEnabled = EliteEssentials.getInstance().getConfigManager().isDebugEnabled();
             boolean backSaved = false;
             boolean silent = data.silent;
+
+            // Support semicolon-separated command chains
             for (String cmd : data.command.split(";")) {
-                cmd = cmd.trim(); if (cmd.isEmpty()) continue; if (cmd.startsWith("/")) cmd = cmd.substring(1);
-                String[] p = cmd.split(" ", 2); String cn = p[0].toLowerCase(); String args = p.length > 1 ? p[1].trim() : "";
-                if (!backSaved && (cn.equals("warp") || cn.equals("spawn") || cn.equals("home"))) { saveBack(store, ref, player, world); backSaved = true; }
-                runCmd(ctx, store, ref, player, world, cn, args, silent);
+                cmd = cmd.trim();
+                if (cmd.isEmpty()) continue;
+                if (cmd.startsWith("/")) cmd = cmd.substring(1);
+
+                String[] parts = cmd.split(" ", 2);
+                String commandName = parts[0].toLowerCase();
+                String args = parts.length > 1 ? parts[1].trim() : "";
+
+                // Save /back location before first teleport command
+                if (!backSaved && (commandName.equals("warp") || commandName.equals("spawn") || commandName.equals("home"))) {
+                    saveBack(store, ref, player, world);
+                    backSaved = true;
+                }
+
+                if (isOptimizedCommand(commandName)) {
+                    // Optimized path: EE commands with silent/back support
+                    if (debugEnabled) {
+                        logger.info("[Alias] Optimized dispatch: /" + commandName + " " + args);
+                    }
+                    runOptimizedCmd(ctx, store, ref, player, world, commandName, args, silent);
+                } else {
+                    // Generic dispatch: any command from any mod, runs as the player
+                    if (debugEnabled) {
+                        logger.info("[Alias] Generic dispatch as player: /" + commandName + " " + args);
+                    }
+                    dispatchAsPlayer(ctx, player, world, cmd, debugEnabled);
+                }
             }
         }
 
-        private void runCmd(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, String cn, String args, boolean silent) {
+        /**
+         * Generic command dispatch - runs the command as the player via CommandManager.
+         * The target command's own permission checks will run against the player's real permissions.
+         * This is Gate 2 of the security model.
+         */
+        private void dispatchAsPlayer(CommandContext ctx, PlayerRef player, World world, 
+                                       String fullCommand, boolean debugEnabled) {
+            try {
+                PlayerCommandSender playerSender = new PlayerCommandSender(player);
+                
+                world.execute(() -> {
+                    try {
+                        CommandManager cm = CommandManager.get();
+                        cm.handleCommand(playerSender, fullCommand);
+                        
+                        if (debugEnabled) {
+                            logger.info("[Alias] Successfully dispatched: /" + fullCommand + " for " + player.getUsername());
+                        }
+                    } catch (Exception e) {
+                        logger.warning("[Alias] Failed to dispatch command '/" + fullCommand + "' for " 
+                            + player.getUsername() + ": " + e.getMessage());
+                        if (player.isValid()) {
+                            player.sendMessage(Message.raw("Alias error: Could not execute /" + fullCommand).color("#FF5555"));
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                logger.warning("[Alias] Failed to process command '/" + fullCommand + "': " + e.getMessage());
+                ctx.sendMessage(Message.raw("Alias error: Could not execute command.").color("#FF5555"));
+            }
+        }
+
+        // ==================== OPTIMIZED EE COMMAND HANDLERS ====================
+        // These provide silent mode, /back saving, and direct service access.
+        // Existing aliases targeting these commands continue to work exactly as before.
+
+        private void runOptimizedCmd(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, 
+                                      PlayerRef player, World world, String cn, String args, boolean silent) {
             try {
                 switch (cn) {
                     case "warp": doWarp(ctx, store, ref, player, world, args, silent); break;
@@ -134,22 +251,19 @@ public class AliasService {
                     case "clearinv": doClearInv(ctx, store, ref, player, silent); break;
                     case "repair": doRepair(ctx, store, ref, player, silent); break;
                     case "vanish": doVanish(ctx, store, ref, player, silent); break;
-                    default: ctx.sendMessage(Message.raw("Alias error: Command '" + cn + "' is not supported. Supported: warp, spawn, home, homes, heal, god, fly, rules, motd, discord, kit, back, top, list, clearinv, repair, vanish").color("#FF5555"));
+                    default: break; // Should never hit - isOptimizedCommand guards this
                 }
             } catch (Exception e) { logger.warning("[Alias] " + cn + ": " + e.getMessage()); }
         }
 
         private void doWarp(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, String n, boolean silent) {
             if (n.isEmpty()) return;
-            
-            // Use the real warp command's goToWarp method which handles warmup/cooldown
             WarpService warpService = EliteEssentials.getInstance().getWarpService();
             BackService backService = EliteEssentials.getInstance().getBackService();
             HytaleWarpCommand.goToWarp(ctx, store, ref, player, world, n, warpService, backService, silent);
         }
 
         private void doSpawn(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, boolean silent) {
-            // Use the real spawn command logic which handles warmup/cooldown
             var backService = EliteEssentials.getInstance().getBackService();
             var cooldownService = EliteEssentials.getInstance().getCooldownService();
             var warmupService = EliteEssentials.getInstance().getWarmupService();
@@ -158,13 +272,11 @@ public class AliasService {
             var spawnStorage = EliteEssentials.getInstance().getSpawnStorage();
             UUID playerId = player.getUuid();
             
-            // Check permission (always show error even if silent)
             if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.SPAWN, config.spawn.enabled)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
                 return;
             }
             
-            // Check cooldown (with bypass check)
             if (!com.eliteessentials.util.CommandPermissionUtil.canBypassCooldown(playerId, "spawn")) {
                 int cooldownRemaining = cooldownService.getCooldownRemaining("spawn", playerId);
                 if (cooldownRemaining > 0) {
@@ -173,20 +285,18 @@ public class AliasService {
                 }
             }
             
-            // Check if already warming up
             if (warmupService.hasActiveWarmup(playerId)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("teleportInProgress"), "#FF5555"));
                 return;
             }
             
             String targetWorldName = config.spawn.perWorld ? world.getName() : config.spawn.mainWorld;
-            SpawnStorage.SpawnData s = spawnStorage.getSpawn(targetWorldName);
+            com.eliteessentials.storage.SpawnStorage.SpawnData s = spawnStorage.getSpawn(targetWorldName);
             if (s == null) { 
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnNoSpawn"), "#FF5555")); 
                 return; 
             }
             
-            // Get current position for warmup and /back
             TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
             if (transform == null) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("couldNotGetPosition"), "#FF5555"));
@@ -197,7 +307,7 @@ public class AliasService {
             HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
             Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
             
-            com.eliteessentials.model.Location currentLoc = new com.eliteessentials.model.Location(
+            Location currentLoc = new Location(
                 world.getName(),
                 currentPos.getX(), currentPos.getY(), currentPos.getZ(),
                 rotation.y, rotation.x
@@ -213,10 +323,8 @@ public class AliasService {
             
             Runnable doTeleport = () -> {
                 backService.pushLocation(playerId, currentLoc);
-                // Pre-load destination chunk before teleporting
                 TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, store, ref,
                     () -> {
-                        // Only suppress success message when silent
                         if (!finalSilent) {
                             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
                         }
@@ -229,18 +337,14 @@ public class AliasService {
             };
             
             int warmupSeconds = com.eliteessentials.util.CommandPermissionUtil.getEffectiveWarmup(playerId, "spawn", config.spawn.warmupSeconds);
-            // Only suppress warmup message when silent
             if (warmupSeconds > 0 && !silent) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnWarmup", "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
             }
-            // Pass false for warmup silent - we want countdown messages to show
             warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, "spawn", world, store, ref, false);
         }
 
         private void doHome(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world, String n, boolean silent) {
             if (n.isEmpty()) n = "home";
-            
-            // Use the real home command's goHome method which handles warmup/cooldown
             var homeService = EliteEssentials.getInstance().getHomeService();
             var backService = EliteEssentials.getInstance().getBackService();
             HytaleHomeCommand.goHome(ctx, store, ref, player, world, n, homeService, backService, silent);
@@ -251,7 +355,6 @@ public class AliasService {
             var config = configManager.getConfig();
             UUID playerId = player.getUuid();
             
-            // Check permission (always show error even if silent)
             if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.HEAL, config.heal.enabled)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
                 return;
@@ -271,7 +374,6 @@ public class AliasService {
             var config = configManager.getConfig();
             UUID playerId = player.getUuid();
             
-            // Check permission (always show error even if silent)
             if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.GOD, config.god.enabled)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
                 return;
@@ -284,8 +386,7 @@ public class AliasService {
                 if (!silent) {
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("godEnabled"), "#55FF55")); 
                 }
-            }
-            else { 
+            } else { 
                 store.removeComponent(ref, Invulnerable.getComponentType()); 
                 if (!silent) {
                     ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("godDisabled"), "#FF5555")); 
@@ -298,7 +399,6 @@ public class AliasService {
             var config = configManager.getConfig();
             UUID playerId = player.getUuid();
             
-            // Check permission (always show error even if silent)
             if (!PermissionService.get().canUseEveryoneCommand(playerId, com.eliteessentials.permissions.Permissions.FLY, config.fly.enabled)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
                 return;
@@ -373,7 +473,6 @@ public class AliasService {
                 return;
             }
             
-            // Open the home selection GUI (same as /homes command)
             Player playerEntity = store.getComponent(ref, Player.getComponentType());
             if (playerEntity == null) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback("&cCould not open homes menu.", "#FF5555"));
@@ -428,7 +527,6 @@ public class AliasService {
             
             Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
-            // Pre-load destination chunk before teleporting
             TeleportUtil.safeTeleport(world, finalWorld, pos, rot, store, ref,
                 () -> {
                     if (!silent) {
@@ -458,7 +556,6 @@ public class AliasService {
             int blockX = (int) Math.floor(pos.getX());
             int blockZ = (int) Math.floor(pos.getZ());
             
-            // Get chunk at player's position
             long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
             WorldChunk chunk = world.getChunk(chunkIndex);
             if (chunk == null) {
@@ -466,7 +563,6 @@ public class AliasService {
                 return;
             }
             
-            // Find highest solid block
             int topY = -1;
             for (int y = 255; y >= 0; y--) {
                 BlockType blockType = chunk.getBlockType(blockX, y, blockZ);
@@ -480,7 +576,6 @@ public class AliasService {
                 return;
             }
             final int finalY = topY;
-            // Pre-load destination chunk before teleporting
             Vector3d newPos = new Vector3d(pos.getX(), finalY, pos.getZ());
             HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
             Vector3f rot = hr != null ? new Vector3f(0, hr.getRotation().y, 0) : new Vector3f(0, 0, 0);
@@ -585,21 +680,33 @@ public class AliasService {
             }
         }
 
+        // ==================== HELPERS ====================
+
         private void saveBack(Store<EntityStore> store, Ref<EntityStore> ref, PlayerRef player, World world) {
             try {
                 TransformComponent t = store.getComponent(ref, TransformComponent.getComponentType());
                 if (t != null) {
-                    Vector3d p = t.getPosition(); HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType()); float y = hr != null ? hr.getRotation().y : 0;
-                    EliteEssentials.getInstance().getBackService().pushLocation(player.getUuid(), new com.eliteessentials.model.Location(world.getName(), p.getX(), p.getY(), p.getZ(), y, 0));
+                    Vector3d p = t.getPosition();
+                    HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
+                    float y = hr != null ? hr.getRotation().y : 0;
+                    EliteEssentials.getInstance().getBackService().pushLocation(player.getUuid(), 
+                        new Location(world.getName(), p.getX(), p.getY(), p.getZ(), y, 0));
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                logger.warning("[Alias] Failed to save back location: " + e.getMessage());
+            }
         }
 
+        /**
+         * Check alias-level permission (Gate 1).
+         * "everyone" = anyone, "op" = admins only, custom = permission node check.
+         */
         private boolean checkPerm(UUID id, String perm) {
             PermissionService ps = PermissionService.get();
             if ("everyone".equalsIgnoreCase(perm)) return true;
             if ("op".equalsIgnoreCase(perm)) return ps.isAdmin(id);
-            return EliteEssentials.getInstance().getConfigManager().isAdvancedPermissions() ? ps.hasPermission(id, perm) : ps.isAdmin(id);
+            return EliteEssentials.getInstance().getConfigManager().isAdvancedPermissions() 
+                ? ps.hasPermission(id, perm) : ps.isAdmin(id);
         }
     }
 }
