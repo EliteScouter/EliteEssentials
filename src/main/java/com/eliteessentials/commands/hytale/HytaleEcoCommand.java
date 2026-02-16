@@ -41,21 +41,15 @@ public class HytaleEcoCommand extends CommandBase {
 
     private final ConfigManager configManager;
     private final PlayerService playerService;
-    private final RequiredArg<String> actionArg;
-    private final RequiredArg<String> playerArg;
 
     public HytaleEcoCommand(ConfigManager configManager, PlayerService playerService) {
         super("eco", "Economy management (check/set/add/remove)");
         this.configManager = configManager;
         this.playerService = playerService;
         
+        setAllowsExtraArguments(true);
+        
         addAliases("economy");
-        
-        this.actionArg = withRequiredArg("action", "check, set, add, or remove", ArgTypes.STRING);
-        this.playerArg = withRequiredArg("player", "Player name (online or offline)", ArgTypes.STRING);
-        
-        // Add variant with amount for set/add/remove
-        addUsageVariant(new EcoWithAmountCommand(configManager, playerService));
     }
 
     @Override
@@ -78,29 +72,106 @@ public class HytaleEcoCommand extends CommandBase {
             return;
         }
         
-        String action = ctx.get(actionArg).toLowerCase();
-        String playerName = ctx.get(playerArg);
+        // Parse: /eco <action> <player> [amount]
+        String rawInput = ctx.getInputString();
+        String[] parts = rawInput.split("\\s+");
         
-        // Only "check" works without amount
-        if (!action.equals("check")) {
-            ctx.sendMessage(Message.raw("Usage: /eco <set|add|remove> <player> <amount>").color("#FFAA00"));
-            ctx.sendMessage(Message.raw("       /eco check <player>").color("#FFAA00"));
+        if (parts.length < 2) {
+            showUsage(ctx);
             return;
         }
         
-        UUID targetId = findPlayerId(playerName);
-        if (targetId == null) {
+        String action = parts[1].toLowerCase();
+        
+        if (action.equals("check")) {
+            if (parts.length < 3) {
+                showUsage(ctx);
+                return;
+            }
+            String playerName = parts[2];
+            UUID targetId = findPlayerId(playerName);
+            if (targetId == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNotFound", "player", playerName), "#FF5555"));
+                return;
+            }
+            double balance = playerService.getBalance(targetId);
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerNotFound", "player", playerName), "#FF5555"));
-            return;
+                configManager.getMessage("walletBalanceOther",
+                    "player", playerName,
+                    "balance", EconomyAPI.format(balance),
+                    "currency", EconomyAPI.getCurrencyNamePlural()), "#55FF55"));
+        } else if (action.equals("set") || action.equals("add") || action.equals("remove")) {
+            if (parts.length < 4) {
+                showUsage(ctx);
+                return;
+            }
+            String playerName = parts[2];
+            double amount;
+            try {
+                amount = Double.parseDouble(parts[3]);
+            } catch (NumberFormatException e) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("walletInvalidAmount"), "#FF5555"));
+                return;
+            }
+            
+            UUID targetId = findPlayerId(playerName);
+            PlayerRef targetPlayer = findPlayerRef(playerName);
+            if (targetId == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNotFound", "player", playerName), "#FF5555"));
+                return;
+            }
+            
+            // Determine sender name (console or player name)
+            String senderName = ctx.sender() instanceof PlayerRef ? 
+                ((PlayerRef) ctx.sender()).getUsername() : "Server";
+            
+            switch (action) {
+                case "set" -> {
+                    if (playerService.setBalance(targetId, amount, targetPlayer, senderName)) {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(
+                            configManager.getMessage("walletSet",
+                                "player", playerName,
+                                "amount", EconomyAPI.format(amount),
+                                "balance", EconomyAPI.format(amount)), "#55FF55"));
+                    } else {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("walletFailed"), "#FF5555"));
+                    }
+                }
+                case "add" -> {
+                    if (playerService.addMoney(targetId, amount, targetPlayer, senderName)) {
+                        double newBalance = playerService.getBalance(targetId);
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(
+                            configManager.getMessage("walletAdded",
+                                "player", playerName,
+                                "amount", EconomyAPI.format(amount),
+                                "balance", EconomyAPI.format(newBalance)), "#55FF55"));
+                    } else {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("walletFailed"), "#FF5555"));
+                    }
+                }
+                case "remove" -> {
+                    if (playerService.removeMoney(targetId, amount, targetPlayer, senderName)) {
+                        double newBalance = playerService.getBalance(targetId);
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(
+                            configManager.getMessage("walletRemoved",
+                                "player", playerName,
+                                "amount", EconomyAPI.format(amount),
+                                "balance", EconomyAPI.format(newBalance)), "#55FF55"));
+                    } else {
+                        ctx.sendMessage(MessageFormatter.formatWithFallback(
+                            configManager.getMessage("walletInsufficientFunds", "player", playerName), "#FF5555"));
+                    }
+                }
+            }
+        } else {
+            showUsage(ctx);
         }
-        
-        double balance = playerService.getBalance(targetId);
-        ctx.sendMessage(MessageFormatter.formatWithFallback(
-            configManager.getMessage("walletBalanceOther",
-                "player", playerName,
-                "balance", EconomyAPI.format(balance),
-                "currency", EconomyAPI.getCurrencyNamePlural()), "#55FF55"));
+    }
+    
+    private void showUsage(CommandContext ctx) {
+        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("ecoUsage"), "#FFAA00"));
     }
     
     private UUID findPlayerId(String name) {
@@ -112,6 +183,16 @@ public class HytaleEcoCommand extends CommandBase {
         }
         // Check offline players in cache
         return playerService.getPlayerByName(name).map(d -> d.getUuid()).orElse(null);
+    }
+    
+    private PlayerRef findPlayerRef(String name) {
+        // Check online players first
+        for (PlayerRef p : Universe.get().getPlayers()) {
+            if (p.getUsername().equalsIgnoreCase(name)) {
+                return p;
+            }
+        }
+        return null;
     }
     
     /**
@@ -182,9 +263,13 @@ public class HytaleEcoCommand extends CommandBase {
                 return;
             }
             
+            // Determine sender name (console or player name)
+            String senderName = ctx.sender() instanceof PlayerRef ? 
+                ((PlayerRef) ctx.sender()).getUsername() : "Server";
+            
             switch (action) {
                 case "set" -> {
-                    if (playerService.setBalance(targetId, amount, targetPlayer)) {
+                    if (playerService.setBalance(targetId, amount, targetPlayer, senderName)) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletSet",
                                 "player", playerName,
@@ -195,7 +280,7 @@ public class HytaleEcoCommand extends CommandBase {
                     }
                 }
                 case "add" -> {
-                    if (playerService.addMoney(targetId, amount, targetPlayer)) {
+                    if (playerService.addMoney(targetId, amount, targetPlayer, senderName)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletAdded",
@@ -207,7 +292,7 @@ public class HytaleEcoCommand extends CommandBase {
                     }
                 }
                 case "remove" -> {
-                    if (playerService.removeMoney(targetId, amount, targetPlayer)) {
+                    if (playerService.removeMoney(targetId, amount, targetPlayer, senderName)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletRemoved",

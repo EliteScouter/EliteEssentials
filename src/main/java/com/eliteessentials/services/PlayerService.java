@@ -149,7 +149,7 @@ public class PlayerService {
      * Add money to a player's wallet.
      */
     public boolean addMoney(UUID playerId, double amount) {
-        return addMoney(playerId, amount, null);
+        return addMoney(playerId, amount, null, null);
     }
     
     /**
@@ -159,6 +159,17 @@ public class PlayerService {
      * @param playerRef Player reference for notifications (null if not available)
      */
     public boolean addMoney(UUID playerId, double amount, PlayerRef playerRef) {
+        return addMoney(playerId, amount, playerRef, null);
+    }
+    
+    /**
+     * Add money to a player's wallet with optional notification.
+     * @param playerId Player UUID
+     * @param amount Amount to add
+     * @param playerRef Player reference for notifications (null if not available)
+     * @param senderName Name of the sender (player name or "Server" for console)
+     */
+    public boolean addMoney(UUID playerId, double amount, PlayerRef playerRef, String senderName) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
@@ -169,7 +180,7 @@ public class PlayerService {
         storage.saveAndMarkDirty(playerId);
         
         // Notify player of balance change if configured
-        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef, senderName);
         
         return true;
     }
@@ -179,7 +190,7 @@ public class PlayerService {
      * Returns false if insufficient funds.
      */
     public boolean removeMoney(UUID playerId, double amount) {
-        return removeMoney(playerId, amount, null);
+        return removeMoney(playerId, amount, null, null);
     }
     
     /**
@@ -189,6 +200,17 @@ public class PlayerService {
      * @param playerRef Player reference for notifications (null if not available)
      */
     public boolean removeMoney(UUID playerId, double amount, PlayerRef playerRef) {
+        return removeMoney(playerId, amount, playerRef, null);
+    }
+    
+    /**
+     * Remove money from a player's wallet with optional notification.
+     * @param playerId Player UUID
+     * @param amount Amount to remove
+     * @param playerRef Player reference for notifications (null if not available)
+     * @param senderName Name of the sender (player name or "Server" for console)
+     */
+    public boolean removeMoney(UUID playerId, double amount, PlayerRef playerRef, String senderName) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
@@ -202,7 +224,7 @@ public class PlayerService {
         storage.saveAndMarkDirty(playerId);
         
         // Notify player of balance change if configured
-        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef, senderName);
         
         return true;
     }
@@ -211,7 +233,7 @@ public class PlayerService {
      * Set a player's wallet balance directly.
      */
     public boolean setBalance(UUID playerId, double amount) {
-        return setBalance(playerId, amount, null);
+        return setBalance(playerId, amount, null, null);
     }
     
     /**
@@ -221,6 +243,17 @@ public class PlayerService {
      * @param playerRef Player reference for notifications (null if not available)
      */
     public boolean setBalance(UUID playerId, double amount, PlayerRef playerRef) {
+        return setBalance(playerId, amount, playerRef, null);
+    }
+    
+    /**
+     * Set a player's wallet balance directly with optional notification.
+     * @param playerId Player UUID
+     * @param amount New balance
+     * @param playerRef Player reference for notifications (null if not available)
+     * @param senderName Name of the sender (player name or "Server" for console)
+     */
+    public boolean setBalance(UUID playerId, double amount, PlayerRef playerRef, String senderName) {
         PlayerFile data = storage.getPlayer(playerId);
         if (data == null) {
             return false;
@@ -231,7 +264,7 @@ public class PlayerService {
         storage.saveAndMarkDirty(playerId);
         
         // Notify player of balance change if configured
-        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef);
+        notifyBalanceChange(playerId, oldBalance, data.getWallet(), playerRef, senderName);
         
         return true;
     }
@@ -419,15 +452,21 @@ public class PlayerService {
     /**
      * Notify player of balance changes.
      * Supports chat notifications and tooltip notifications.
+     * 
+     * @param playerId Player UUID
+     * @param oldBalance Previous balance
+     * @param newBalance New balance
+     * @param playerRef Player reference for sending messages (null if not available)
+     * @param senderName Name of the sender (player name or "Server" for console)
      */
-    public void notifyBalanceChange(UUID playerId, double oldBalance, double newBalance, PlayerRef playerRef) {
+    public void notifyBalanceChange(UUID playerId, double oldBalance, double newBalance, PlayerRef playerRef, String senderName) {
         String notifyMode = configManager.getConfig().economy.playerBalanceChangeNotify;
         
         if ("none".equals(notifyMode)) {
             return;
         }
         
-        // Get player name for display
+        // Get player data
         PlayerFile playerData = storage.getPlayer(playerId);
         if (playerData == null) {
             return;
@@ -447,17 +486,30 @@ public class PlayerService {
         String changeType = diff > 0 ? "added" : "removed";
         String changeColor = diff > 0 ? "#55FF55" : "#FF5555";
         
-        if ("chat".equals(notifyMode)) {
-            // Send chat notification
-            if (playerRef != null && playerRef.isValid()) {
-                String message = configManager.getMessage("balanceChangeNotify",
-                    "player", playerName,
-                    "oldBalance", oldFormatted,
-                    "newBalance", newFormatted,
-                    "amount", diffFormatted,
-                    "changeType", changeType,
-                    "currency", currencyName);
-                playerRef.sendMessage(MessageFormatter.formatWithFallback(message, changeColor));
+        if ("chat".equals(notifyMode) || "chat_global".equals(notifyMode)) {
+            boolean broadcastToAll = "chat_global".equals(notifyMode) 
+                || configManager.getConfig().economy.playerBalanceChangeNotifyGlobal;
+            
+            String targetName = broadcastToAll ? playerName + "'s" : "your";
+            String message = configManager.getMessage("balanceChangeNotify",
+                "sender", senderName != null ? senderName : "Unknown",
+                "target", targetName,
+                "oldBalance", oldFormatted,
+                "newBalance", newFormatted,
+                "amount", diffFormatted,
+                "changeType", changeType,
+                "currency", currencyName);
+            
+            if (broadcastToAll) {
+                // Broadcast notification to ALL players on server
+                for (PlayerRef p : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+                    p.sendMessage(MessageFormatter.formatWithFallback(message, changeColor));
+                }
+            } else {
+                // Send chat notification to affected player only
+                if (playerRef != null && playerRef.isValid()) {
+                    playerRef.sendMessage(MessageFormatter.formatWithFallback(message, changeColor));
+                }
             }
         } else if ("tooltip".equals(notifyMode)) {
             // Tooltip notification - store in player data for UI to read
@@ -465,5 +517,14 @@ public class PlayerService {
             playerData.setBalanceChangeNotification(oldBalance, newBalance, diff);
             storage.markDirty(playerId);
         }
+    }
+    
+    /**
+     * Notify player of balance changes (convenience method without sender name).
+     * Uses "Server" as sender when playerRef is null (console), player name otherwise.
+     */
+    public void notifyBalanceChange(UUID playerId, double oldBalance, double newBalance, PlayerRef playerRef) {
+        String senderName = playerRef != null && playerRef.isValid() ? playerRef.getUsername() : "Server";
+        notifyBalanceChange(playerId, oldBalance, newBalance, playerRef, senderName);
     }
 }

@@ -211,9 +211,13 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
                 return;
             }
             
+            // Determine sender name (console or player name)
+            String senderName = ctx.sender() instanceof PlayerRef ? 
+                ((PlayerRef) ctx.sender()).getUsername() : "Server";
+            
             switch (action) {
                 case "set" -> {
-                    if (playerService.setBalance(targetId, amount, targetPlayer)) {
+                    if (playerService.setBalance(targetId, amount, targetPlayer, senderName)) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletSet",
                                 "player", targetName,
@@ -224,7 +228,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
                     }
                 }
                 case "add" -> {
-                    if (playerService.addMoney(targetId, amount, targetPlayer)) {
+                    if (playerService.addMoney(targetId, amount, targetPlayer, senderName)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletAdded",
@@ -236,7 +240,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
                     }
                 }
                 case "remove" -> {
-                    if (playerService.removeMoney(targetId, amount, targetPlayer)) {
+                    if (playerService.removeMoney(targetId, amount, targetPlayer, senderName)) {
                         double newBalance = playerService.getBalance(targetId);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(
                             configManager.getMessage("walletRemoved",

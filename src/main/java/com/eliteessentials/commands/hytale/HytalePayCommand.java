@@ -133,8 +133,9 @@ public class HytalePayCommand extends AbstractPlayerCommand {
                     "player", player.getUsername()), "#55FF55"));
             
             // Notify player of balance change if configured
-            playerService.notifyBalanceChange(senderId, playerService.getBalance(senderId) + amount, playerService.getBalance(senderId), player);
-            playerService.notifyBalanceChange(targetId, playerService.getBalance(targetId) - amount, playerService.getBalance(targetId), targetPlayer);
+            // For /pay, sender is the player running the command, receiver is targetPlayer
+            playerService.notifyBalanceChange(senderId, playerService.getBalance(senderId) + amount, playerService.getBalance(senderId), player, player.getUsername());
+            playerService.notifyBalanceChange(targetId, playerService.getBalance(targetId) - amount, playerService.getBalance(targetId), targetPlayer, player.getUsername());
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("payFailed"), "#FF5555"));
         }

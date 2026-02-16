@@ -341,7 +341,8 @@ public class PluginConfig {
         messages.put("paySelf", "&cYou cannot pay yourself.");
         messages.put("payInsufficientFunds", "&cInsufficient funds. Your balance: &e{balance}");
         messages.put("payFailed", "&cPayment failed.");
-        messages.put("balanceChangeNotify", "&a{changeType} &e{amount} &ato/from &f{player}&a. Balance: &e{oldBalance} &7-> &e{newBalance}");
+        messages.put("balanceChangeNotify", "&a{sender} {changeType} &e{amount} &ato {target} wallet. Balance: &e{oldBalance} &7->&e{newBalance}");
+        messages.put("ecoUsage", "&eUsage: &f/eco <check|set|add|remove> <player> [amount]");
         messages.put("baltopHeader", "&b&l=== &fRichest Players &b&l===");
         messages.put("baltopEntry", "&e{rank}. &f{player} &7- &a{balance}");
         
@@ -1303,11 +1304,24 @@ public class PluginConfig {
         /**
          * Notify players when their balance changes.
          * Options:
-         * - "none" - No notifications
-         * - "chat" - Show notification in chat
+         * - "none" - No notifications (default)
+         * - "chat" - Show notification in chat (only to affected player)
+         * - "chat_global" - Broadcast notification to ALL players on server
          * - "tooltip" - Show notification in HUD tooltip (when hovering over wallet icon)
+         * 
+         * Note: Tooltip notifications require a UI component to read and display the balance change data.
          */
         public String playerBalanceChangeNotify = "none";
+        
+        /**
+         * When true, balance change notifications are broadcast to ALL online players
+         * and show the target player's name instead of "your wallet".
+         * When true: "Server added 10$ to Steve's wallet. Balance: $100 -> $110" (sent to everyone)
+         * When false: "Server added 10$ to your wallet. Balance: $100 -> $110" (sent only to affected player)
+         * 
+         * Only applies when playerBalanceChangeNotify is set to "chat" or "chat_global".
+         */
+        public boolean playerBalanceChangeNotifyGlobal = false;
     }
     
     // ==================== MAIL ====================

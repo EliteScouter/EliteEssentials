@@ -4,17 +4,42 @@ All notable changes to EliteEssentials will be documented in this file.
 
 ## [1.1.10] - 2026-02-15
 
+### Fixed
+
+**Balance Change Notification Broadcast** - Fixed global balance change notifications not working
+* When `playerBalanceChangeNotify` is set to `"chat"` and `playerBalanceChangeNotifyGlobal` is `true`, balance changes are now correctly broadcast to ALL online players
+* Previously, only the affected player would see the notification even when global broadcast was enabled
+* The `playerBalanceChangeNotifyGlobal` flag now correctly controls whether notifications are sent to everyone or just the affected player
+
 ### Added
 
 **Player Balance Change Notifications** - Notify players when their wallet balance changes
 * New config option: `economy.playerBalanceChangeNotify` with three modes:
   - `"none"` - No notifications (default)
-  - `"chat"` - Show balance change in chat with color-coded messages
+  - `"chat"` - Show balance change in chat (only to affected player)
+  - `"chat_global"` - Broadcast balance change to ALL players on server
   - `"tooltip"` - Show balance change in HUD tooltip (when hovering over wallet icon)
-* Chat notifications show: old balance, new balance, amount changed, and change type (added/removed)
+* Chat notifications show: sender name, amount changed, change type (added/removed), old balance, new balance
+* When console runs commands, sender shows as "Server" instead of blank
+* When a player runs commands, sender shows as the player's name
+* New config option: `economy.playerBalanceChangeNotifyGlobal` - when true, shows target player's name instead of "your wallet"
+  - Example: "Server added 10$ to Steve's wallet. Balance: $100 -> $110"
 * Tooltip notifications store the change data in player data for UI to display
 * Works with all balance-changing operations: /eco, /wallet, /pay, command costs
-* Configurable message format: `balanceChangeNotify` with placeholders `{player}`, `{oldBalance}`, `{newBalance}`, `{amount}`, `{changeType}`, `{currency}`
+* Configurable message format: `balanceChangeNotify` with placeholders `{sender}`, `{target}`, `{oldBalance}`, `{newBalance}`, `{amount}`, `{changeType}`, `{currency}`
+
+**Fixed /eco Command Help** - Fixed command to show proper usage when run without arguments
+* Command now parses arguments manually instead of using RequiredArg
+* Shows helpful usage message when arguments are missing
+* Works correctly when run from console or in-game
+  - `"chat"` - Show balance change in chat with color-coded messages
+  - `"tooltip"` - Show balance change in HUD tooltip (when hovering over wallet icon)
+* Chat notifications show: sender name, amount changed, change type (added/removed), old balance, new balance
+* When console runs commands, sender shows as "Server" instead of blank
+* When a player runs commands, sender shows as the player's name
+* Tooltip notifications store the change data in player data for UI to display
+* Works with all balance-changing operations: /eco, /wallet, /pay, command costs
+* Configurable message format: `balanceChangeNotify` with placeholders `{sender}`, `{oldBalance}`, `{newBalance}`, `{amount}`, `{changeType}`, `{currency}`
 
 **Overhauled Command Aliases** - Aliases now work with ANY command on the server
 * `/alias` now supports any command from any mod/plugin, not just EliteEssentials commands
