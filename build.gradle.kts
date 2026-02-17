@@ -5,7 +5,7 @@ plugins {
 }
 
 group = findProperty("pluginGroup") as String? ?: "com.eliteessentials"
-version = findProperty("pluginVersion") as String? ?: "1.1.9"
+version = findProperty("pluginVersion") as String? ?: "1.1.11"
 description = findProperty("pluginDescription") as String? ?: "Essential commands for Hytale servers"
 
 repositories {
@@ -17,6 +17,9 @@ repositories {
     // Official Hytale Maven repository
     maven( "https://maven.hytale.com/release")
     maven( "https://maven.hytale.com/pre-release")
+
+    // CodeMC Hytale repository (mirrors server JARs)
+    maven("https://repo.codemc.io/repository/hytale/")
     
     // VaultUnlocked API repository
     maven("https://repo.codemc.io/repository/creatorfromhell/") {
@@ -26,7 +29,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:2026.01.24-6e2d4fc36")
+    compileOnly("com.hypixel.hytale:Server:2026.02.17-255364b8e")
 
     compileOnly("at.helpch:placeholderapi-hytale:1.0.4")
 

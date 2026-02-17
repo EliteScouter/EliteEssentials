@@ -1307,9 +1307,9 @@ public class PluginConfig {
          * - "none" - No notifications (default)
          * - "chat" - Show notification in chat (only to affected player)
          * - "chat_global" - Broadcast notification to ALL players on server
-         * - "tooltip" - Show notification in HUD tooltip (when hovering over wallet icon)
+         * - "tooltip" - Store balance change data in player data for a custom UI to read and display (requires a separate UI mod)
          * 
-         * Note: Tooltip notifications require a UI component to read and display the balance change data.
+         * Note: Tooltip notifications only store data in the player file. A separate UI mod is needed to read and display it.
          */
         public String playerBalanceChangeNotify = "none";
         
