@@ -65,9 +65,14 @@ public class AfkService {
     
     private ScheduledExecutorService poller;
     private ScheduledFuture<?> pollTask;
+    private TabListService tabListService;
 
     public AfkService(ConfigManager configManager) {
         this.configManager = configManager;
+    }
+
+    public void setTabListService(TabListService tabListService) {
+        this.tabListService = tabListService;
     }
 
     /**
@@ -351,9 +356,21 @@ public class AfkService {
 
     /**
      * Update the tab list for a player going AFK or returning.
-     * Removes and re-adds the player with [AFK] prefix or normal name.
+     * Delegates to TabListService which handles all prefix composition.
      */
     private void updateTabListForPlayer(UUID targetId, boolean afk) {
+        if (tabListService != null) {
+            tabListService.updatePlayer(targetId);
+        } else {
+            // Fallback if TabListService not wired yet
+            updateTabListDirect(targetId, afk);
+        }
+    }
+
+    /**
+     * Direct tab list update fallback (used if TabListService is not available).
+     */
+    private void updateTabListDirect(UUID targetId, boolean afk) {
         try {
             Universe universe = Universe.get();
             if (universe == null) return;
@@ -362,10 +379,9 @@ public class AfkService {
             if (targetPlayer == null || !targetPlayer.isValid()) return;
             
             String displayName = afk 
-                ? configManager.getMessage("afkPrefix", "player", targetPlayer.getUsername())
+                ? MessageFormatter.stripColorCodes(configManager.getMessage("afkPrefix", "player", targetPlayer.getUsername()))
                 : targetPlayer.getUsername();
             
-            // Remove then re-add with updated name
             RemoveFromServerPlayerList removePacket = new RemoveFromServerPlayerList(new UUID[] { targetId });
             ServerPlayerListPlayer listPlayer = new ServerPlayerListPlayer(
                 targetPlayer.getUuid(),

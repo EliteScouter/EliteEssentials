@@ -38,6 +38,7 @@ import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.SleepService;
 import com.eliteessentials.services.SpawnProtectionService;
 import com.eliteessentials.services.TpaService;
+import com.eliteessentials.services.TabListService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
@@ -104,6 +105,7 @@ public class EliteEssentials extends JavaPlugin {
     private PlayTimeRewardStorage playTimeRewardStorage;
     private PlayTimeRewardService playTimeRewardService;
     private AfkService afkService;
+    private TabListService tabListService;
     private IgnoreService ignoreService;
     private MuteService muteService;
     private BanService banService;
@@ -216,6 +218,9 @@ public class EliteEssentials extends JavaPlugin {
         costService = new CostService(configManager);
         mailService = new MailService(playerFileStorage, configManager);
         afkService = new AfkService(configManager);
+        tabListService = new TabListService(configManager);
+        tabListService.setAfkService(afkService);
+        afkService.setTabListService(tabListService);
         ignoreService = new IgnoreService(playerFileStorage);
         muteService = new MuteService(this.dataFolder);
         banService = new BanService(this.dataFolder);
@@ -838,6 +843,10 @@ public class EliteEssentials extends JavaPlugin {
     
     public AfkService getAfkService() {
         return afkService;
+    }
+    
+    public TabListService getTabListService() {
+        return tabListService;
     }
     
     public IgnoreService getIgnoreService() {

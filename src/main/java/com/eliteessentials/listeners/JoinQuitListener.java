@@ -314,6 +314,12 @@ public class JoinQuitListener {
                 afkService.onPlayerJoin(playerId, store, ref);
             }
 
+            // Notify tab list service (applies LuckPerms prefix if enabled)
+            com.eliteessentials.services.TabListService tabListService = EliteEssentials.getInstance().getTabListService();
+            if (tabListService != null) {
+                tabListService.onPlayerJoin(playerId);
+            }
+
             // Check if first join by checking if player file existed on disk before this session
             // We check the file directly because playerService.onPlayerJoin() just created it
             boolean isFirstJoin = false;

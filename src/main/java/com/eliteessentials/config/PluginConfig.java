@@ -58,6 +58,7 @@ public class PluginConfig {
     public TrashConfig trash = new TrashConfig();
     public ListConfig list = new ListConfig();
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
+    public TabListConfig tabList = new TabListConfig();
     public DiscordConfig discord = new DiscordConfig();
     public AutoBroadcastConfig autoBroadcast = new AutoBroadcastConfig();
     public AliasConfig aliases = new AliasConfig();
@@ -1222,6 +1223,17 @@ public class PluginConfig {
             priorities.put("Default", 0);
             return priorities;
         }
+    }
+    
+    // ==================== TAB LIST ====================
+    
+    public static class TabListConfig {
+        /**
+         * Show LuckPerms prefix before player names in the tab list.
+         * Requires LuckPerms to be installed. Has no effect without it.
+         * Works alongside the AFK [AFK] prefix - LuckPerms prefix appears after it.
+         */
+        public boolean showLuckPermsPrefix = false;
     }
     
     // ==================== DISCORD ====================
