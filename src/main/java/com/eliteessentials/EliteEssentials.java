@@ -636,6 +636,10 @@ public class EliteEssentials extends JavaPlugin {
             registeredCommands.append("/clearinv, ");
         }
         
+        // Invsee command (admin only)
+        getCommandRegistry().registerCommand(new HytaleInvseeCommand(configManager));
+        registeredCommands.append("/invsee, ");
+        
         // Trash command
         if (config.trash.enabled) {
             getCommandRegistry().registerCommand(new HytaleTrashCommand(configManager, cooldownService));

@@ -258,25 +258,18 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         final double finalCost = cost;
         final boolean finalSilent = silent;
         
-        // For cross-world teleports, we must execute on the CURRENT world's thread
-        // and use the CURRENT world's store, but include the TARGET world in the Teleport constructor.
-        final boolean isCrossWorld = !world.getName().equals(finalWorld.getName());
-        
+        // Always use PlayerRef to get fresh refs at teleport time
         Runnable doTeleport = () -> {
             backService.pushLocation(playerId, currentLoc);
             
             Vector3d targetPos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             Vector3f targetRot = new Vector3f(0, loc.getYaw(), 0);
             
-            // Pre-load destination chunk before teleporting to prevent
-            // "entity moved into unloaded chunk" crash
-            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, store, ref,
+            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,
                 () -> {
                     if (finalCostService != null) {
                         finalCostService.charge(ctx, player, "warp", finalCost);
                     }
-                    
-                    // Only suppress success message when silent
                     if (!finalSilent) {
                         player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warpTeleported", "name", finalWarpName), "#55FF55"));
                     }

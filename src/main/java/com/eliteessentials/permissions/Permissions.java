@@ -153,6 +153,7 @@ public final class Permissions {
     public static final String JOINDATE_OTHERS = MISC_CATEGORY + ".joindate.others";
     public static final String PLAYTIME = MISC_CATEGORY + ".playtime";
     public static final String PLAYTIME_OTHERS = MISC_CATEGORY + ".playtime.others";
+    public static final String INVSEE = MISC_CATEGORY + ".invsee";
 
     // ==================== CHAT CATEGORY ====================
     // eliteessentials.chat.*

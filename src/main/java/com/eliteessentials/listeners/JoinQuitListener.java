@@ -12,6 +12,7 @@ import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportGuard;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -373,6 +374,10 @@ public class JoinQuitListener {
 
                                             World targetWorld = findWorldByName(finalTargetWorldName);
                                             if (targetWorld != null) {
+                                                // Guard: skip if another teleport is already in-flight
+                                                if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "FirstJoin-CrossWorld", configManager.isDebugEnabled())) {
+                                                    return;
+                                                }
                                                 Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
                                                 store.putComponent(ref, Teleport.getComponentType(), teleport);
 
@@ -419,6 +424,10 @@ public class JoinQuitListener {
                                             }
                                             
                                             // ALWAYS include world in Teleport constructor (even for same-world)
+                                            // Guard: skip if another teleport is already in-flight
+                                            if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "FirstJoin-SameWorld", configManager.isDebugEnabled())) {
+                                                return;
+                                            }
                                             Teleport teleport = new Teleport(world, spawnPos, spawnRot);
                                             store.putComponent(ref, Teleport.getComponentType(), teleport);
                                             
@@ -482,6 +491,10 @@ public class JoinQuitListener {
 
                                             World targetWorld = findWorldByName(finalTargetWorldName);
                                             if (targetWorld != null) {
+                                                // Guard: skip if another teleport is already in-flight
+                                                if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "SpawnOnLogin-CrossWorld", configManager.isDebugEnabled())) {
+                                                    return;
+                                                }
                                                 Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
                                                 store.putComponent(ref, Teleport.getComponentType(), teleport);
 
@@ -532,6 +545,10 @@ public class JoinQuitListener {
                                             }
                                             
                                             // ALWAYS include world in Teleport constructor (even for same-world)
+                                            // Guard: skip if another teleport is already in-flight
+                                            if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "SpawnOnLogin-SameWorld", configManager.isDebugEnabled())) {
+                                                return;
+                                            }
                                             Teleport teleport = new Teleport(world, spawnPos, spawnRot);
                                             store.putComponent(ref, Teleport.getComponentType(), teleport);
                                             
@@ -619,6 +636,8 @@ public class JoinQuitListener {
         seenWorldMotds.remove(playerId);
         // Clear last world tracking
         playerLastWorld.remove(playerId);
+        // Clear teleport guard so stale entries don't block future sessions
+        TeleportGuard.get().clear(playerId);
 
         // Notify playtime reward service before updating player cache
         PlayTimeRewardService rewardService = EliteEssentials.getInstance().getPlayTimeRewardService();

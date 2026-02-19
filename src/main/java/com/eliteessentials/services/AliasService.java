@@ -9,7 +9,7 @@ import com.eliteessentials.storage.AliasStorage;
 import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.MessageFormatter;
-import com.eliteessentials.util.PlayerCommandSender;
+
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -46,12 +46,12 @@ import java.util.logging.Logger;
  * Service for managing command aliases.
  * 
  * Aliases can target ANY command on the server (EliteEssentials or other mods).
- * Commands are dispatched through CommandManager using a PlayerCommandSender,
- * so the player's own permissions gate what they can actually execute.
+ * Commands are dispatched through CommandManager using the PlayerRef overload,
+ * so the API resolves the real Player component and permission checks work natively.
  * 
  * Security model (two gates):
  * 1. Alias permission check (everyone/op/custom node) - can the player USE this alias?
- * 2. Target command permission check (via PlayerCommandSender) - can the player RUN the target?
+ * 2. Target command permission check (via native Player sender) - can the player RUN the target?
  * 
  * EliteEssentials commands that benefit from silent mode and /back saving are handled
  * through optimized paths. All other commands use generic dispatch.
@@ -142,7 +142,13 @@ public class AliasService {
 
     private static class AliasPlayerCommand extends AbstractPlayerCommand {
         private final String aliasName;
-        public AliasPlayerCommand(String name, AliasData data) { super(name, "Alias: " + data.command); this.aliasName = name; }
+        public AliasPlayerCommand(String name, AliasData data) {
+            super(name, "Alias: " + data.command);
+            this.aliasName = name;
+            // Allow extra arguments so players can pass subcommands/args through
+            // e.g., /lucky editor -> /lp editor
+            setAllowsExtraArguments(true);
+        }
         @Override protected boolean canGeneratePermission() { return false; }
 
         @Override
@@ -162,11 +168,25 @@ public class AliasService {
             boolean backSaved = false;
             boolean silent = data.silent;
 
+            // Extract any extra arguments the player typed after the alias name
+            // e.g., "/lucky editor" -> extraArgs = "editor"
+            String rawInput = ctx.getInputString();
+            String extraArgs = "";
+            int spaceIdx = rawInput.indexOf(' ');
+            if (spaceIdx >= 0) {
+                extraArgs = rawInput.substring(spaceIdx + 1).trim();
+            }
+
             // Support semicolon-separated command chains
             for (String cmd : data.command.split(";")) {
                 cmd = cmd.trim();
                 if (cmd.isEmpty()) continue;
                 if (cmd.startsWith("/")) cmd = cmd.substring(1);
+
+                // Append any extra arguments the player typed after the alias
+                if (!extraArgs.isEmpty()) {
+                    cmd = cmd + " " + extraArgs;
+                }
 
                 String[] parts = cmd.split(" ", 2);
                 String commandName = parts[0].toLowerCase();
@@ -196,18 +216,19 @@ public class AliasService {
 
         /**
          * Generic command dispatch - runs the command as the player via CommandManager.
-         * The target command's own permission checks will run against the player's real permissions.
-         * This is Gate 2 of the security model.
+         * Uses the PlayerRef overload so the API resolves the actual Player component,
+         * which is required by any command extending AbstractPlayerCommand.
          */
         private void dispatchAsPlayer(CommandContext ctx, PlayerRef player, World world, 
                                        String fullCommand, boolean debugEnabled) {
             try {
-                PlayerCommandSender playerSender = new PlayerCommandSender(player);
-                
                 world.execute(() -> {
                     try {
                         CommandManager cm = CommandManager.get();
-                        cm.handleCommand(playerSender, fullCommand);
+                        // Use the PlayerRef overload - it resolves the Player component
+                        // from the store, so target commands see a real Player sender
+                        // instead of our PlayerCommandSender wrapper.
+                        cm.handleCommand(player, fullCommand);
                         
                         if (debugEnabled) {
                             logger.info("[Alias] Successfully dispatched: /" + fullCommand + " for " + player.getUsername());
@@ -323,7 +344,7 @@ public class AliasService {
             
             Runnable doTeleport = () -> {
                 backService.pushLocation(playerId, currentLoc);
-                TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, store, ref,
+                TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, player,
                     () -> {
                         if (!finalSilent) {
                             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
@@ -527,7 +548,7 @@ public class AliasService {
             
             Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
-            TeleportUtil.safeTeleport(world, finalWorld, pos, rot, store, ref,
+            TeleportUtil.safeTeleport(world, finalWorld, pos, rot, player,
                 () -> {
                     if (!silent) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
@@ -579,7 +600,7 @@ public class AliasService {
             Vector3d newPos = new Vector3d(pos.getX(), finalY, pos.getZ());
             HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
             Vector3f rot = hr != null ? new Vector3f(0, hr.getRotation().y, 0) : new Vector3f(0, 0, 0);
-            TeleportUtil.safeTeleport(world, world, newPos, rot, store, ref,
+            TeleportUtil.safeTeleport(world, world, newPos, rot, player,
                 () -> {
                     if (!silent) {
                         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));

@@ -159,11 +159,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         final String finalHomeName = homeName;
         final boolean finalSilent = silent;
 
-        // Define the teleport action
-        // For cross-world teleports, we must execute on the CURRENT world's thread
-        // and use the CURRENT world's store, but include the TARGET world in the Teleport constructor.
-        final boolean isCrossWorld = !world.getName().equals(finalWorld.getName());
-        
+        // Define the teleport action - always use PlayerRef to get fresh refs at teleport time
         Runnable doTeleport = () -> {
             backService.pushLocation(playerId, currentLoc);
             
@@ -171,13 +167,9 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             // Always use pitch=0 to keep player upright, preserve yaw for direction
             Vector3f targetRot = new Vector3f(0, loc.getYaw(), 0);
             
-            // Pre-load destination chunk before teleporting to prevent
-            // "entity moved into unloaded chunk" crash
-            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, store, ref,
+            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,
                 () -> {
-                    // Charge cost AFTER successful teleport
                     CommandPermissionUtil.chargeCost(ctx, player, "home", config.homes.cost);
-                    
                     if (!finalSilent) {
                         player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeTeleported", "name", finalHomeName), "#55FF55"));
                     }

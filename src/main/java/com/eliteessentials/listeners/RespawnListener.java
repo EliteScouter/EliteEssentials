@@ -3,6 +3,7 @@ package com.eliteessentials.listeners;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.storage.SpawnStorage;
+import com.eliteessentials.util.TeleportGuard;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
@@ -16,11 +17,13 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigDa
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerRespawnPointData;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -110,6 +113,10 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         // Get death world
         EntityStore entityStore;
         World deathWorld;
+
+        // Get PlayerRef for UUID (needed for teleport guard)
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        final UUID playerId = playerRef != null ? playerRef.getUuid() : null;
 
         try {
             entityStore = store.getExternalData();
@@ -222,6 +229,14 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
                                 if (!refFinal.isValid()) {
                                     if (debugEnabled) {
                                         logger.info("[Respawn] Ref is no longer valid at delayed teleport time; skipping.");
+                                        logger.info("[Respawn] ========================================");
+                                    }
+                                    return;
+                                }
+
+                                // Guard: skip if another teleport is already in-flight for this player
+                                if (playerId != null && !TeleportGuard.get().tryAcquireAutomatic(playerId, "Respawn", debugEnabled)) {
+                                    if (debugEnabled) {
                                         logger.info("[Respawn] ========================================");
                                     }
                                     return;

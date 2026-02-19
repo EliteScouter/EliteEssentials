@@ -119,22 +119,14 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
         Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0);
         
-        // For cross-world teleports, we must execute on the CURRENT world's thread
-        // and use the CURRENT world's store, but include the TARGET world in the Teleport constructor.
-        final boolean isCrossWorld = !world.getName().equals(finalTargetWorld.getName());
-        
-        // Define the actual teleport action
+        // Define the actual teleport action - always use PlayerRef for fresh refs
         Runnable doTeleport = () -> {
             // Save location for /back
             backService.pushLocation(playerId, currentLoc);
 
-            // Pre-load destination chunk before teleporting to prevent
-            // "entity moved into unloaded chunk" crash
-            TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, store, ref,
+            TeleportUtil.safeTeleport(world, finalTargetWorld, spawnPos, spawnRot, player,
                 () -> {
-                    // Charge cost AFTER successful teleport
                     CommandPermissionUtil.chargeCost(ctx, player, "spawn", config.spawn.cost);
-                    
                     player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnTeleported"), "#55FF55"));
                 },
                 () -> {

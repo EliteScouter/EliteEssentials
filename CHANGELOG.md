@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.12 - 2026-02-17
+## 1.1.12 - 2026-02-19
 
 ### Added
 - Tab list LuckPerms prefix support - new standalone `tabList` config section
@@ -9,6 +9,17 @@
   - Color codes are automatically stripped since the Hytale tab list only supports plain text
   - New `TabListService` handles all tab list display name composition
   - AFK tab list updates now route through `TabListService` so both prefixes stay in sync
+
+### Fixed
+- Fixed server crash (`IndexOutOfBoundsException` in `ArchetypeChunk.getComponent`) when running `/back` after multiple `/rtp` commands
+  - Root cause: RTP's post-teleport `Invulnerable` component add/remove caused deferred archetype migrations that invalidated the entity `Ref` cached by `AbstractPlayerCommand.executeAsync()`, creating a race condition with any subsequent command
+  - Removed `Invulnerable` component manipulation from RTP — only the `Teleport` component is added now, avoiding extra ECS mutations
+  - Players still land on safe ground via the existing `findHighestSolidBlock` + `isSafeLocation` checks
+- Fixed aliases for non-EE commands (other mods, LuckPerms, etc.) failing with "Wrong sender type, expecting Player"
+  - Generic dispatch now uses the `PlayerRef` overload of `CommandManager.handleCommand()` so the API resolves the real `Player` component, which commands extending `AbstractPlayerCommand` require
+- Fixed aliases not passing through extra arguments/subcommands typed by the player
+  - e.g., `/lucky editor` where `/lucky` is an alias for `/lp` now correctly dispatches `/lp editor`
+  - Alias commands now allow extra arguments and append them to the target command
 
 ## 1.1.11 - 2026-02-17
 

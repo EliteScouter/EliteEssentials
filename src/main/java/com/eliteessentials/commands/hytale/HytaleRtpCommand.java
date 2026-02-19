@@ -10,6 +10,7 @@ import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -23,9 +24,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -35,9 +34,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
@@ -62,7 +58,6 @@ import javax.annotation.Nonnull;
 public class HytaleRtpCommand extends CommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final String COMMAND_NAME = "rtp";
     
     private final RtpService rtpService;
@@ -541,7 +536,7 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
-        executeTeleport(ctx, store, ref, world, playerId, currentLoc, rtpConfig, targetX, teleportY, targetZ, isAdminRtp);
+        executeTeleport(ctx, player, world, playerId, currentLoc, rtpConfig, targetX, teleportY, targetZ, isAdminRtp);
     }
     
     private void processChunkCrossWorld(CommandContext ctx, PlayerRef player, World world, UUID playerId,
@@ -634,7 +629,7 @@ public class HytaleRtpCommand extends CommandBase {
         }
     }
     
-    private void executeTeleport(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+    private void executeTeleport(CommandContext ctx, PlayerRef player,
                                   World world, UUID playerId, Location currentLoc,
                                   PluginConfig.RtpConfig rtpConfig,
                                   double teleportX, double teleportY, double teleportZ, boolean isAdminRtp) {
@@ -647,55 +642,40 @@ public class HytaleRtpCommand extends CommandBase {
         // Save location for /back
         backService.pushLocation(playerId, currentLoc);
         
-        int invulnerabilitySeconds = rtpConfig.invulnerabilitySeconds;
+        // Get current store/ref and yaw - we're on the world thread so these are valid
+        Ref<EntityStore> currentRef = player.getReference();
+        if (currentRef == null || !currentRef.isValid()) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpChunkLoadFailed"), "#FF5555"));
+            return;
+        }
+        Store<EntityStore> currentStore = currentRef.getStore();
+        if (currentStore == null) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpChunkLoadFailed"), "#FF5555"));
+            return;
+        }
         
-        // Get current yaw to preserve horizontal facing direction
-        HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        float currentYaw = headRotation != null ? headRotation.getRotation().y : 0;
+        float currentYaw = 0;
+        HeadRotation headRotation = (HeadRotation) currentStore.getComponent(currentRef, HeadRotation.getComponentType());
+        currentYaw = headRotation != null ? headRotation.getRotation().y : 0;
         
         Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
-        // ALWAYS include world in Teleport constructor (even for same-world)
-        Teleport teleport = new Teleport(world, targetPos, new Vector3f(0, currentYaw, 0));
-        store.putComponent(ref, Teleport.getComponentType(), teleport);
+        Vector3f targetRot = new Vector3f(0, currentYaw, 0);
         
-        if (invulnerabilitySeconds > 0) {
-            store.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-            
-            // Capture playerId for fresh ref lookup - avoids stale ref after rapid teleports
-            final UUID targetPlayerId = playerId;
-            scheduler.schedule(() -> {
-                world.execute(() -> {
-                    try {
-                        // Get fresh player ref - original ref may be stale after teleport
-                        PlayerRef freshPlayer = findPlayerByUuid(targetPlayerId);
-                        if (freshPlayer == null) return;
-                        
-                        Ref<EntityStore> freshRef = freshPlayer.getReference();
-                        if (freshRef == null || !freshRef.isValid()) return;
-                        
-                        Store<EntityStore> freshStore = freshRef.getStore();
-                        if (freshStore == null) return;
-                        
-                        freshStore.removeComponent(freshRef, Invulnerable.getComponentType());
-                    } catch (Exception e) {
-                        // Player may have logged out or changed worlds - safe to ignore
-                    }
-                });
-            }, invulnerabilitySeconds, TimeUnit.SECONDS);
-        }
-        
-        String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
-        ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpTeleported", "location", location), "#55FF55"));
-        
-        // Only set cooldown and charge cost for self-RTP
-        if (!isAdminRtp) {
-            // Charge cost AFTER successful teleport
-            PlayerRef player = findPlayerByUuid(playerId);
-            if (player != null) {
-                CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
+        TeleportUtil.safeTeleport(world, world, targetPos, targetRot, currentStore, currentRef,
+            () -> {
+                String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("rtpTeleported", "location", location), "#55FF55"));
+                
+                if (!isAdminRtp) {
+                    CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
+                    rtpService.setCooldown(playerId);
+                }
+            },
+            () -> {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("rtpChunkLoadFailed"), "#FF5555"));
             }
-            rtpService.setCooldown(playerId);
-        }
+        );
     }
     
     private void executeCrossWorldTeleport(CommandContext ctx, PlayerRef player, World targetWorld, UUID playerId,
@@ -717,7 +697,7 @@ public class HytaleRtpCommand extends CommandBase {
         
         // First, gather player data on their current world thread
         currentWorld.execute(() -> {
-            // Get player's store and ref directly from PlayerRef
+            // Get fresh ref to save current location for /back
             Ref<EntityStore> ref = player.getReference();
             if (ref == null || !ref.isValid()) {
                 ctx.sendMessage(Message.raw("Could not find player entity.").color("#FF5555"));
@@ -744,24 +724,27 @@ public class HytaleRtpCommand extends CommandBase {
                 backService.pushLocation(playerId, currentLoc);
             }
             
-            // For cross-world teleport, the Teleport component must be added on the CURRENT world's thread
-            // (the store belongs to the current world, not the target world)
-            if (!ref.isValid()) return;
-            
             Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
-            Teleport teleport = new Teleport(targetWorld, targetPos, new Vector3f(0, 0, 0));
-            store.putComponent(ref, Teleport.getComponentType(), teleport);
+            Vector3f targetRot = new Vector3f(0, 0, 0);
             
-            String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
-            String worldName = targetWorld.getName();
-            player.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("rtpTeleportedWorld", "location", location, "world", worldName), "#55FF55"));
-            
-            if (!isAdminRtp) {
-                // Charge cost AFTER successful teleport
-                CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
-                rtpService.setCooldown(playerId);
-            }
+            // Use PlayerRef-based safeTeleport to get fresh store/ref at teleport time
+            TeleportUtil.safeTeleport(currentWorld, targetWorld, targetPos, targetRot, player,
+                () -> {
+                    String location = String.format("%.0f, %.0f, %.0f", teleportX, teleportY, teleportZ);
+                    String worldName = targetWorld.getName();
+                    player.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("rtpTeleportedWorld", "location", location, "world", worldName), "#55FF55"));
+                    
+                    if (!isAdminRtp) {
+                        CommandPermissionUtil.chargeCost(ctx, player, "rtp", rtpConfig.cost);
+                        rtpService.setCooldown(playerId);
+                    }
+                },
+                () -> {
+                    player.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("rtpChunkLoadFailed"), "#FF5555"));
+                }
+            );
         });
     }
     

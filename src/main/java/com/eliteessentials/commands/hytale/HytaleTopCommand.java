@@ -21,7 +21,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -132,8 +132,8 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
         float cardinalYaw = roundToCardinalYaw(yaw);
         Vector3f targetRotation = new Vector3f(0, cardinalYaw, 0);
 
-        // Use safe teleport to ensure chunk is loaded (should be fast since player is in same chunk)
-        TeleportUtil.safeTeleport(world, world, targetPos, targetRotation, store, ref,
+        // Use safe teleport with PlayerRef for fresh refs at teleport time
+        TeleportUtil.safeTeleport(world, world, targetPos, targetRotation, player,
             () -> {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topTeleported"), "#55FF55"));
                 

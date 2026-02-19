@@ -118,10 +118,12 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
         // Capture effective cooldown for use in lambda
         final int finalEffectiveCooldown = effectiveCooldown;
         
-        // For cross-world teleports, we must execute on the TARGET world's thread
-        final boolean isCrossWorld = !world.getName().equals(finalWorld.getName());
-        
         // Define the teleport action
+        // CRITICAL: Always use PlayerRef-based teleport to get fresh store/ref at teleport time.
+        // The store/ref from the command context can be stale after previous teleports cause
+        // archetype migrations. EP's /back also passes store/ref through but EP doesn't do
+        // extra putComponent calls in teleport callbacks that cause additional migrations.
+        // Using PlayerRef.getReference() ensures we always have the current valid ref.
         Runnable doTeleport = () -> {
             // Now pop the location (consume it)
             backService.popLocation(playerId);
@@ -130,18 +132,13 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
             // Always use pitch=0 to keep player upright, preserve yaw for direction
             Vector3f targetRot = new Vector3f(0, destination.getYaw(), 0);
             
-            // Pre-load destination chunk before teleporting to prevent
-            // "entity moved into unloaded chunk" crash
-            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, store, ref,
+            // Always use PlayerRef overload - gets fresh store/ref at teleport time
+            TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,
                 () -> {
-                    // Charge cost AFTER successful teleport
                     CommandPermissionUtil.chargeCost(ctx, player, "back", config.back.cost);
-                    
-                    // Set cooldown after successful teleport
                     if (finalEffectiveCooldown > 0) {
                         cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
                     }
-                    
                     player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("backTeleported"), "#55FF55"));
                 },
                 () -> {

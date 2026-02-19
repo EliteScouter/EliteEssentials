@@ -196,6 +196,7 @@ public class PluginConfig {
         messages.put("rtpTeleported", "&aTeleported to &7{location}&a.");
         messages.put("rtpTeleportedWorld", "&aTeleported to &7{location} &ain world &b{world}&a.");
         messages.put("rtpFailed", "&cCould not find a safe location after &e{attempts} &cattempts. Try again.");
+        messages.put("rtpChunkLoadFailed", "&cFailed to load destination area. Try again.");
         messages.put("rtpCouldNotDeterminePosition", "&cCould not determine your position.");
         
         // ==================== SLEEP ====================
@@ -302,6 +303,14 @@ public class PluginConfig {
         // ==================== CLEAR INVENTORY ====================
         messages.put("clearInvSuccess", "&aCleared &e{count} &aitems from your inventory.");
         messages.put("clearInvFailed", "&cCould not clear inventory.");
+        
+        // ==================== INVSEE ====================
+        messages.put("invseeUsage", "&cUsage: &e/invsee <player>");
+        messages.put("invseePlayerNotFound", "&cPlayer '&e{player}&c' not found or not online.");
+        messages.put("invseeError", "&cCould not view inventory.");
+        messages.put("invseeHeader", "&b&l=== &f{player}'s Inventory &b&l===");
+        messages.put("invseeFooter", "&7&o(End of inventory)");
+        messages.put("invseeContainer", "{content}");
         
         // ==================== TRASH ====================
         messages.put("trashOpened", "&aTrash window opened. Items placed here will be deleted when closed.");
@@ -573,9 +582,6 @@ public class PluginConfig {
         
         /** Default Y height to use when chunk is not loaded (0 = skip unloaded chunks) */
         public int defaultHeight = 128;
-        
-        /** Seconds of invulnerability after RTP to prevent fall damage (0 = disabled) */
-        public int invulnerabilitySeconds = 5;
         
         /** Cost to use this command (0 = free, requires economy enabled) */
         public double cost = 0.0;

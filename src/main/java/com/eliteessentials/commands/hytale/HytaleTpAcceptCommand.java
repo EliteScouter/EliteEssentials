@@ -172,15 +172,12 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         
         // Define teleport action
         Runnable doTeleport = () -> {
-            // ALWAYS execute on the appropriate world's thread to avoid cross-world issues
             if (request.getType() == TpaRequest.Type.TPA) {
-                // Requester teleports to acceptor
+                // Requester teleports to acceptor - use PlayerRef for fresh refs
                 backService.pushLocation(request.getRequesterId(), requesterLoc);
-                // Pre-load destination chunk before teleporting
                 TeleportUtil.safeTeleport(world, world, targetPos, new Vector3f(0, targetYaw, 0),
-                    requesterStore, requesterRef,
+                    requester,
                     () -> {
-                        // Charge cost AFTER successful teleport
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
                     },
@@ -189,13 +186,11 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     }
                 );
             } else {
-                // Acceptor teleports to requester (TPAHERE)
+                // Acceptor teleports to requester (TPAHERE) - use PlayerRef for fresh refs
                 backService.pushLocation(playerId, targetLoc);
-                // Pre-load destination chunk before teleporting
                 TeleportUtil.safeTeleport(world, world, requesterPos, new Vector3f(0, reqRot.y, 0),
-                    store, ref,
+                    player,
                     () -> {
-                        // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
@@ -272,7 +267,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                         backService.pushLocation(request.getRequesterId(), requesterLoc);
                         // Pre-load destination chunk before teleporting
                         TeleportUtil.safeTeleport(requesterWorld, acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0),
-                            requesterStore, requesterRef,
+                            requester,
                             () -> {
                                 // Charge cost AFTER successful teleport
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
@@ -287,7 +282,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                         backService.pushLocation(playerId, targetLoc);
                         // Pre-load destination chunk before teleporting
                         TeleportUtil.safeTeleport(acceptorWorld, requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0),
-                            store, ref,
+                            player,
                             () -> {
                                 // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
