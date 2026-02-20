@@ -81,6 +81,8 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **`/msg <player> <message>`** - Send a private message
 - **`/reply`** - Reply to the last private message (aliases: /r)
 - **`/clearinv`** - Clear all items from your inventory (Admin, aliases: /clearinventory, /ci)
+- **`/invsee <player>`** - View and edit another player's inventory (Admin)
+  - Uses the same approach as Hytale's built-in `/inv see` command
 
 ### Command Aliases
 - **`/alias create <name> <command> [permission]`** - Create custom shortcut commands (Admin)
@@ -307,6 +309,7 @@ Config file is automatically created on first server start with sensible default
 | `/unipban <player>` | Remove an IP ban | Admin |
 | `/freeze <player>` | Toggle freeze on a player | Admin |
 | `/clearinv` | Clear all inventory items | Admin |
+| `/invsee <player>` | View player's inventory | Admin |
 | `/clearchat` | Clear chat for all players | Admin |
 | `/setwarp <name> [perm]` | Create warp | Admin |
 | `/delwarp <name>` | Delete warp | Admin |
@@ -342,6 +345,7 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Spawn | `command.spawn.use`, `command.spawn.protection.bypass`, `command.spawn.warmup.0` |
 | Kit | `command.kit.use`, `command.kit.<kitname>`, `command.kit.bypass.cooldown` |
 | Ignore | `command.misc.ignore` |
+| Invsee | `command.misc.invsee` |
 | Admin | `admin.mute`, `admin.unmute` |
 | Bypass | `command.home.bypass.cooldown`, `command.tp.bypass.warmup`, `bypass.cost` |
 
@@ -351,7 +355,4 @@ See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
 
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
 - **Player Nicknames** - Allow players to set display names.
-- **Vanish** - Allow admins to go invisible to players.
-- **Invsee** - View and edit other players' inventories.
-- **Trashcan** - Dispose of unwanted items.
 - **SQL Support** - Ability to use External SQL for Mod storage.

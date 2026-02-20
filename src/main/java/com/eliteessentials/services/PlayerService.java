@@ -492,7 +492,7 @@ public class PlayerService {
             
             String targetName = broadcastToAll ? playerName + "'s" : "your";
             String message = configManager.getMessage("balanceChangeNotify",
-                "sender", senderName != null ? senderName : "Unknown",
+                "sender", senderName != null ? senderName : configManager.getConfig().economy.serverSenderName,
                 "target", targetName,
                 "oldBalance", oldFormatted,
                 "newBalance", newFormatted,

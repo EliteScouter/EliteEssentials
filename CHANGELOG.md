@@ -3,6 +3,11 @@
 ## 1.1.12 - 2026-02-19
 
 ### Added
+- Invsee command - view and modify another player's inventory
+  - `/invsee <player>` - Opens the target player's live inventory on the Bench page
+  - Runs on the target player's world thread for cross-world safety
+  - Permission: `eliteessentials.command.misc.invsee` (Admin)
+  - Configurable messages: `invseeOpened`, `invseePlayerNotFound`, `invseeError`
 - Tab list LuckPerms prefix support - new standalone `tabList` config section
   - `tabList.showLuckPermsPrefix` (default: `false`) prepends the player's LuckPerms prefix to their name in the tab list
   - Works alongside the AFK `[AFK]` prefix - LuckPerms prefix appears after it (e.g. `[AFK] [VIP] PlayerName`)
@@ -20,6 +25,16 @@
 - Fixed aliases not passing through extra arguments/subcommands typed by the player
   - e.g., `/lucky editor` where `/lucky` is an alias for `/lp` now correctly dispatches `/lp editor`
   - Alias commands now allow extra arguments and append them to the target command
+- Fixed PlaceholderAPI expansions (e.g., RPGLeveling) crashing chat with `IllegalStateException: Assert not in thread`
+  - Root cause: `PlayerChatEvent` fires on the network thread (`ServerWorkerGroup`), but PAPI expansions call `store.getComponent()` which requires the `WorldThread`
+  - PAPI placeholder resolution and message broadcasting now dispatch to the world thread via `world.execute()`
+  - Thread-safe work (mute check, format building, LuckPerms placeholders) stays on the network thread for performance
+  - Graceful fallback: if the player's world can't be resolved, chat sends without PAPI placeholders instead of silently disappearing
+
+### Changed
+- Economy balance change notifications now show configurable `serverSenderName` (default: "Server") instead of "Unknown" when the server deducts money (e.g., command costs, console /eco commands)
+  - New config option: `economy.serverSenderName` - customize the name shown as the sender for server-initiated wallet changes
+  - Server owners can set this to anything they like (e.g., "Bank", "System", their server name)
 
 ## 1.1.11 - 2026-02-17
 

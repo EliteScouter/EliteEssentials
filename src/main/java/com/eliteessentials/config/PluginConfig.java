@@ -306,8 +306,10 @@ public class PluginConfig {
         
         // ==================== INVSEE ====================
         messages.put("invseeUsage", "&cUsage: &e/invsee <player>");
+        messages.put("invseeExamples", "&7Examples: &e/invsee Steve &7or &e/invsee Alex");
         messages.put("invseePlayerNotFound", "&cPlayer '&e{player}&c' not found or not online.");
-        messages.put("invseeError", "&cCould not view inventory.");
+        messages.put("invseeError", "&cCould not open inventory view.");
+        messages.put("invseeOpened", "&aViewing &e{player}&a's inventory.");
         messages.put("invseeHeader", "&b&l=== &f{player}'s Inventory &b&l===");
         messages.put("invseeFooter", "&7&o(End of inventory)");
         messages.put("invseeContainer", "{content}");
@@ -1340,6 +1342,13 @@ public class PluginConfig {
          * Only applies when playerBalanceChangeNotify is set to "chat" or "chat_global".
          */
         public boolean playerBalanceChangeNotifyGlobal = false;
+        
+        /**
+         * The name shown as the sender when the server (not a player) modifies a wallet.
+         * Examples: command costs, console /eco commands, automated rewards, etc.
+         * Configurable so server owners can brand it however they like.
+         */
+        public String serverSenderName = "Server";
     }
     
     // ==================== MAIL ====================

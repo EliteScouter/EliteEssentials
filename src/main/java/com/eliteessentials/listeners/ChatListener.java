@@ -68,76 +68,142 @@ public class ChatListener {
     /**
      * Handle player chat event.
      */
+    /**
+     * Handle player chat event.
+     * 
+     * The event fires on the network thread (ServerWorkerGroup), but PAPI expansions
+     * (like RPGLeveling) may call store.getComponent() which requires the WorldThread.
+     * We do all thread-safe work (mute check, format building, LuckPerms placeholders)
+     * on the network thread, then dispatch PAPI resolution and broadcasting to the
+     * world thread via world.execute().
+     */
     private void onPlayerChat(PlayerChatEvent event) {
         // Skip if already cancelled by another handler to prevent double processing
         if (event.isCancelled()) {
             return;
         }
-        
+
         PlayerRef sender = event.getSender();
         if (!sender.isValid()) {
             logger.warning("Chat event received but sender is invalid");
             return;
         }
-        
+
         // Cancel the event IMMEDIATELY to prevent default/LuckPerms formatting
         // This must happen before any processing to ensure no other handlers see it
         event.setCancelled(true);
-        
+
         // Block muted players from chatting
         if (muteService != null && muteService.isMuted(sender.getUuid())) {
             sender.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("mutedBlocked"), "#FF5555"));
             return;
         }
-        
+
         String playerName = sender.getUsername();
         String originalMessage = event.getContent();
-        
+
         // Process player message - strip color/format codes if they don't have permission
         String processedMessage = processPlayerMessage(sender, originalMessage);
-        
+
         // Get the chat format for this player's group
         String format = getChatFormat(sender);
-        
+
         // Replace placeholders - build the formatted message step by step
         String formattedMessage = format
                 .replace("{player}", playerName)
                 .replace("{displayname}", playerName);
-        
-        // Replace LuckPerms placeholders if available
+
+        // Replace LuckPerms placeholders if available (thread-safe, no store access)
         formattedMessage = replaceLuckPermsPlaceholders(sender, formattedMessage);
-        
+
         // Check if PAPI is available and enabled
         boolean isPapiAvailable = PAPIIntegration.available() && configManager.getConfig().chatFormat.placeholderapi;
 
-        if (isPapiAvailable) {
-            formattedMessage = PAPIIntegration.setPlaceholders(sender, formattedMessage);
+        if (!isPapiAvailable) {
+            // No PAPI - broadcast directly on this thread (no store access needed)
+            broadcastMessage(sender, formattedMessage, processedMessage, false);
+            return;
         }
-        
+
+        // PAPI is enabled - we need the world thread because PAPI expansions (like RPGLeveling)
+        // may call store.getComponent() which asserts WorldThread.
+        // Get the sender's World to dispatch onto the correct thread.
+        com.hypixel.hytale.server.core.universe.world.World world = getPlayerWorld(sender);
+        if (world == null) {
+            // Fallback: broadcast without PAPI if we can't get the world
+            logger.warning("Could not get world for player " + playerName + ", skipping PAPI placeholders in chat");
+            broadcastMessage(sender, formattedMessage, processedMessage, false);
+            return;
+        }
+
+        // Capture for lambda
+        final String prePapiMessage = formattedMessage;
+        final String finalProcessedMessage = processedMessage;
+
+        world.execute(() -> {
+            try {
+                String papiMessage = PAPIIntegration.setPlaceholders(sender, prePapiMessage);
+                broadcastMessage(sender, papiMessage, finalProcessedMessage, true);
+            } catch (Exception e) {
+                logger.severe("Error processing PAPI placeholders in chat: " + e.getMessage());
+                // Fallback: broadcast without PAPI
+                broadcastMessage(sender, prePapiMessage, finalProcessedMessage, false);
+            }
+        });
+    }
+
+    /**
+     * Get the World a player is currently in, for dispatching to the world thread.
+     * Returns null if the player's world cannot be resolved.
+     */
+    private com.hypixel.hytale.server.core.universe.world.World getPlayerWorld(PlayerRef playerRef) {
+        try {
+            com.hypixel.hytale.component.Ref<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) return null;
+
+            com.hypixel.hytale.component.Store<com.hypixel.hytale.server.core.universe.world.storage.EntityStore> store = ref.getStore();
+            if (store == null) return null;
+
+            com.hypixel.hytale.server.core.universe.world.storage.EntityStore entityStore = store.getExternalData();
+            if (entityStore == null) return null;
+
+            return entityStore.getWorld();
+        } catch (Exception e) {
+            if (configManager.isDebugEnabled()) {
+                logger.info("Could not resolve world for player " + playerRef.getUsername() + ": " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Broadcast a formatted chat message to all online players.
+     * Handles ignore filtering and optional PAPI relational placeholders.
+     */
+    private void broadcastMessage(PlayerRef sender, String formattedMessage, String processedMessage, boolean usePapi) {
         if (configManager.isDebugEnabled()) {
             logger.info("Formatted message: " + formattedMessage.replace("{message}", processedMessage));
         }
-        
-        // Broadcast the formatted message to all players
+
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
             // Skip players who are ignoring the sender
             if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
                 continue;
             }
-            
+
             String playerFormattedMessage = formattedMessage;
-            
-            if (isPapiAvailable) {
+
+            if (usePapi) {
                 playerFormattedMessage = PAPIIntegration.setRelationalPlaceholders(sender, player, playerFormattedMessage);
             }
-            
+
             playerFormattedMessage = playerFormattedMessage.replace("{message}", processedMessage);
             Message message = MessageFormatter.format(playerFormattedMessage);
             player.sendMessage(message);
         }
     }
-    
+
     /**
      * Process player message, stripping color/format codes if they don't have permission.
      * 
