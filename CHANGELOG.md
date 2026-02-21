@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.1.13 - 2026-02-20
+
+### Added
+- Custom help entries via `custom_help.json` - server admins can now add help text for commands from other plugins to `/eehelp`
+  - Each entry has `command`, `description`, `permission` (everyone/op/custom node), and `enabled` fields
+  - Ships with disabled examples so admins can see the format immediately
+  - Reloads with `/ee reload`
+- Added all missing commands to `/eehelp`: `/playtime`, `/joindate`, `/mail`, `/afk`, `/ignore`, `/unignore`, `/gc`, `/chats`, `/repair`, `/trash`, `/vanish`, `/clearchat`, `/mute`, `/unmute`, `/ban`, `/unban`, `/tempban`, `/ipban`, `/unipban`, `/freeze`, `/invsee`
+  - Each entry respects its config enabled flag and permission checks
+- Console broadcast options for monitoring player communications (all disabled by default)
+  - `chatFormat.broadcastToConsole` - logs all player chat to console as `[CHAT]`
+  - `groupChat.broadcastToConsole` - logs all group chat messages to console as `[GC]`
+  - `msg.broadcastToConsole` - logs all private messages (/msg, /reply) to console as `[MSG]`
+
+### Improved
+- Rewrote spawn-on-login system to eliminate the visible teleport flash
+  - `teleportOnEveryLogin` now rewrites the player's save file on disconnect instead of teleporting after join
+  - Players load directly at spawn with no teleport, no screen flash, no delay
+  - Works correctly with per-world spawns and cross-world spawn (mainWorld setting)
+- New players now land at the correct `/setspawn` location via Hytale's native spawn provider
+- Removed `teleportOnFirstJoin` and `teleportDelaySeconds` config options (no longer needed)
+- `/setspawn` message is now customizable via messages.json (`spawnSet` key with `{world}` and `{location}` placeholders)
+- Fixed a server crash caused by spawn marker entity conflicts during chunk loading
+  - Removed startup spawn provider sync that triggered `SpawnReferenceSystems` crashes
+
+### Fixed
+- Fixed alias permission bypass that could allow privilege escalation through aliased commands
+  - Added Gate 2 permission enforcement: aliases now validate the player has the target command's actual permission before dispatch, not just the alias's own permission
+  - Prevents scenarios where an alias with "everyone" permission could invoke admin-only commands
+  - Covers all known EE commands via a permission map; unknown commands (other plugins) still pass through to the target command's own permission check via `CommandManager`
+  - Debug logging shows when Gate 2 blocks a command
+
 ## 1.1.12 - 2026-02-19
 
 ### Added

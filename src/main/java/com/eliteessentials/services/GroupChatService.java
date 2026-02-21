@@ -367,6 +367,12 @@ public class GroupChatService {
             recipient.sendMessage(formattedMessage);
         }
         
+        // Broadcast to console if enabled
+        if (gcConfig.broadcastToConsole) {
+            String consoleMsg = format.replaceAll("&[0-9a-fk-or]", "").replaceAll("&#[0-9A-Fa-f]{6}", "");
+            logger.info("[GC] " + consoleMsg);
+        }
+        
         // Send spy messages
         if (spyMessage != null) {
             for (PlayerRef spy : spyRecipients) {

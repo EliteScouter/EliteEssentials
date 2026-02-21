@@ -138,6 +138,113 @@ public class AliasService {
         return OPTIMIZED_COMMANDS.contains(commandName.toLowerCase());
     }
 
+    /**
+     * Maps known EE command names to their required permission node.
+     * Used by alias dispatch to enforce target command permissions (Gate 2)
+     * regardless of the alias's own permission setting.
+     */
+    private static final Map<String, String> COMMAND_PERMISSION_MAP = new HashMap<>();
+    private static final Set<String> ADMIN_ONLY_COMMANDS = Set.of(
+        "setspawn", "tphere", "warpadmin", "warpsetperm", "warpsetdesc",
+        "kitcreate", "kitdelete", "broadcast", "clearchat", "eco",
+        "sleeppercent", "eliteessentials", "alias", "mute", "unmute",
+        "ban", "unban", "tempban", "ipban", "unipban", "freeze",
+        "invsee", "sendmessage", "gcspy", "gcset", "eemigration"
+    );
+
+    static {
+        // Teleportation
+        COMMAND_PERMISSION_MAP.put("home", com.eliteessentials.permissions.Permissions.HOME);
+        COMMAND_PERMISSION_MAP.put("sethome", com.eliteessentials.permissions.Permissions.SETHOME);
+        COMMAND_PERMISSION_MAP.put("delhome", com.eliteessentials.permissions.Permissions.DELHOME);
+        COMMAND_PERMISSION_MAP.put("homes", com.eliteessentials.permissions.Permissions.HOMES);
+        COMMAND_PERMISSION_MAP.put("back", com.eliteessentials.permissions.Permissions.BACK);
+        COMMAND_PERMISSION_MAP.put("spawn", com.eliteessentials.permissions.Permissions.SPAWN);
+        COMMAND_PERMISSION_MAP.put("warp", com.eliteessentials.permissions.Permissions.WARP);
+        COMMAND_PERMISSION_MAP.put("rtp", com.eliteessentials.permissions.Permissions.RTP);
+        COMMAND_PERMISSION_MAP.put("top", com.eliteessentials.permissions.Permissions.TOP);
+        COMMAND_PERMISSION_MAP.put("tpa", com.eliteessentials.permissions.Permissions.TPA);
+        COMMAND_PERMISSION_MAP.put("tpahere", com.eliteessentials.permissions.Permissions.TPAHERE);
+        COMMAND_PERMISSION_MAP.put("tpaccept", com.eliteessentials.permissions.Permissions.TPACCEPT);
+        COMMAND_PERMISSION_MAP.put("tpdeny", com.eliteessentials.permissions.Permissions.TPDENY);
+        // Kits & Communication
+        COMMAND_PERMISSION_MAP.put("kit", com.eliteessentials.permissions.Permissions.KIT);
+        COMMAND_PERMISSION_MAP.put("msg", com.eliteessentials.permissions.Permissions.MSG);
+        COMMAND_PERMISSION_MAP.put("reply", com.eliteessentials.permissions.Permissions.MSG);
+        COMMAND_PERMISSION_MAP.put("motd", com.eliteessentials.permissions.Permissions.MOTD);
+        COMMAND_PERMISSION_MAP.put("rules", com.eliteessentials.permissions.Permissions.RULES);
+        COMMAND_PERMISSION_MAP.put("discord", com.eliteessentials.permissions.Permissions.DISCORD);
+        COMMAND_PERMISSION_MAP.put("list", com.eliteessentials.permissions.Permissions.LIST);
+        COMMAND_PERMISSION_MAP.put("mail", com.eliteessentials.permissions.Permissions.MAIL);
+        // Economy
+        COMMAND_PERMISSION_MAP.put("wallet", com.eliteessentials.permissions.Permissions.WALLET);
+        COMMAND_PERMISSION_MAP.put("pay", com.eliteessentials.permissions.Permissions.PAY);
+        COMMAND_PERMISSION_MAP.put("baltop", com.eliteessentials.permissions.Permissions.BALTOP);
+        // Player commands
+        COMMAND_PERMISSION_MAP.put("fly", com.eliteessentials.permissions.Permissions.FLY);
+        COMMAND_PERMISSION_MAP.put("flyspeed", com.eliteessentials.permissions.Permissions.FLYSPEED);
+        COMMAND_PERMISSION_MAP.put("god", com.eliteessentials.permissions.Permissions.GOD);
+        COMMAND_PERMISSION_MAP.put("heal", com.eliteessentials.permissions.Permissions.HEAL);
+        COMMAND_PERMISSION_MAP.put("clearinv", com.eliteessentials.permissions.Permissions.CLEARINV);
+        COMMAND_PERMISSION_MAP.put("repair", com.eliteessentials.permissions.Permissions.REPAIR);
+        COMMAND_PERMISSION_MAP.put("trash", com.eliteessentials.permissions.Permissions.TRASH);
+        COMMAND_PERMISSION_MAP.put("vanish", com.eliteessentials.permissions.Permissions.VANISH);
+        COMMAND_PERMISSION_MAP.put("seen", com.eliteessentials.permissions.Permissions.SEEN);
+        COMMAND_PERMISSION_MAP.put("joindate", com.eliteessentials.permissions.Permissions.JOINDATE);
+        COMMAND_PERMISSION_MAP.put("playtime", com.eliteessentials.permissions.Permissions.PLAYTIME);
+        COMMAND_PERMISSION_MAP.put("afk", com.eliteessentials.permissions.Permissions.AFK);
+        COMMAND_PERMISSION_MAP.put("ignore", com.eliteessentials.permissions.Permissions.IGNORE);
+        COMMAND_PERMISSION_MAP.put("gc", com.eliteessentials.permissions.Permissions.GROUP_CHAT);
+        COMMAND_PERMISSION_MAP.put("g", com.eliteessentials.permissions.Permissions.GROUP_CHAT);
+        COMMAND_PERMISSION_MAP.put("chats", com.eliteessentials.permissions.Permissions.CHATS_LIST);
+        // Admin commands
+        COMMAND_PERMISSION_MAP.put("setspawn", com.eliteessentials.permissions.Permissions.SETSPAWN);
+        COMMAND_PERMISSION_MAP.put("tphere", com.eliteessentials.permissions.Permissions.TPHERE);
+        COMMAND_PERMISSION_MAP.put("warpadmin", com.eliteessentials.permissions.Permissions.WARPADMIN);
+        COMMAND_PERMISSION_MAP.put("broadcast", com.eliteessentials.permissions.Permissions.BROADCAST);
+        COMMAND_PERMISSION_MAP.put("clearchat", com.eliteessentials.permissions.Permissions.CLEARCHAT);
+        COMMAND_PERMISSION_MAP.put("alias", com.eliteessentials.permissions.Permissions.ADMIN_ALIAS);
+        COMMAND_PERMISSION_MAP.put("eliteessentials", com.eliteessentials.permissions.Permissions.ADMIN_RELOAD);
+        COMMAND_PERMISSION_MAP.put("mute", com.eliteessentials.permissions.Permissions.ADMIN_MUTE);
+        COMMAND_PERMISSION_MAP.put("unmute", com.eliteessentials.permissions.Permissions.ADMIN_UNMUTE);
+        COMMAND_PERMISSION_MAP.put("ban", com.eliteessentials.permissions.Permissions.ADMIN_BAN);
+        COMMAND_PERMISSION_MAP.put("unban", com.eliteessentials.permissions.Permissions.ADMIN_UNBAN);
+        COMMAND_PERMISSION_MAP.put("tempban", com.eliteessentials.permissions.Permissions.ADMIN_TEMPBAN);
+        COMMAND_PERMISSION_MAP.put("ipban", com.eliteessentials.permissions.Permissions.ADMIN_IPBAN);
+        COMMAND_PERMISSION_MAP.put("unipban", com.eliteessentials.permissions.Permissions.ADMIN_UNIPBAN);
+        COMMAND_PERMISSION_MAP.put("freeze", com.eliteessentials.permissions.Permissions.ADMIN_FREEZE);
+        COMMAND_PERMISSION_MAP.put("invsee", com.eliteessentials.permissions.Permissions.INVSEE);
+    }
+
+    /**
+     * Gate 2: Check if the player has permission to run the target command.
+     * This prevents privilege escalation through aliases - even if the alias
+     * permission is "everyone", the player must still have the target command's
+     * permission to execute it.
+     *
+     * For unknown commands (other plugins), returns true and relies on
+     * the target command's own permission check via CommandManager dispatch.
+     */
+    static boolean canRunTargetCommand(UUID playerId, String commandName) {
+        String lowerCmd = commandName.toLowerCase();
+        PermissionService ps = PermissionService.get();
+
+        // Admin-only commands always require admin
+        if (ADMIN_ONLY_COMMANDS.contains(lowerCmd)) {
+            return ps.isAdmin(playerId);
+        }
+
+        // Known EE commands - check their specific permission
+        String permission = COMMAND_PERMISSION_MAP.get(lowerCmd);
+        if (permission != null) {
+            return ps.canUseEveryoneCommand(playerId, permission, true) || ps.isAdmin(playerId);
+        }
+
+        // Unknown command (other plugin) - let CommandManager handle permission
+        return true;
+    }
+
+
     // ==================== ALIAS COMMAND IMPLEMENTATION ====================
 
     private static class AliasPlayerCommand extends AbstractPlayerCommand {
@@ -191,6 +298,19 @@ public class AliasService {
                 String[] parts = cmd.split(" ", 2);
                 String commandName = parts[0].toLowerCase();
                 String args = parts.length > 1 ? parts[1].trim() : "";
+
+                // Gate 2: Check target command permission to prevent privilege escalation.
+                // Even if the alias permission is "everyone", the player must have
+                // permission to run the actual target command.
+                if (!canRunTargetCommand(player.getUuid(), commandName)) {
+                    if (debugEnabled) {
+                        logger.info("[Alias] Gate 2 blocked /" + commandName + " for " + player.getUsername() 
+                            + " - missing target command permission");
+                    }
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(
+                        EliteEssentials.getInstance().getConfigManager().getMessage("noPermission"), "#FF5555"));
+                    return;
+                }
 
                 // Save /back location before first teleport command
                 if (!backSaved && (commandName.equals("warp") || commandName.equals("spawn") || commandName.equals("home"))) {

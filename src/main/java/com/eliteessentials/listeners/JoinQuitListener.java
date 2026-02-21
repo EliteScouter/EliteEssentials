@@ -13,21 +13,26 @@ import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportGuard;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
-import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -347,110 +352,9 @@ public class JoinQuitListener {
                     broadcastMessage(message, "#FFFF55", playerRef);
                 }
 
-                // Teleport first-time players to spawn if enabled
-                if (config.spawn.teleportOnFirstJoin && spawnStorage != null) {
-                    // Determine which world's spawn to use based on perWorld setting
-                    String targetWorldName = config.spawn.perWorld ? worldName : config.spawn.mainWorld;
-                    SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
-
-                    if (spawn != null) {
-                        try {
-                            Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
-                            Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0); // pitch=0, yaw, roll=0
-
-                            // Check if spawn is in a different world
-                            if (!targetWorldName.equalsIgnoreCase(worldName)) {
-                                // Cross-world teleport needs a delay to let player fully load first
-                                // Schedule the teleport after a short delay
-                                final String finalTargetWorldName = targetWorldName;
-                                final String finalPlayerName = playerName;
-                                scheduler.schedule(() -> {
-                                    world.execute(() -> {
-                                        try {
-                                            if (!ref.isValid()) {
-                                                logger.warning("[FirstJoin] Player ref no longer valid for cross-world teleport");
-                                                return;
-                                            }
-
-                                            World targetWorld = findWorldByName(finalTargetWorldName);
-                                            if (targetWorld != null) {
-                                                // Guard: skip if another teleport is already in-flight
-                                                if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "FirstJoin-CrossWorld", configManager.isDebugEnabled())) {
-                                                    return;
-                                                }
-                                                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
-                                                store.putComponent(ref, Teleport.getComponentType(), teleport);
-
-                                                logger.info("[FirstJoin] Teleported new player " + finalPlayerName +
-                                                        " to spawn in world '" + finalTargetWorldName + "' at " +
-                                                        String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
-                                            } else {
-                                                logger.warning("[FirstJoin] Target world '" + finalTargetWorldName +
-                                                        "' not found. Player " + finalPlayerName + " spawned at default location.");
-                                            }
-                                        } catch (Exception e) {
-                                            logger.warning("[FirstJoin] Failed cross-world teleport for " + finalPlayerName + ": " + e.getMessage());
-                                        }
-                                    });
-                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
-                                
-                                logger.info("[FirstJoin] Scheduled cross-world teleport for " + playerName + 
-                                    " to world '" + targetWorldName + "' in " + config.spawn.teleportDelaySeconds + " seconds");
-                            } else {
-                                // Same world teleport - still needs delay to let player fully load
-                                final String finalPlayerName = playerName;
-                                final String expectedWorldName = worldName;
-                                scheduler.schedule(() -> {
-                                    world.execute(() -> {
-                                        try {
-                                            if (!ref.isValid()) {
-                                                if (configManager.isDebugEnabled()) {
-                                                    logger.info("[FirstJoin] Player ref no longer valid for spawn teleport (player may have changed worlds)");
-                                                }
-                                                return;
-                                            }
-                                            
-                                            // Verify player is still in the expected world
-                                            EntityStore currentEntityStore = store.getExternalData();
-                                            if (currentEntityStore != null) {
-                                                World currentWorld = currentEntityStore.getWorld();
-                                                if (currentWorld != null && !currentWorld.getName().equalsIgnoreCase(expectedWorldName)) {
-                                                    if (configManager.isDebugEnabled()) {
-                                                        logger.info("[FirstJoin] Player " + finalPlayerName + " changed worlds before teleport (now in '" + 
-                                                            currentWorld.getName() + "'), skipping spawn teleport");
-                                                    }
-                                                    return;
-                                                }
-                                            }
-                                            
-                                            // ALWAYS include world in Teleport constructor (even for same-world)
-                                            // Guard: skip if another teleport is already in-flight
-                                            if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "FirstJoin-SameWorld", configManager.isDebugEnabled())) {
-                                                return;
-                                            }
-                                            Teleport teleport = new Teleport(world, spawnPos, spawnRot);
-                                            store.putComponent(ref, Teleport.getComponentType(), teleport);
-                                            
-                                            logger.info("[FirstJoin] Teleported new player " + finalPlayerName + " to spawn at " +
-                                                String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
-                                        } catch (Exception e) {
-                                            logger.warning("[FirstJoin] Failed to teleport " + finalPlayerName + " to spawn: " + e.getMessage());
-                                        }
-                                    });
-                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
-                                
-                                logger.info("[FirstJoin] Scheduled same-world spawn teleport for " + playerName + " in " + config.spawn.teleportDelaySeconds + " seconds");
-                            }
-                        } catch (Exception e) {
-                            logger.warning("[FirstJoin] Failed to teleport " + playerName + " to spawn: " + e.getMessage());
-                        }
-                    } else {
-                        if (configManager.isDebugEnabled()) {
-                            logger.info("[FirstJoin] No spawn set for world '" + targetWorldName +
-                                    "', new player " + playerName + " spawned at default location");
-                        }
-                    }
-                }
+                // First-join spawn is handled by Hytale's native ISpawnProvider.
+                // New players with no saved TransformComponent land at the
+                // default spawn location automatically.
 
             } else {
                 // Regular join message (unless player is vanished)
@@ -463,119 +367,9 @@ public class JoinQuitListener {
                     }
                 }
 
-                // Teleport returning players to spawn on every login if enabled
-                if (config.spawn.teleportOnEveryLogin && spawnStorage != null) {
-                    // Determine which world's spawn to use based on perWorld setting
-                    // When perWorld=false, always use mainWorld spawn (cross-world teleport)
-                    // When perWorld=true, use current world's spawn
-                    String targetWorldName = config.spawn.perWorld ? worldName : config.spawn.mainWorld;
-                    SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
-
-                    if (spawn != null) {
-                        try {
-                            Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
-                            Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0); // pitch=0, yaw, roll=0
-
-                            // Check if spawn is in a different world
-                            if (!targetWorldName.equalsIgnoreCase(worldName)) {
-                                // Cross-world teleport needs a delay to let player fully load first
-                                final String finalTargetWorldName = targetWorldName;
-                                final String finalPlayerName = playerName;
-                                scheduler.schedule(() -> {
-                                    world.execute(() -> {
-                                        try {
-                                            if (!ref.isValid()) {
-                                                logger.warning("[SpawnOnLogin] Player ref no longer valid for cross-world teleport");
-                                                return;
-                                            }
-
-                                            World targetWorld = findWorldByName(finalTargetWorldName);
-                                            if (targetWorld != null) {
-                                                // Guard: skip if another teleport is already in-flight
-                                                if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "SpawnOnLogin-CrossWorld", configManager.isDebugEnabled())) {
-                                                    return;
-                                                }
-                                                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
-                                                store.putComponent(ref, Teleport.getComponentType(), teleport);
-
-                                                if (configManager.isDebugEnabled()) {
-                                                    logger.info("[SpawnOnLogin] Teleported " + finalPlayerName +
-                                                            " to spawn in world '" + finalTargetWorldName + "' at " +
-                                                            String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
-                                                }
-                                            } else {
-                                                logger.warning("[SpawnOnLogin] Target world '" + finalTargetWorldName +
-                                                        "' not found for player " + finalPlayerName);
-                                            }
-                                        } catch (Exception e) {
-                                            logger.warning("[SpawnOnLogin] Failed cross-world teleport for " + finalPlayerName + ": " + e.getMessage());
-                                        }
-                                    });
-                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
-                                
-                                if (configManager.isDebugEnabled()) {
-                                    logger.info("[SpawnOnLogin] Scheduled cross-world teleport for " + playerName + 
-                                        " to world '" + targetWorldName + "' in " + config.spawn.teleportDelaySeconds + " seconds");
-                                }
-                            } else {
-                                // Same world teleport - still needs delay to let player fully load
-                                final String finalPlayerName = playerName;
-                                final String expectedWorldName = worldName;
-                                scheduler.schedule(() -> {
-                                    world.execute(() -> {
-                                        try {
-                                            if (!ref.isValid()) {
-                                                if (configManager.isDebugEnabled()) {
-                                                    logger.info("[SpawnOnLogin] Player ref no longer valid for spawn teleport (player may have changed worlds)");
-                                                }
-                                                return;
-                                            }
-                                            
-                                            // Verify player is still in the expected world
-                                            EntityStore currentEntityStore = store.getExternalData();
-                                            if (currentEntityStore != null) {
-                                                World currentWorld = currentEntityStore.getWorld();
-                                                if (currentWorld != null && !currentWorld.getName().equalsIgnoreCase(expectedWorldName)) {
-                                                    if (configManager.isDebugEnabled()) {
-                                                        logger.info("[SpawnOnLogin] Player " + finalPlayerName + " changed worlds before teleport (now in '" + 
-                                                            currentWorld.getName() + "'), skipping spawn teleport");
-                                                    }
-                                                    return;
-                                                }
-                                            }
-                                            
-                                            // ALWAYS include world in Teleport constructor (even for same-world)
-                                            // Guard: skip if another teleport is already in-flight
-                                            if (!TeleportGuard.get().tryAcquireAutomatic(playerId, "SpawnOnLogin-SameWorld", configManager.isDebugEnabled())) {
-                                                return;
-                                            }
-                                            Teleport teleport = new Teleport(world, spawnPos, spawnRot);
-                                            store.putComponent(ref, Teleport.getComponentType(), teleport);
-                                            
-                                            if (configManager.isDebugEnabled()) {
-                                                logger.info("[SpawnOnLogin] Teleported " + finalPlayerName + " to spawn at " +
-                                                    String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
-                                            }
-                                        } catch (Exception e) {
-                                            logger.warning("[SpawnOnLogin] Failed to teleport " + finalPlayerName + " to spawn: " + e.getMessage());
-                                        }
-                                    });
-                                }, config.spawn.teleportDelaySeconds, TimeUnit.SECONDS);
-                                
-                                if (configManager.isDebugEnabled()) {
-                                    logger.info("[SpawnOnLogin] Scheduled same-world spawn teleport for " + playerName + " in " + config.spawn.teleportDelaySeconds + " seconds");
-                                }
-                            }
-                        } catch (Exception e) {
-                            logger.warning("[SpawnOnLogin] Failed to teleport " + playerName + " to spawn: " + e.getMessage());
-                        }
-                    } else {
-                        if (configManager.isDebugEnabled()) {
-                            logger.info("[SpawnOnLogin] No spawn set for world '" + targetWorldName +
-                                    "', player " + playerName + " spawned at logout location");
-                        }
-                    }
-                }
+                // Every-login spawn is handled by rewriting the player's save file
+                // on disconnect (onPlayerQuit). The file rewrite sets Transform.Position
+                // and LastPosition to spawn coords, so the player loads directly at spawn.
             }
 
             // Show global MOTD (only on server join, not world changes)
@@ -630,6 +424,30 @@ public class JoinQuitListener {
             return;
         }
 
+        PluginConfig config = configManager.getConfig();
+
+        // Rewrite the player's save file on disk after Hytale saves it.
+        // We delay briefly to let Hytale's PlayerRemovedSystem + PlayerStorage.save()
+        // finish writing, then overwrite the Transform and LastPosition fields
+        // with spawn coordinates. This is the only reliable approach because:
+        // - Modifying TransformComponent on disconnect gets overwritten by PlayerRemovedSystem
+        // - PlayerRemovedSystem sets lastPosition but nobody calls saveConfig() after removal
+        // - The periodic TickingSystem (10s) won't run again after the entity is removed
+        if (config.spawn.enabled && config.spawn.teleportOnEveryLogin && spawnStorage != null) {
+            String targetWorldName = config.spawn.perWorld ?
+                (playerLastWorld.get(playerId) != null ? playerLastWorld.get(playerId) : config.spawn.mainWorld) :
+                config.spawn.mainWorld;
+            SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
+            if (spawn != null) {
+                final String pName = playerName;
+                final UUID pId = playerId;
+                final String lastWorld = playerLastWorld.get(playerId);
+                scheduler.schedule(() -> {
+                    rewritePlayerSaveFile(pId, pName, spawn, targetWorldName, lastWorld);
+                }, 2, TimeUnit.SECONDS);
+            }
+        }
+
         // Clean up tracking data
         worldChangingPlayers.remove(playerId);
         // Clear seen world MOTDs when player disconnects
@@ -661,7 +479,6 @@ public class JoinQuitListener {
         }
 
         // Broadcast quit message if enabled (unless player was vanished)
-        PluginConfig config = configManager.getConfig();
         if (config.joinMsg.quitEnabled) {
             // Suppress quit message if player was vanished and suppressJoinQuitMessages is enabled
             boolean shouldSuppress = wasVanished && config.vanish.suppressJoinQuitMessages;
@@ -839,25 +656,121 @@ public class JoinQuitListener {
     }
 
     /**
-     * Find a world by name (case-insensitive).
-     * @param worldName The name of the world to find
-     * @return The World object, or null if not found
+     * Rewrite the player's Hytale save file on disk to set spawn coordinates.
+     * Called on a scheduler thread after a delay to let Hytale finish saving.
+     * 
+     * Modifies both Components.Transform.Position and 
+     * Components.Player.PlayerData.PerWorldData.{world}.LastPosition
+     * so the player loads at spawn on next login.
      */
-    private World findWorldByName(String worldName) {
-        if (worldName == null) return null;
-
+    private void rewritePlayerSaveFile(UUID playerId, String playerName, 
+            SpawnStorage.SpawnData spawn, String targetWorldName, String lastWorld) {
         try {
-            Universe universe = Universe.get();
-            if (universe == null) return null;
+            // Player save files are at universe/players/{uuid}.json
+            Path universePath = Path.of("universe", "players", playerId.toString() + ".json");
+            File saveFile = universePath.toFile();
+            
+            if (!saveFile.exists()) {
+                logger.warning("[SpawnOnLogout] Save file not found for " + playerName + ": " + saveFile.getAbsolutePath());
+                return;
+            }
 
-            for (World w : universe.getWorlds().values()) {
-                if (w.getName().equalsIgnoreCase(worldName)) {
-                    return w;
+            // Read the JSON
+            JsonObject root;
+            try (Reader reader = new InputStreamReader(new FileInputStream(saveFile), StandardCharsets.UTF_8)) {
+                root = JsonParser.parseReader(reader).getAsJsonObject();
+            }
+
+            JsonObject components = root.getAsJsonObject("Components");
+            if (components == null) {
+                logger.warning("[SpawnOnLogout] No Components in save file for " + playerName);
+                return;
+            }
+
+            // Update Transform.Position (where the entity spawns)
+            JsonObject transform = components.getAsJsonObject("Transform");
+            if (transform != null) {
+                JsonObject position = transform.getAsJsonObject("Position");
+                if (position != null) {
+                    position.addProperty("X", spawn.x);
+                    position.addProperty("Y", spawn.y);
+                    position.addProperty("Z", spawn.z);
+                }
+                JsonObject rotation = transform.getAsJsonObject("Rotation");
+                if (rotation != null) {
+                    rotation.addProperty("Pitch", 0.0);
+                    rotation.addProperty("Yaw", spawn.yaw);
+                    rotation.addProperty("Roll", 0.0);
                 }
             }
+
+            // Update HeadRotation to match
+            JsonObject headRotation = components.getAsJsonObject("HeadRotation");
+            if (headRotation != null) {
+                JsonObject rotation = headRotation.getAsJsonObject("Rotation");
+                if (rotation != null) {
+                    rotation.addProperty("Pitch", 0.0);
+                    rotation.addProperty("Yaw", spawn.yaw);
+                    rotation.addProperty("Roll", 0.0);
+                }
+            }
+
+            // Update Player.PlayerData.PerWorldData.{world}.LastPosition
+            JsonObject player = components.getAsJsonObject("Player");
+            if (player != null) {
+                JsonObject playerData = player.getAsJsonObject("PlayerData");
+                if (playerData != null) {
+                    // Update World field if cross-world
+                    String currentWorld = lastWorld != null ? lastWorld : targetWorldName;
+                    if (!currentWorld.equalsIgnoreCase(targetWorldName)) {
+                        playerData.addProperty("World", targetWorldName);
+                    }
+
+                    JsonObject perWorldData = playerData.getAsJsonObject("PerWorldData");
+                    if (perWorldData != null) {
+                        // Update LastPosition in the world the player was in
+                        String worldKey = currentWorld;
+                        JsonObject worldData = perWorldData.getAsJsonObject(worldKey);
+                        if (worldData != null) {
+                            updateLastPosition(worldData, spawn);
+                        }
+                        // Also update target world if different
+                        if (!currentWorld.equalsIgnoreCase(targetWorldName)) {
+                            JsonObject targetData = perWorldData.getAsJsonObject(targetWorldName);
+                            if (targetData != null) {
+                                updateLastPosition(targetData, spawn);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Write back
+            Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+            try (Writer writer = new OutputStreamWriter(new FileOutputStream(saveFile), StandardCharsets.UTF_8)) {
+                gson.toJson(root, writer);
+            }
+
+            logger.info("[SpawnOnLogout] Rewrote " + playerName + "'s save file with spawn at " +
+                String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
         } catch (Exception e) {
-            logger.warning("Error finding world '" + worldName + "': " + e.getMessage());
+            logger.warning("[SpawnOnLogout] Failed to rewrite save file for " + playerName + ": " + e.getMessage());
         }
-        return null;
     }
+
+    /**
+     * Update the LastPosition object in a PerWorldData entry.
+     */
+    private void updateLastPosition(JsonObject worldData, SpawnStorage.SpawnData spawn) {
+        JsonObject lastPos = worldData.getAsJsonObject("LastPosition");
+        if (lastPos != null) {
+            lastPos.addProperty("X", spawn.x);
+            lastPos.addProperty("Y", spawn.y);
+            lastPos.addProperty("Z", spawn.z);
+            lastPos.addProperty("Pitch", 0.0);
+            lastPos.addProperty("Yaw", spawn.yaw);
+            lastPos.addProperty("Roll", 0.0);
+        }
+    }
+
 }

@@ -60,18 +60,22 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
         Vector3f rot = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
 
-        // Save spawn
+        // Save spawn to our storage (spawn.json - our persistent source of truth)
         spawnStorage.setSpawn(world.getName(), pos.getX(), pos.getY(), pos.getZ(), rot.y, rot.x);
+
+        // Sync to Hytale's native spawn provider - this updates the spawn icon/compass,
+        // controls where new players land, and makes WorldSpawnPoint respawn work natively
+        SpawnStorage.SpawnData spawnData = spawnStorage.getSpawn(world.getName());
+        if (spawnData != null) {
+            spawnStorage.syncSpawnToWorld(world, spawnData);
+        }
 
         // Update spawn protection service with world name
         EliteEssentials.getInstance().getSpawnProtectionService().setSpawnLocation(world.getName(), pos.getX(), pos.getY(), pos.getZ());
 
-        // NOTE: Respawn behavior is handled by RespawnListener system:
-        // - Players with bed spawns will respawn at their bed (vanilla behavior)
-        // - Players without bed spawns will respawn at this /setspawn location
-
-        ctx.sendMessage(MessageFormatter.formatWithFallback("Spawn set for world '" + world.getName() + "' at " + 
-            String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ()) + 
-            " (Players without beds will respawn here)", "#55FF55"));
+        String location = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        String message = EliteEssentials.getInstance().getConfigManager().getMessage("spawnSet",
+                "world", world.getName(), "location", location);
+        ctx.sendMessage(MessageFormatter.format(message));
     }
 }

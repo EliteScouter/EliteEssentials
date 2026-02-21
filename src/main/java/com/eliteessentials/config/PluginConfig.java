@@ -188,6 +188,7 @@ public class PluginConfig {
         messages.put("spawnNoSpawn", "&cNo spawn point set. An admin must use &e/setspawn &cfirst.");
         messages.put("spawnNotFound", "&cCould not find spawn point.");
         messages.put("spawnTeleported", "&aTeleported to spawn!");
+        messages.put("spawnSet", "&aSpawn set for world '&e{world}&a' at &e{location}&a.");
         messages.put("spawnWarmup", "&eTeleporting to spawn in &a{seconds} &eseconds... Stand still!");
         
         // ==================== RTP ====================
@@ -755,27 +756,12 @@ public class PluginConfig {
         public double cost = 0.0;
         
         /**
-         * Teleport new players to /setspawn location on first join.
-         * When true: First-time players are teleported to the spawn point after joining.
-         * When false (default): Players spawn at the world's default spawn location.
-         */
-        public boolean teleportOnFirstJoin = true;
-        
-        /**
          * Teleport ALL players to /setspawn location on every login.
-         * When true: Every player is teleported to spawn when they join the server,
-         * regardless of which world they logged out in.
+         * When true: Returning players are teleported to spawn after joining.
          * When false (default): Players spawn where they logged out.
-         * Note: Uses mainWorld spawn when perWorld=false, or current world spawn when perWorld=true.
+         * Note: Uses mainWorld spawn when perWorld=false.
          */
         public boolean teleportOnEveryLogin = false;
-        
-        /**
-         * Delay in seconds before teleporting players to spawn after joining.
-         * This delay allows the player to fully load before teleporting.
-         * Default is 2 seconds.
-         */
-        public int teleportDelaySeconds = 2;
     }
 
     // ==================== WARPS ====================
@@ -876,6 +862,12 @@ public class PluginConfig {
     public static class MsgConfig {
         /** Enable/disable /msg, /reply commands */
         public boolean enabled = true;
+        
+        /**
+         * Broadcast all private messages (/msg, /reply) to the server console.
+         * Useful for monitoring private conversations between players.
+         */
+        public boolean broadcastToConsole = false;
     }
 
     // ==================== FLY ====================
@@ -965,6 +957,12 @@ public class PluginConfig {
          * Default puts the channel tag before the player's normal chat format.
          */
         public String formattedMessageFormat = "{channel_color}{channel_prefix} {chat_format}";
+        
+        /**
+         * Broadcast all group chat messages to the server console.
+         * Useful for logging/monitoring group chat conversations.
+         */
+        public boolean broadcastToConsole = false;
         
         /**
          * Allow admins to spy on all group chat channels with /gcspy.
@@ -1154,6 +1152,12 @@ public class PluginConfig {
     public static class ChatFormatConfig {
         /** Enable/disable group-based chat formatting */
         public boolean enabled = true;
+        
+        /**
+         * Broadcast all player chat messages to the server console.
+         * Useful for logging/monitoring player conversations.
+         */
+        public boolean broadcastToConsole = false;
         
         /**
          * Allow regular players to use color codes in chat (&c, &#FF0000, etc).

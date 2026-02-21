@@ -60,7 +60,6 @@
     "perWorld": false,
     "mainWorld": "default",
     "cost": 0.0,
-    "teleportOnFirstJoin": true,
     "teleportOnEveryLogin": false
   },
   

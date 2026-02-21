@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
 
@@ -29,6 +30,7 @@ import javax.annotation.Nonnull;
  */
 public class HytaleReplyCommand extends AbstractPlayerCommand {
 
+    private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final MessageService messageService;
     private final ConfigManager configManager;
 
@@ -119,6 +121,11 @@ public class HytaleReplyCommand extends AbstractPlayerCommand {
         String toSender = configManager.getMessage("msgSent", 
             "player", targetName, "message", message);
         ctx.sendMessage(MessageFormatter.formatWithFallback(toSender, "#D8BFD8"));
+        
+        // Broadcast to console if enabled
+        if (configManager.getConfig().msg.broadcastToConsole) {
+            logger.info("[MSG] " + senderName + " -> " + targetName + ": " + message);
+        }
     }
 
     private PlayerRef findPlayerByUuid(UUID uuid) {

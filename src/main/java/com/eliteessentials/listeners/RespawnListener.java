@@ -29,15 +29,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Handles player respawns after death.
+ * Handles player respawns after death - specifically CROSS-WORLD respawn.
  *
  * Behaviour:
  *  - If player has at least one respawn point (bed / custom), vanilla respawn is used.
- *  - If player has no respawn points, they respawn at the /setspawn location (per-world or main world).
+ *  - If perWorld=true, Hytale's native WorldSpawnPoint handles same-world respawn
+ *    (we sync /setspawn to the world's ISpawnProvider on startup and /setspawn).
+ *  - If perWorld=false and player dies in the mainWorld, native respawn handles it.
+ *  - If perWorld=false and player dies in a NON-main world, we do a cross-world
+ *    teleport to the mainWorld's spawn (Hytale can't do cross-world respawn natively).
  *
  * Implementation detail:
- *  - We hook DeathComponent removal, BUT teleport is delayed and executed on the death world's executor
- *    to avoid fighting the core JoinWorld/ClientReady flow and causing "ghost" players.
+ *  - We hook DeathComponent removal, and only intervene for cross-world cases.
+ *  - Teleport is delayed 1s and executed on the death world's executor to avoid
+ *    fighting the core JoinWorld/ClientReady flow.
  */
 public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent> {
 
@@ -96,7 +101,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
             player = store.getComponent(ref, Player.getComponentType());
         } catch (Exception ex) {
             if (debugEnabled) {
-                logger.info("[Respawn] Ref " + ref + " has no Player component (exception), skipping respawn handling: " + ex.getMessage());
+                logger.info("[Respawn] Ref " + ref + " has no Player component (exception), skipping: " + ex.getMessage());
                 logger.info("[Respawn] ========================================");
             }
             return;
@@ -104,25 +109,25 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
 
         if (player == null) {
             if (debugEnabled) {
-                logger.info("[Respawn] Ref " + ref + " has no Player component, skipping respawn handling.");
+                logger.info("[Respawn] Ref " + ref + " has no Player component, skipping.");
                 logger.info("[Respawn] ========================================");
             }
             return;
         }
 
+        // Get PlayerRef for UUID
+        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+        final UUID playerId = playerRef != null ? playerRef.getUuid() : null;
+
         // Get death world
         EntityStore entityStore;
         World deathWorld;
-
-        // Get PlayerRef for UUID (needed for teleport guard)
-        PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        final UUID playerId = playerRef != null ? playerRef.getUuid() : null;
 
         try {
             entityStore = store.getExternalData();
         } catch (Exception ex) {
             if (debugEnabled) {
-                logger.info("[Respawn] Could not get external EntityStore for ref " + ref + ": " + ex.getMessage());
+                logger.info("[Respawn] Could not get external EntityStore: " + ex.getMessage());
                 logger.info("[Respawn] ========================================");
             }
             return;
@@ -130,7 +135,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
 
         if (entityStore == null || entityStore.getWorld() == null) {
             if (debugEnabled) {
-                logger.info("[Respawn] EntityStore or World is null for ref " + ref + ", falling back to vanilla respawn.");
+                logger.info("[Respawn] EntityStore or World is null, falling back to vanilla respawn.");
                 logger.info("[Respawn] ========================================");
             }
             return;
@@ -157,31 +162,41 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
                 logger.info("[Respawn] Player has bed/custom respawn points; using vanilla respawn.");
                 logger.info("[Respawn] ========================================");
             }
-            // Let vanilla bed / respawn logic stand.
             return;
         }
 
-        // --- No bed/custom respawn: fall back to our /setspawn logic ---
+        // --- Same-world respawn is now handled by Hytale's native WorldSpawnPoint ---
+        // We synced our /setspawn to the world's ISpawnProvider, so Hytale's respawn
+        // controller will teleport bedless players to the right spot automatically.
+        // We only need to intervene for CROSS-WORLD respawn (perWorld=false, different world).
 
-        String targetWorldName;
         if (config.spawn.perWorld) {
-            targetWorldName = currentWorldName;
+            // perWorld=true: each world has its own spawn, Hytale handles it natively
             if (debugEnabled) {
-                logger.info("[Respawn] perWorld=true, using current world spawn: " + targetWorldName);
+                logger.info("[Respawn] perWorld=true, native spawn provider handles same-world respawn.");
+                logger.info("[Respawn] ========================================");
             }
-        } else {
-            targetWorldName = config.spawn.mainWorld;
-            if (debugEnabled) {
-                logger.info("[Respawn] perWorld=false, using mainWorld spawn: " + targetWorldName);
-            }
+            return;
         }
 
+        // perWorld=false: check if we need cross-world teleport
+        String targetWorldName = config.spawn.mainWorld;
+
+        if (targetWorldName.equalsIgnoreCase(currentWorldName)) {
+            // Dying in the main world - native spawn provider handles it
+            if (debugEnabled) {
+                logger.info("[Respawn] Player died in mainWorld '" + targetWorldName + "', native spawn provider handles respawn.");
+                logger.info("[Respawn] ========================================");
+            }
+            return;
+        }
+
+        // Cross-world respawn: player died in a non-main world, needs to go to mainWorld
         SpawnStorage.SpawnData ourSpawn = spawnStorage.getSpawn(targetWorldName);
 
         if (ourSpawn == null) {
-            // No spawn set for target world - let vanilla handle respawn
             if (debugEnabled) {
-                logger.info("[Respawn] No /setspawn set for world '" + targetWorldName + "', using vanilla respawn.");
+                logger.info("[Respawn] No /setspawn set for mainWorld '" + targetWorldName + "', using vanilla respawn.");
                 logger.info("[Respawn] ========================================");
             }
             return;
@@ -189,37 +204,32 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
 
         World targetWorld = findWorldByName(targetWorldName);
         if (targetWorld == null) {
-            logger.warning("[Respawn] Target world '" + targetWorldName + "' not found, using vanilla respawn");
+            logger.warning("[Respawn] Target mainWorld '" + targetWorldName + "' not found, using vanilla respawn");
             if (debugEnabled) {
                 logger.info("[Respawn] ========================================");
             }
             return;
         }
 
-        boolean isCrossWorld = !targetWorldName.equalsIgnoreCase(currentWorldName);
-        if (isCrossWorld && debugEnabled) {
-            logger.info("[Respawn] Cross-world teleport from '" + currentWorldName +
-                    "' to '" + targetWorldName + "'");
+        if (debugEnabled) {
+            logger.info("[Respawn] Cross-world respawn: '" + currentWorldName + "' -> '" + targetWorldName + "'");
         }
 
         // Prepare immutable copies for async usage
         final World deathWorldFinal = deathWorld;
-        final World targetWorldFinal = targetWorld;
         final Vector3d spawnPos = new Vector3d(ourSpawn.x, ourSpawn.y, ourSpawn.z);
-        final Vector3f spawnRot = new Vector3f(0, ourSpawn.yaw, 0); // pitch=0, yaw, roll=0
+        final Vector3f spawnRot = new Vector3f(0, ourSpawn.yaw, 0);
         final Store<EntityStore> storeFinal = store;
         final Ref<EntityStore> refFinal = ref;
 
-        // === CRITICAL CHANGE ===
-        // Delay the teleport a bit and run it on the death world's executor.
-        // This avoids interfering with the core respawn/ClientReady handshake and fixes "ghost" players.
+        // Delay the cross-world teleport to avoid interfering with the core respawn handshake
         CompletableFuture
-                .delayedExecutor(1L, TimeUnit.SECONDS) // 1s delay like HyThroneUtils
+                .delayedExecutor(1L, TimeUnit.SECONDS)
                 .execute(() -> {
                     try {
                         if (!deathWorldFinal.isAlive()) {
                             if (debugEnabled) {
-                                logger.info("[Respawn] Death world is no longer alive; skipping delayed teleport.");
+                                logger.info("[Respawn] Death world is no longer alive; skipping.");
                             }
                             return;
                         }
@@ -228,35 +238,34 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
                             try {
                                 if (!refFinal.isValid()) {
                                     if (debugEnabled) {
-                                        logger.info("[Respawn] Ref is no longer valid at delayed teleport time; skipping.");
+                                        logger.info("[Respawn] Ref no longer valid; skipping.");
                                         logger.info("[Respawn] ========================================");
                                     }
                                     return;
                                 }
 
-                                // Guard: skip if another teleport is already in-flight for this player
-                                if (playerId != null && !TeleportGuard.get().tryAcquireAutomatic(playerId, "Respawn", debugEnabled)) {
+                                if (playerId != null && !TeleportGuard.get().tryAcquireAutomatic(playerId, "Respawn-CrossWorld", debugEnabled)) {
                                     if (debugEnabled) {
                                         logger.info("[Respawn] ========================================");
                                     }
                                     return;
                                 }
 
-                                Teleport teleport = new Teleport(targetWorldFinal, spawnPos, spawnRot);
+                                Teleport teleport = new Teleport(targetWorld, spawnPos, spawnRot);
                                 storeFinal.putComponent(refFinal, Teleport.getComponentType(), teleport);
 
                                 if (debugEnabled) {
-                                    logger.info("[Respawn] (DELAYED) No bed spawn - teleporting to /setspawn in world '" +
+                                    logger.info("[Respawn] Cross-world teleport to mainWorld '" +
                                             targetWorldName + "' at " + String.format("%.1f, %.1f, %.1f",
                                             ourSpawn.x, ourSpawn.y, ourSpawn.z));
                                     logger.info("[Respawn] ========================================");
                                 }
                             } catch (Throwable t) {
-                                logger.warning("[Respawn] Failed to apply Teleport component in delayed task: " + t.getMessage());
+                                logger.warning("[Respawn] Failed cross-world teleport: " + t.getMessage());
                             }
                         });
                     } catch (Throwable t) {
-                        logger.warning("[Respawn] Failed to schedule delayed teleport: " + t.getMessage());
+                        logger.warning("[Respawn] Failed to schedule cross-world teleport: " + t.getMessage());
                     }
                 });
     }

@@ -186,6 +186,14 @@ public class ChatListener {
             logger.info("Formatted message: " + formattedMessage.replace("{message}", processedMessage));
         }
 
+        // Broadcast to console if enabled
+        if (configManager.getConfig().chatFormat.broadcastToConsole) {
+            String consoleMsg = formattedMessage.replace("{message}", processedMessage);
+            // Strip color codes for clean console output
+            consoleMsg = consoleMsg.replaceAll("&[0-9a-fk-or]", "").replaceAll("&#[0-9A-Fa-f]{6}", "");
+            logger.info("[CHAT] " + consoleMsg);
+        }
+
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
             // Skip players who are ignoring the sender
             if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {

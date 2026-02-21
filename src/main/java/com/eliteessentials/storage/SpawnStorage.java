@@ -3,6 +3,12 @@ package com.eliteessentials.storage;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.WorldConfig;
+import com.hypixel.hytale.server.core.universe.world.spawn.GlobalSpawnProvider;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -117,19 +123,6 @@ public class SpawnStorage {
     }
     
     /**
-     * Get spawn for a specific world, or null if not set.
-     * @deprecated Use getSpawn(String worldName) instead
-     */
-    @Deprecated
-    public SpawnData getSpawn() {
-        // For backwards compatibility, return first spawn if only one exists
-        if (spawns.size() == 1) {
-            return spawns.values().iterator().next();
-        }
-        return null;
-    }
-
-    /**
      * Set spawn for a specific world.
      */
     public void setSpawn(String world, double x, double y, double z, float yaw, float pitch) {
@@ -156,6 +149,35 @@ public class SpawnStorage {
      */
     public java.util.Set<String> getWorldsWithSpawn() {
         return spawns.keySet();
+    }
+
+    /**
+     * Sync a single spawn to a world's native spawn provider.
+     * Sets the WorldConfig's SpawnProvider to a GlobalSpawnProvider at our coordinates,
+     * which controls where new players (no TransformComponent) land.
+     * 
+     * NOTE: We intentionally do NOT call worldConfig.markChanged() because that triggers
+     * spawn marker entity recreation in SpawnReferenceSystems, which causes
+     * ArrayIndexOutOfBoundsException crashes during chunk loading when duplicate
+     * marker entities collide. setSpawnProvider alone updates the runtime spawn
+     * location without touching the marker entity system.
+     */
+    public void syncSpawnToWorld(World world, SpawnData spawn) {
+        try {
+            WorldConfig worldConfig = world.getWorldConfig();
+            // pitch=0 to avoid player tilt, yaw for facing direction, roll=0
+            Transform spawnTransform = new Transform(
+                new Vector3d(spawn.x, spawn.y, spawn.z),
+                new Vector3f(0, spawn.yaw, 0)
+            );
+            worldConfig.setSpawnProvider(new GlobalSpawnProvider(spawnTransform));
+            // Do NOT call worldConfig.markChanged() - it triggers spawn marker entity
+            // recreation that crashes SpawnReferenceSystems$MarkerAddRemoveSystem
+            logger.info("[SpawnSync] Set native spawn provider for world '" + world.getName() + 
+                "' at " + String.format("%.1f, %.1f, %.1f", spawn.x, spawn.y, spawn.z));
+        } catch (Exception e) {
+            logger.warning("[SpawnSync] Failed to sync spawn for world '" + world.getName() + "': " + e.getMessage());
+        }
     }
 
     /**

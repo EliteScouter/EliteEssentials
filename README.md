@@ -92,7 +92,7 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
 - **Works with ANY command** - Execute commands from any mod/plugin (e.g., `/alias claims sc` runs `/sc`)
 - **Silent mode** - Add `"silent": true` in aliases.json to suppress teleport messages
 - **Command chains** - Use `;` to execute multiple commands (e.g., `warp spawn; heal; fly`)
-- **Security** - Commands run as the player (respects their permissions), no privilege escalation
+- **Security** - Two-gate permission model: alias permission controls who can use the alias, target command permission is always enforced to prevent privilege escalation
 - **Optimized paths** - EE commands (warp, spawn, home, etc.) support silent mode and /back saving
 - **Generic dispatch** - All other commands (including other mods) run via `CommandManager.handleCommand()`
 - **Auto-generated permissions** - Custom permissions auto-generate as `eliteessentials.command.alias.<name>`
@@ -197,6 +197,13 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - No argument shows your own playtime
   - Includes current session for accurate live totals
   - Separate permission for viewing other players' playtime
+
+### Help System
+- **`/eehelp`** - Shows all commands the player has permission to use (alias: /ehelp)
+- **Custom help entries** - Add help text for commands from other plugins via `custom_help.json`
+  - Each entry has `command`, `description`, `permission`, and `enabled` fields
+  - Permission supports `everyone`, `op`, or custom permission nodes
+  - Reloads with `/ee reload`
 
 ### AFK System
 - **`/afk`** - Toggle AFK (Away From Keyboard) status
@@ -322,6 +329,7 @@ Config file is automatically created on first server start with sensible default
 | `/eco` | Economy admin commands | Admin |
 | `/mail` | Send/receive offline mail | Everyone |
 | `/alias` | Manage command aliases | Admin |
+| `/eehelp` | Show available commands | Everyone |
 | `/eliteessentials reload` | Reload configuration | Admin |
 
 *In simple mode (default), "Everyone" commands work for all players, "Admin" requires OP.*

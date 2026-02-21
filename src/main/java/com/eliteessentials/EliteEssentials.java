@@ -42,6 +42,7 @@ import com.eliteessentials.services.TabListService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
+import com.eliteessentials.storage.CustomHelpStorage;
 import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.PlayerFileStorage;
@@ -80,6 +81,7 @@ public class EliteEssentials extends JavaPlugin {
     private SpawnStorage spawnStorage;
     private MotdStorage motdStorage;
     private RulesStorage rulesStorage;
+    private CustomHelpStorage customHelpStorage;
     private DiscordStorage discordStorage;
     private HomeService homeService;
     private BackService backService;
@@ -191,6 +193,8 @@ public class EliteEssentials extends JavaPlugin {
         
         discordStorage = new DiscordStorage(this.dataFolder);
         discordStorage.load();
+        
+        customHelpStorage = new CustomHelpStorage(this.dataFolder);
         
         // Initialize services (now using PlayerFileStorage)
         cooldownService = new CooldownService();
@@ -354,14 +358,23 @@ public class EliteEssentials extends JavaPlugin {
             getLogger().at(Level.WARNING).log("Could not register spawn protection: " + e.getMessage());
         }
         
-        // Register respawn system (handles respawning at spawn if no bed is set)
+        // Register respawn system (handles cross-world respawning at spawn if no bed is set)
         try {
             respawnListener = new RespawnListener(spawnStorage);
             EntityStore.REGISTRY.registerSystem(respawnListener);
-            getLogger().at(Level.INFO).log("RespawnListener registered - players without beds will respawn at /setspawn location!");
+            getLogger().at(Level.INFO).log("RespawnListener registered - handles cross-world respawn for bedless players!");
         } catch (Exception e) {
             getLogger().at(Level.WARNING).log("Could not register respawn system: " + e.getMessage());
         }
+        
+        // NOTE: syncToNativeSpawnProviders() is intentionally NOT called at startup.
+        // Calling setSpawnProvider() creates spawn marker entities that conflict with
+        // SpawnReferenceSystems$MarkerAddRemoveSystem during chunk loading, causing
+        // ArrayIndexOutOfBoundsException crashes that kill the world.
+        // Spawn positioning is handled by:
+        //   - File rewrite on disconnect (teleportOnEveryLogin)
+        //   - Post-join teleport for first-join players (onPlayerJoin)
+        //   - RespawnListener for bedless respawns
         
         // Start auto broadcast system
         if (configManager.getConfig().autoBroadcast.enabled) {
@@ -813,6 +826,10 @@ public class EliteEssentials extends JavaPlugin {
         return discordStorage;
     }
     
+    public CustomHelpStorage getCustomHelpStorage() {
+        return customHelpStorage;
+    }
+    
     public StarterKitEvent getStarterKitEvent() {
         return starterKitEvent;
     }
@@ -911,8 +928,16 @@ public class EliteEssentials extends JavaPlugin {
         warpStorage.load();
         spawnStorage.load();
         
+        // Reload custom help entries (allows admins to edit custom_help.json)
+        if (customHelpStorage != null) {
+            customHelpStorage.reload();
+        }
+        
         // Refresh spawn protection locations from reloaded spawn storage
         spawnProtectionService.loadFromStorage(spawnStorage);
+        
+        // NOTE: syncToNativeSpawnProviders() is NOT called on reload.
+        // See startup comment — setSpawnProvider() causes marker entity crashes.
         
         // Reload services
         kitService.reload();
