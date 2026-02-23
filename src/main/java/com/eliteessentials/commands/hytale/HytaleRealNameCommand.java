@@ -2,16 +2,16 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.NickService;
-import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
@@ -22,9 +22,9 @@ import javax.annotation.Nonnull;
  * Looks up the real username of a player who is currently using a nickname.
  * Searches online players only.
  *
- * Permission: eliteessentials.command.misc.realname (Admin)
+ * Permission: eliteessentials.command.misc.nickname.lookup (Admin)
  */
-public class HytaleRealNameCommand extends AbstractPlayerCommand {
+public class HytaleRealNameCommand extends CommandBase {
 
     private static final String COMMAND_NAME = "realname";
 
@@ -44,9 +44,19 @@ public class HytaleRealNameCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
-                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player,
-                           @Nonnull World world) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
+        // Resolve player sender
+        Ref<EntityStore> ref = ctx.senderAsPlayerRef();
+        if (ref == null || !ref.isValid()) {
+            ctx.sendMessage(Message.raw("This command can only be used by players.").color("#FF5555"));
+            return;
+        }
+        Store<EntityStore> store = ref.getStore();
+        PlayerRef player = store.getComponent(ref, PlayerRef.getComponentType());
+        if (player == null) {
+            ctx.sendMessage(Message.raw("Could not resolve player.").color("#FF5555"));
+            return;
+        }
 
         if (!configManager.getConfig().nick.enabled) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
@@ -54,7 +64,10 @@ public class HytaleRealNameCommand extends AbstractPlayerCommand {
             return;
         }
 
-        if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.NICK_LOOKUP, true)) {
+        // Permission: misc.nickname.lookup (admin only in simple mode)
+        if (!hasLookupPermission(player.getUuid())) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("noPermission"), "#FF5555"));
             return;
         }
 
@@ -93,5 +106,13 @@ public class HytaleRealNameCommand extends AbstractPlayerCommand {
 
         ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("realnameNotFound", "player", query), "#FF5555"));
+    }
+
+    private boolean hasLookupPermission(java.util.UUID playerId) {
+        if (!configManager.getConfig().advancedPermissions) {
+            return PermissionService.get().isAdmin(playerId);
+        }
+        return PermissionService.get().hasPermission(playerId, Permissions.NICK_LOOKUP)
+                || PermissionService.get().isAdmin(playerId);
     }
 }
