@@ -151,6 +151,16 @@ All 60+ player-facing messages are configurable in `messages.json`. Translate yo
   - Fully customizable in config
   - Option to suppress default Hytale join messages
 
+### Nickname System
+- **`/nick <nickname>`** - Set your own display nickname (persists across restarts)
+- **`/nick off`** - Clear your own nickname
+- **`/nick <player> <nickname|off>`** - Set/clear another player's nickname (requires `misc.nickname.others`)
+- **`/realname <name>`** - Look up the real username behind a nickname (requires `misc.nickname.lookup`)
+- Nicknames appear in chat, group chat, tab list, `/msg`, `/list`, and join/quit messages
+- Color codes in nicknames gated behind `eliteessentials.command.misc.nick.color` permission
+- Note: other mods will still show the player's real username
+- Admin only in simple mode
+
 ### Ignore System
 - **`/ignore <player>`** - Block a player's public and private messages
 - **`/ignore list`** - View all players you are currently ignoring
@@ -328,6 +338,10 @@ Config file is automatically created on first server start with sensible default
 | `/baltop` | View richest players | Everyone |
 | `/eco` | Economy admin commands | Admin |
 | `/mail` | Send/receive offline mail | Everyone |
+| `/nick <nickname>` | Set your display nickname | Admin |
+| `/nick off` | Clear your nickname | Admin |
+| `/nick <player> <nickname\|off>` | Set/clear another player's nickname | Admin+ |
+| `/realname <name>` | Look up real username behind a nickname | Admin |
 | `/alias` | Manage command aliases | Admin |
 | `/eehelp` | Show available commands | Everyone |
 | `/eliteessentials reload` | Reload configuration | Admin |
@@ -362,5 +376,4 @@ See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.
 ## Roadmap
 
 - **Chat Filter** - Configurable word filter with customizable actions (warn, mute, kick).
-- **Player Nicknames** - Allow players to set display names.
 - **SQL Support** - Ability to use External SQL for Mod storage.
