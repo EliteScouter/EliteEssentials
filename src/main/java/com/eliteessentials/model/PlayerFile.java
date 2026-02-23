@@ -11,6 +11,7 @@ public class PlayerFile {
     // Core identity
     private UUID uuid;
     private String name;
+    private String nickname;  // Custom display name (null = use real name)
     
     // Timestamps
     private long firstJoin;
@@ -81,6 +82,23 @@ public class PlayerFile {
     
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    /** Returns nickname if set, otherwise real name. */
+    public String getDisplayName() {
+        return nickname != null && !nickname.isEmpty() ? nickname : name;
+    }
+
+    public boolean hasNickname() {
+        return nickname != null && !nickname.isEmpty();
     }
     
     // ==================== Timestamps ====================

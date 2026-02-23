@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.1.14 - 2026-02-22
+
+### Added
+- Nickname system - `/nick` and `/realname` commands
+  - `/nick <nickname>` - Set your own display nickname (persists across restarts)
+  - `/nick off` - Clear your own nickname
+  - `/nick <player> <nickname|off>` - Set/clear another player's nickname (requires `misc.nickname.others`)
+  - `/realname <name>` - Look up the real username behind a nickname (requires `misc.nickname.lookup`)
+  - Nicknames appear everywhere player names show within EliteEssentials: chat, group chat, tab list, `/msg`, `/list`, join/quit messages
+  - Note: other mods will still show the player's real username
+  - Color codes in nicknames gated behind `eliteessentials.command.misc.nick.color` permission
+  - Config section: `nick.enabled`, `nick.allowColors`
+  - Permissions:
+    - `eliteessentials.command.misc.nick` - set your own nickname (admin only in simple mode)
+    - `eliteessentials.command.misc.nick.color` - use color codes in nicknames
+    - `eliteessentials.command.misc.nickname.others` - set/clear other players' nicknames
+    - `eliteessentials.command.misc.nickname.lookup` - look up real name via `/realname`
+  - Stored in per-player data file (no separate file needed)
+- `spawn.respawnExcludedWorlds` config option - list world names where EliteEssentials will skip the death-respawn teleport to spawn
+  - Prevents race conditions when another plugin manages its own respawn/teleport logic in specific worlds
+  - Supports wildcard patterns: `arena*` matches any world starting with "arena"
+  - Players who die in an excluded world are left entirely to the other plugin's respawn handling
+
+### Fixed
+- `/ee reload` now refreshes LuckPerms prefix/suffix caches for all online players
+  - Previously, changing a group's prefix via `/lp group <group> meta setprefix` wouldn't show in chat until a server restart
+  - On reload, `recalculateCaches()` is called for each online player so the new prefix takes effect immediately
+
+### Improved
+- `spawn.respawnExcludedWorlds` now also suppresses the `teleportOnEveryLogin` save-file rewrite for players disconnecting from a matching world
+  - A single entry like `arena*` now covers both death-respawn and login-spawn suppression
+  - Prevents conflicts when another plugin (e.g. ArenaPvP) restores the player's pre-match position after they return to the main world
+
 ## 1.1.13 - 2026-02-20
 
 ### Added

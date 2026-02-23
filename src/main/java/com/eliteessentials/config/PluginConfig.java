@@ -71,6 +71,7 @@ public class PluginConfig {
     public MuteConfig mute = new MuteConfig();
     public BanConfig ban = new BanConfig();
     public FreezeConfig freeze = new FreezeConfig();
+    public NickConfig nick = new NickConfig();
     
     // ==================== MESSAGES ====================
     
@@ -546,6 +547,20 @@ public class PluginConfig {
         messages.put("unfreezeSuccess", "&a{player} &ahas been unfrozen.");
         messages.put("unfreezeNotify", "&aYou have been unfrozen.");
         messages.put("freezeStillFrozen", "&cYou are still frozen. You cannot move.");
+
+        // ==================== NICK ====================
+        messages.put("nickUsage", "&cUsage: &e/nick <nickname|off> &cor &e/nick <player> <nickname|off>");
+        messages.put("nickSet", "&aYour nickname is now &r{nick}&a.");
+        messages.put("nickSetOther", "&aSet &f{player}&a's nickname to &r{nick}&a.");
+        messages.put("nickSetNotify", "&aAn admin set your nickname to &r{nick}&a.");
+        messages.put("nickCleared", "&aYour nickname has been cleared.");
+        messages.put("nickClearedOther", "&aCleared &f{player}&a's nickname.");
+        messages.put("nickTooLong", "&cNickname too long. Maximum &e{max} &ccharacters.");
+        messages.put("nickInvalid", "&cInvalid nickname.");
+        messages.put("realnameUsage", "&cUsage: &e/realname <name>");
+        messages.put("realnameResult", "&f{nick} &7is the nickname of &e{player}&7.");
+        messages.put("realnameNoNick", "&f{player} &7has no nickname set.");
+        messages.put("realnameNotFound", "&cNo online player found matching &e'{player}'&c.");
     }
 
     // ==================== RTP (Random Teleport) ====================
@@ -762,6 +777,17 @@ public class PluginConfig {
          * Note: Uses mainWorld spawn when perWorld=false.
          */
         public boolean teleportOnEveryLogin = false;
+
+        /**
+         * Worlds where death-respawn teleport to spawn is suppressed.
+         * Players who die in any world listed here will NOT be teleported to spawn on respawn.
+         * Also suppresses the teleportOnEveryLogin save-file rewrite for players who disconnect
+         * from a matching world, preventing conflicts with plugins that manage their own
+         * post-match teleportation (e.g. PVPArena restoring original position).
+         * Supports wildcard patterns using * (e.g. "arena*" matches "Arena_1vs1-standard_1771781348556_3").
+         * Example: ["pvparena_world", "arena*"]
+         */
+        public java.util.List<String> respawnExcludedWorlds = new java.util.ArrayList<>();
     }
 
     // ==================== WARPS ====================
@@ -1446,6 +1472,20 @@ public class PluginConfig {
     public static class FreezeConfig {
         /** Enable/disable the /freeze command */
         public boolean enabled = true;
+    }
+
+    // ==================== NICK ====================
+
+    public static class NickConfig {
+        /** Enable/disable the /nick and /realname commands */
+        public boolean enabled = false;
+
+        /**
+         * Allow players to use color codes in their own nickname.
+         * In simple mode this is admin-only regardless of this setting.
+         * In advanced mode, grant eliteessentials.command.misc.nick.color to allow it.
+         */
+        public boolean allowColors = false;
     }
     
     // ==================== PLAYTIME REWARDS ====================

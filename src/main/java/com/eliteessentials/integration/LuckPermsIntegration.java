@@ -1329,4 +1329,39 @@ public class LuckPermsIntegration {
         String group = getPrimaryGroup(playerId);
         return group != null ? group : "";
     }
+
+    /**
+     * Force LuckPerms to recalculate cached metadata (prefix, suffix, etc.) for all online players.
+     * 
+     * LuckPerms caches prefix/suffix data per-user. When a group's prefix is changed via
+     * /lp group <group> meta setprefix, the cache for users in that group is not automatically
+     * invalidated in all environments. Calling recalculateCaches() forces a fresh recalculation
+     * so the new prefix is visible immediately without a server restart.
+     */
+    public static void refreshCachesForOnlinePlayers() {
+        Logger logger = Logger.getLogger("EliteEssentials");
+        if (!isAvailable()) return;
+
+        com.hypixel.hytale.server.core.universe.Universe universe = com.hypixel.hytale.server.core.universe.Universe.get();
+        if (universe == null) return;
+
+        int refreshed = 0;
+        for (com.hypixel.hytale.server.core.universe.PlayerRef playerRef : universe.getPlayers()) {
+            try {
+                Object[] lpObjects = getLuckPermsObjects(playerRef.getUuid());
+                if (lpObjects == null) continue;
+
+                Object user = lpObjects[2];
+
+                // recalculateCaches() forces LuckPerms to rebuild prefix/suffix/meta from current data
+                Method recalcMethod = user.getClass().getMethod("recalculateCaches");
+                recalcMethod.invoke(user);
+                refreshed++;
+            } catch (Exception e) {
+                logger.warning("[LuckPerms] Failed to refresh cache for " + playerRef.getUsername() + ": " + e.getMessage());
+            }
+        }
+
+        logger.info("[LuckPerms] Refreshed caches for " + refreshed + " online player(s)");
+    }
 }

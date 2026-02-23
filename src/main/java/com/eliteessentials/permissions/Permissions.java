@@ -154,6 +154,12 @@ public final class Permissions {
     public static final String PLAYTIME = MISC_CATEGORY + ".playtime";
     public static final String PLAYTIME_OTHERS = MISC_CATEGORY + ".playtime.others";
     public static final String INVSEE = MISC_CATEGORY + ".invsee";
+    public static final String NICK = MISC_CATEGORY + ".nick";
+    public static final String NICK_COLOR = MISC_CATEGORY + ".nick.color";
+    public static final String NICK_OTHERS = MISC_CATEGORY + ".nickname.others";
+    public static final String NICK_LOOKUP = MISC_CATEGORY + ".nickname.lookup";
+    /** @deprecated use NICK_LOOKUP */
+    public static final String REALNAME = NICK_LOOKUP;
 
     // ==================== CHAT CATEGORY ====================
     // eliteessentials.chat.*

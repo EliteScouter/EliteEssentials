@@ -7,6 +7,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.IgnoreService;
 import com.eliteessentials.services.MuteService;
+import com.eliteessentials.services.NickService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
@@ -27,6 +28,7 @@ public class ChatListener {
     private final ConfigManager configManager;
     private IgnoreService ignoreService;
     private MuteService muteService;
+    private NickService nickService;
     
     public ChatListener(ConfigManager configManager) {
         this.configManager = configManager;
@@ -38,6 +40,10 @@ public class ChatListener {
     
     public void setMuteService(MuteService muteService) {
         this.muteService = muteService;
+    }
+
+    public void setNickService(NickService nickService) {
+        this.nickService = nickService;
     }
     
     /**
@@ -103,6 +109,11 @@ public class ChatListener {
         String playerName = sender.getUsername();
         String originalMessage = event.getContent();
 
+        // Use nickname as display name if set
+        String displayName = (nickService != null)
+                ? nickService.getDisplayName(sender.getUuid(), playerName)
+                : playerName;
+
         // Process player message - strip color/format codes if they don't have permission
         String processedMessage = processPlayerMessage(sender, originalMessage);
 
@@ -111,8 +122,8 @@ public class ChatListener {
 
         // Replace placeholders - build the formatted message step by step
         String formattedMessage = format
-                .replace("{player}", playerName)
-                .replace("{displayname}", playerName);
+                .replace("{player}", displayName)
+                .replace("{displayname}", displayName);
 
         // Replace LuckPerms placeholders if available (thread-safe, no store access)
         formattedMessage = replaceLuckPermsPlaceholders(sender, formattedMessage);

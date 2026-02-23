@@ -27,6 +27,7 @@ import com.eliteessentials.services.IgnoreService;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.services.MailService;
 import com.eliteessentials.services.MessageService;
+import com.eliteessentials.services.NickService;
 import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.BanService;
 import com.eliteessentials.services.TempBanService;
@@ -114,6 +115,7 @@ public class EliteEssentials extends JavaPlugin {
     private TempBanService tempBanService;
     private IpBanService ipBanService;
     private FreezeService freezeService;
+    private NickService nickService;
     private HytaleFlyCommand flyCommand;
     private PlayerDeathSystem playerDeathSystem;
     private DamageTrackingSystem damageTrackingSystem;
@@ -222,19 +224,26 @@ public class EliteEssentials extends JavaPlugin {
         costService = new CostService(configManager);
         mailService = new MailService(playerFileStorage, configManager);
         afkService = new AfkService(configManager);
-        tabListService = new TabListService(configManager);
-        tabListService.setAfkService(afkService);
-        afkService.setTabListService(tabListService);
+        // Nick service - uses PlayerFileStorage, no separate file needed
+        nickService = new NickService(playerFileStorage);
+
         ignoreService = new IgnoreService(playerFileStorage);
         muteService = new MuteService(this.dataFolder);
         banService = new BanService(this.dataFolder);
         tempBanService = new TempBanService(this.dataFolder);
         ipBanService = new IpBanService(this.dataFolder);
         freezeService = new FreezeService(this.dataFolder);
-        
+
         // Wire mute/ignore services into group chat for filtering
         groupChatService.setMuteService(muteService);
         groupChatService.setIgnoreService(ignoreService);
+        groupChatService.setNickService(nickService);
+
+        tabListService = new TabListService(configManager);
+        tabListService.setAfkService(afkService);
+        tabListService.setNickService(nickService);
+        afkService.setTabListService(tabListService);
+        groupChatService.setNickService(nickService);
         
         // Initialize playtime rewards
         playTimeRewardStorage = new PlayTimeRewardStorage(this.dataFolder);
@@ -301,6 +310,7 @@ public class EliteEssentials extends JavaPlugin {
         chatListener = new ChatListener(configManager);
         chatListener.setIgnoreService(ignoreService);
         chatListener.setMuteService(muteService);
+        chatListener.setNickService(nickService);
         chatListener.registerEvents(getEventRegistry());
         if (configManager.getConfig().chatFormat.enabled) {
             getLogger().at(Level.INFO).log("Chat formatting system registered.");
@@ -743,6 +753,15 @@ public class EliteEssentials extends JavaPlugin {
             registeredCommands.append(", /freeze");
         }
         
+        // Nick commands
+        if (config.nick.enabled) {
+            HytaleNickCommand nickCmd = new HytaleNickCommand(nickService, configManager);
+            nickCmd.setTabListService(tabListService);
+            getCommandRegistry().registerCommand(nickCmd);
+            getCommandRegistry().registerCommand(new HytaleRealNameCommand(nickService, configManager));
+            registeredCommands.append(", /nick, /realname");
+        }
+        
         getLogger().at(Level.INFO).log("Commands registered: " + registeredCommands.toString());
     }
 
@@ -894,6 +913,10 @@ public class EliteEssentials extends JavaPlugin {
         return freezeService;
     }
     
+    public NickService getNickService() {
+        return nickService;
+    }
+    
     public File getPluginDataFolder() {
         return dataFolder;
     }
@@ -1002,6 +1025,10 @@ public class EliteEssentials extends JavaPlugin {
         if (playerService != null) {
             playerService.startPeriodicSave();
         }
+
+        // Force LuckPerms to recalculate prefix/suffix caches for all online players.
+        // Without this, group prefix changes via /lp don't show in chat until restart.
+        LuckPermsIntegration.refreshCachesForOnlinePlayers();
         
         getLogger().at(Level.INFO).log("Configuration reloaded.");
     }

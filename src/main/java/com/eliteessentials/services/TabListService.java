@@ -3,6 +3,7 @@ package com.eliteessentials.services;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.integration.LuckPermsIntegration;
+import com.eliteessentials.services.NickService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
@@ -26,6 +27,7 @@ public class TabListService {
 
     private final ConfigManager configManager;
     private AfkService afkService;
+    private NickService nickService;
 
     public TabListService(ConfigManager configManager) {
         this.configManager = configManager;
@@ -33,6 +35,10 @@ public class TabListService {
 
     public void setAfkService(AfkService afkService) {
         this.afkService = afkService;
+    }
+
+    public void setNickService(NickService nickService) {
+        this.nickService = nickService;
     }
 
     /**
@@ -45,6 +51,15 @@ public class TabListService {
      */
     public String buildDisplayName(UUID playerId, String username) {
         PluginConfig config = configManager.getConfig();
+
+        // Use nickname as the display base if one is set (strip color codes - tab list is plain text)
+        String baseName = username;
+        if (nickService != null) {
+            String nick = nickService.getNickname(playerId);
+            if (nick != null && !nick.isEmpty()) {
+                baseName = MessageFormatter.stripColorCodes(nick);
+            }
+        }
 
         // Get LuckPerms prefix if enabled — strip color codes since tab list is plain text
         String lpPrefix = "";
@@ -64,17 +79,15 @@ public class TabListService {
         boolean showAfkInTab = config.afk.showInTabList;
 
         if (isAfk && showAfkInTab) {
-            // Strip color codes from AFK prefix too — tab list doesn't render them
             String afkName = MessageFormatter.stripColorCodes(
-                configManager.getMessage("afkPrefix", "player", username));
+                configManager.getMessage("afkPrefix", "player", baseName));
             if (!lpPrefix.isEmpty()) {
-                return afkName.replace(username, lpPrefix + username);
+                return afkName.replace(baseName, lpPrefix + baseName);
             }
             return afkName;
         }
 
-        // <LP prefix> PlayerName (or just PlayerName)
-        return lpPrefix.isEmpty() ? username : lpPrefix + username;
+        return lpPrefix.isEmpty() ? baseName : lpPrefix + baseName;
     }
 
     /**
@@ -116,10 +129,11 @@ public class TabListService {
 
     /**
      * Called when a player joins. Sets their initial tab list display name
-     * if LuckPerms prefix is enabled.
+     * if LuckPerms prefix or a nickname is active.
      */
     public void onPlayerJoin(UUID playerId) {
-        if (configManager.getConfig().tabList.showLuckPermsPrefix) {
+        boolean hasNick = nickService != null && nickService.hasNick(playerId);
+        if (configManager.getConfig().tabList.showLuckPermsPrefix || hasNick) {
             updatePlayer(playerId);
         }
     }

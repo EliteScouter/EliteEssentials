@@ -56,6 +56,7 @@ public class GroupChatService {
     private List<GroupChat> groupChats = new ArrayList<>();
     private MuteService muteService;
     private IgnoreService ignoreService;
+    private NickService nickService;
     
     public GroupChatService(File dataFolder, ConfigManager configManager) {
         this.dataFolder = dataFolder;
@@ -69,6 +70,10 @@ public class GroupChatService {
     
     public void setIgnoreService(IgnoreService ignoreService) {
         this.ignoreService = ignoreService;
+    }
+
+    public void setNickService(NickService nickService) {
+        this.nickService = nickService;
     }
     
     /**
@@ -247,6 +252,11 @@ public class GroupChatService {
     public void broadcast(GroupChat groupChat, PlayerRef sender, String message) {
         var gcConfig = configManager.getConfig().groupChat;
         
+        // Use nickname as display name if set
+        String senderDisplayName = (nickService != null)
+                ? nickService.getDisplayName(sender.getUuid(), sender.getUsername())
+                : sender.getUsername();
+
         // Build the channel color code
         String colorCode = groupChat.getColor();
         if (colorCode != null && colorCode.startsWith("#") && !colorCode.startsWith("&#")) {
@@ -261,8 +271,8 @@ public class GroupChatService {
             
             // Replace player placeholders in the chat format
             String playerFormatted = chatFormat
-                    .replace("{player}", sender.getUsername())
-                    .replace("{displayname}", sender.getUsername());
+                    .replace("{player}", senderDisplayName)
+                    .replace("{displayname}", senderDisplayName);
             
             // Replace LuckPerms placeholders if available
             playerFormatted = replaceLuckPermsPlaceholders(sender, playerFormatted);
@@ -281,12 +291,12 @@ public class GroupChatService {
                     .replace("{channel_prefix}", groupChat.getPrefix())
                     .replace("{channel_color}", colorCode != null ? colorCode : "")
                     .replace("{chat_format}", playerFormatted)
-                    .replace("{player}", sender.getUsername())
+                    .replace("{player}", senderDisplayName)
                     .replace("{message}", message);
         } else {
-            // Plain format: [PREFIX] PlayerName: message
+            // Plain format: [PREFIX] DisplayName: message
             format = colorCode + groupChat.getPrefix() + " &f" + 
-                           sender.getUsername() + "&7: &r" + message;
+                           senderDisplayName + "&7: &r" + message;
         }
         
         Message formattedMessage = MessageFormatter.format(format);
@@ -296,7 +306,7 @@ public class GroupChatService {
         if (gcConfig.allowSpy && !spyingPlayers.isEmpty()) {
             String spyFormat = gcConfig.spyFormat
                     .replace("{channel}", groupChat.getGroupName())
-                    .replace("{player}", sender.getUsername())
+                    .replace("{player}", senderDisplayName)
                     .replace("{message}", message);
             spyMessage = MessageFormatter.format(spyFormat);
         }

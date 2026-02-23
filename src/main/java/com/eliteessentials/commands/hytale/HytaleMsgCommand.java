@@ -4,6 +4,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.MessageService;
+import com.eliteessentials.services.NickService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -118,22 +119,28 @@ public class HytaleMsgCommand extends AbstractPlayerCommand {
      * Send a private message between two players.
      */
     private void sendPrivateMessage(PlayerRef sender, PlayerRef target, String message, CommandContext ctx) {
-        String senderName = sender.getUsername();
-        String targetName = target.getUsername();
+        // Use nicknames as display names if set
+        NickService nickService = EliteEssentials.getInstance().getNickService();
+        String senderName = nickService != null
+                ? nickService.getDisplayName(sender.getUuid(), sender.getUsername())
+                : sender.getUsername();
+        String targetName = nickService != null
+                ? nickService.getDisplayName(target.getUuid(), target.getUsername())
+                : target.getUsername();
         
-        // Format: [From PlayerName] message
+        // Format: [From DisplayName] message
         String toTarget = configManager.getMessage("msgReceived", 
             "player", senderName, "message", message);
         target.sendMessage(MessageFormatter.formatWithFallback(toTarget, "#D8BFD8")); // Light purple
         
-        // Format: [To PlayerName] message
+        // Format: [To DisplayName] message
         String toSender = configManager.getMessage("msgSent", 
             "player", targetName, "message", message);
         ctx.sendMessage(MessageFormatter.formatWithFallback(toSender, "#D8BFD8"));
         
-        // Broadcast to console if enabled
+        // Broadcast to console if enabled (use real names for logging)
         if (configManager.getConfig().msg.broadcastToConsole) {
-            logger.info("[MSG] " + senderName + " -> " + targetName + ": " + message);
+            logger.info("[MSG] " + sender.getUsername() + " -> " + target.getUsername() + ": " + message);
         }
     }
 

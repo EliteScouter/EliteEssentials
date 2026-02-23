@@ -6,6 +6,7 @@ import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.integration.PAPIIntegration;
 import com.eliteessentials.services.AfkService;
 import com.eliteessentials.services.MailService;
+import com.eliteessentials.services.NickService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.storage.MotdStorage;
@@ -348,7 +349,10 @@ public class JoinQuitListener {
             if (isFirstJoin) {
                 // Broadcast first join message (unless player is vanished)
                 if (config.joinMsg.firstJoinEnabled && !playerIsVanished) {
-                    String message = configManager.getMessage("firstJoinMessage", "player", playerName);
+                    NickService nickService = EliteEssentials.getInstance().getNickService();
+                    String displayName = nickService != null
+                            ? nickService.getDisplayName(playerId, playerName) : playerName;
+                    String message = configManager.getMessage("firstJoinMessage", "player", displayName);
                     broadcastMessage(message, "#FFFF55", playerRef);
                 }
 
@@ -362,7 +366,10 @@ public class JoinQuitListener {
                     // Also check if suppressJoinQuitMessages is enabled for vanished players
                     boolean shouldSuppress = playerIsVanished && config.vanish.suppressJoinQuitMessages;
                     if (!shouldSuppress) {
-                        String message = configManager.getMessage("joinMessage", "player", playerName);
+                        NickService nickService = EliteEssentials.getInstance().getNickService();
+                        String displayName = nickService != null
+                                ? nickService.getDisplayName(playerId, playerName) : playerName;
+                        String message = configManager.getMessage("joinMessage", "player", displayName);
                         broadcastMessage(message, "#55FF55", playerRef);
                     }
                 }
@@ -433,7 +440,25 @@ public class JoinQuitListener {
         // - Modifying TransformComponent on disconnect gets overwritten by PlayerRemovedSystem
         // - PlayerRemovedSystem sets lastPosition but nobody calls saveConfig() after removal
         // - The periodic TickingSystem (10s) won't run again after the entity is removed
-        if (config.spawn.enabled && config.spawn.teleportOnEveryLogin && spawnStorage != null) {
+        //
+        // Skip the rewrite if the player's last world is excluded (e.g. arena worlds managed
+        // by another plugin). Uses the same respawnExcludedWorlds list so a single wildcard
+        // like "arena*" covers both death-respawn and login-spawn suppression.
+        String lastWorldForExclusionCheck = playerLastWorld.get(playerId);
+        boolean loginExcluded = false;
+        if (lastWorldForExclusionCheck != null && config.spawn.respawnExcludedWorlds != null) {
+            for (String excluded : config.spawn.respawnExcludedWorlds) {
+                if (excluded != null && worldMatchesPattern(lastWorldForExclusionCheck, excluded)) {
+                    loginExcluded = true;
+                    if (configManager.isDebugEnabled()) {
+                        logger.info("[SpawnOnLogout] World '" + lastWorldForExclusionCheck +
+                                "' matched excluded pattern '" + excluded + "', skipping save file rewrite.");
+                    }
+                    break;
+                }
+            }
+        }
+        if (config.spawn.enabled && config.spawn.teleportOnEveryLogin && spawnStorage != null && !loginExcluded) {
             String targetWorldName = config.spawn.perWorld ?
                 (playerLastWorld.get(playerId) != null ? playerLastWorld.get(playerId) : config.spawn.mainWorld) :
                 config.spawn.mainWorld;
@@ -483,7 +508,10 @@ public class JoinQuitListener {
             // Suppress quit message if player was vanished and suppressJoinQuitMessages is enabled
             boolean shouldSuppress = wasVanished && config.vanish.suppressJoinQuitMessages;
             if (!shouldSuppress) {
-                String message = configManager.getMessage("quitMessage", "player", playerName);
+                NickService nickService = EliteEssentials.getInstance().getNickService();
+                String displayName = nickService != null
+                        ? nickService.getDisplayName(playerId, playerName) : playerName;
+                String message = configManager.getMessage("quitMessage", "player", displayName);
                 broadcastMessage(message, "#FF5555", playerRef);
             }
         }
@@ -653,6 +681,18 @@ public class JoinQuitListener {
         } catch (Exception e) {
             logger.warning("Failed to update packet filters: " + e.getMessage());
         }
+    }
+
+    /**
+     * Check if a world name matches a glob pattern (supports * wildcard, case-insensitive).
+     * Shared logic with RespawnListener for consistent exclusion behaviour.
+     */
+    private boolean worldMatchesPattern(String worldName, String pattern) {
+        if (!pattern.contains("*")) {
+            return pattern.equalsIgnoreCase(worldName);
+        }
+        String regex = "(?i)" + java.util.regex.Pattern.quote(pattern).replace("\\*", ".*");
+        return worldName.matches(regex);
     }
 
     /**

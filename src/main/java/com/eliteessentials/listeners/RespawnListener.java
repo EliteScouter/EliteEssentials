@@ -191,6 +191,20 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
             return;
         }
 
+        // Check if this world is excluded from respawn teleport (e.g. PVPArena worlds).
+        // Entries support wildcards: "arena*" matches "Arena_1vs1-standard_1771781348556_3", etc.
+        if (config.spawn.respawnExcludedWorlds != null) {
+            for (String excluded : config.spawn.respawnExcludedWorlds) {
+                if (excluded != null && worldMatchesPattern(currentWorldName, excluded)) {
+                    if (debugEnabled) {
+                        logger.info("[Respawn] World '" + currentWorldName + "' matched excluded pattern '" + excluded + "', skipping spawn teleport.");
+                        logger.info("[Respawn] ========================================");
+                    }
+                    return;
+                }
+            }
+        }
+
         // Cross-world respawn: player died in a non-main world, needs to go to mainWorld
         SpawnStorage.SpawnData ourSpawn = spawnStorage.getSpawn(targetWorldName);
 
@@ -203,6 +217,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         }
 
         World targetWorld = findWorldByName(targetWorldName);
+
         if (targetWorld == null) {
             logger.warning("[Respawn] Target mainWorld '" + targetWorldName + "' not found, using vanilla respawn");
             if (debugEnabled) {
@@ -268,6 +283,20 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
                         logger.warning("[Respawn] Failed to schedule cross-world teleport: " + t.getMessage());
                     }
                 });
+    }
+
+    /**
+     * Checks whether a world name matches a pattern.
+     * Supports case-insensitive exact matches and glob-style wildcards (*).
+     * e.g. "arena*" matches "Arena_1vs1-standard_1771781348556_3"
+     */
+    private boolean worldMatchesPattern(String worldName, String pattern) {
+        if (!pattern.contains("*")) {
+            return pattern.equalsIgnoreCase(worldName);
+        }
+        // Convert glob pattern to regex: escape everything, then replace \* with .*
+        String regex = "(?i)" + java.util.regex.Pattern.quote(pattern).replace("\\*", ".*");
+        return worldName.matches(regex);
     }
 
     /**
