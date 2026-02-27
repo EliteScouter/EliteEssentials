@@ -126,12 +126,14 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
-        // Get PlayerRef from sender (handles both PlayerRef and Player types)
+        // Get PlayerRef from sender (handles both PlayerRef and Player types; executeSync has no store/ref)
         PlayerRef senderPlayerRef = null;
         if (sender instanceof PlayerRef) {
             senderPlayerRef = (PlayerRef) sender;
-        } else if (sender instanceof Player) {
-            senderPlayerRef = ((Player) sender).getPlayerRef();
+        } else if (sender instanceof Player player) {
+            @SuppressWarnings("removal") // Entity.getUuid() deprecated; no alternative in CommandContext for executeSync
+            UUID playerUuid = player.getUuid();
+            senderPlayerRef = playerUuid != null ? Universe.get().getPlayer(playerUuid) : null;
         }
         
         // If it's a player running /rtp with no args, that's fine - self RTP

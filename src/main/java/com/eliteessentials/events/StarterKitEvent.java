@@ -6,6 +6,7 @@ import com.eliteessentials.services.KitService;
 import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.CommandExecutor;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -53,16 +54,16 @@ public class StarterKitEvent {
                 return;
             }
             
-            // Get the player from the event directly (doesn't require store access)
-            Player eventPlayer = event.getPlayer();
-            if (eventPlayer == null) {
-                logger.warning("PlayerReadyEvent: player is null");
-                return;
-            }
-            
-            PlayerRef playerRef = eventPlayer.getPlayerRef();
+            // Get PlayerRef from store (getPlayerRef() on Player is deprecated)
+            Store<EntityStore> store = ref.getStore();
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
             if (playerRef == null) {
                 logger.warning("PlayerReadyEvent: playerRef is null");
+                return;
+            }
+            Player eventPlayer = store.getComponent(ref, Player.getComponentType());
+            if (eventPlayer == null) {
+                logger.warning("PlayerReadyEvent: Player component is null");
                 return;
             }
             

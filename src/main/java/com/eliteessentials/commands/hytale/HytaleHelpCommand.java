@@ -163,7 +163,11 @@ public class HytaleHelpCommand extends CommandBase {
         if (canUse(sender, Permissions.SEEN, true)) {
             available.add(new CommandInfo("/seen <player>", "Check when player was last online"));
         }
-        
+
+        if (canUse(sender, Permissions.PLAYERINFO, true)) {
+            available.add(new CommandInfo("/playerinfo [player]", "View detailed player info (UUID, playtime, wallet, etc.)"));
+        }
+
         if (config.joindate.enabled && canUse(sender, Permissions.JOINDATE, true)) {
             available.add(new CommandInfo("/joindate [player]", "Check first join date"));
         }

@@ -159,7 +159,10 @@ public final class Permissions {
     public static final String NICK_OTHERS = MISC_CATEGORY + ".nickname.others";
     public static final String NICK_LOOKUP = MISC_CATEGORY + ".nickname.lookup";
     /** @deprecated use NICK_LOOKUP */
+    @Deprecated
     public static final String REALNAME = NICK_LOOKUP;
+    public static final String PLAYERINFO = MISC_CATEGORY + ".playerinfo";
+    public static final String PLAYERINFO_OTHERS = MISC_CATEGORY + ".playerinfo.others";
 
     // ==================== CHAT CATEGORY ====================
     // eliteessentials.chat.*

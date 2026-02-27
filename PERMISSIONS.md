@@ -40,7 +40,9 @@ Commands are either available to Everyone or Admin only:
 | `/discord` | View discord info | Everyone |
 | `/list` | View online players | Everyone |
 | `/eehelp` | View available commands | Everyone |
-| `/seen <player>` | Check player info | Everyone |
+| `/seen <player>` | Check when player was last online | Everyone |
+| `/playerinfo` | View your detailed player info | Everyone |
+| `/playerinfo <player>` | View other's detailed player info | Everyone* |
 | `/joindate [player]` | View first join date | Everyone |
 | `/joindate <player>` | View other's join date | Everyone |
 | `/playtime [player]` | View own playtime | Everyone |
@@ -160,6 +162,8 @@ eliteessentials
 │   │   ├── list                    # /list command
 │   │   ├── eehelp                  # /eehelp command
 │   │   ├── seen                    # /seen command
+│   │   ├── playerinfo              # /playerinfo command
+│   │   │   └── others              # View other players' player info
 │   │   ├── god                     # /god command (Admin)
 │   │   ├── heal                    # /heal command (Admin)
 │   │   │   ├── bypass
@@ -290,7 +294,9 @@ eliteessentials
 | `eliteessentials.command.misc.discord` | View discord info |
 | `eliteessentials.command.misc.list` | View online players |
 | `eliteessentials.command.misc.eehelp` | View available commands |
-| `eliteessentials.command.misc.seen` | Check player info |
+| `eliteessentials.command.misc.seen` | Check when player was last online |
+| `eliteessentials.command.misc.playerinfo` | View your own detailed player info |
+| `eliteessentials.command.misc.playerinfo.others` | View other players' detailed player info |
 | `eliteessentials.command.misc.joindate` | View own join date |
 | `eliteessentials.command.misc.joindate.others` | View other players' join date |
 | `eliteessentials.command.misc.playtime` | View own playtime |
@@ -393,6 +399,7 @@ eliteessentials.command.tp.bypass.cooldown
 eliteessentials.command.tp.bypass.warmup
 eliteessentials.command.warp.use
 eliteessentials.command.economy.wallet.others
+eliteessentials.command.misc.playerinfo.others
 eliteessentials.command.misc.joindate.others
 eliteessentials.command.misc.playtime.others
 eliteessentials.command.home.limit.20

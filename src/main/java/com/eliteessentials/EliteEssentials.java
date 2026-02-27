@@ -697,7 +697,8 @@ public class EliteEssentials extends JavaPlugin {
         
         // Player info commands (always register - useful utility)
         getCommandRegistry().registerCommand(new HytaleSeenCommand(configManager, playerService));
-        registeredCommands.append("/seen, ");
+        getCommandRegistry().registerCommand(new HytalePlayerInfoCommand(configManager, playerService));
+        registeredCommands.append("/seen, /playerinfo, ");
         
         // Joindate command
         if (config.joindate.enabled) {

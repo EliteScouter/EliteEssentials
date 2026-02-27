@@ -60,16 +60,15 @@ public class HytaleListCommand extends CommandBase {
         List<PlayerRef> players = Universe.get().getPlayers();
         
         // Check if the command sender can see vanished players
-        // Get sender UUID - sender can be PlayerRef or Player
+        // Get sender UUID - sender can be PlayerRef or Player (executeSync has no store/ref to resolve PlayerRef from Player)
         UUID senderId = null;
         Object sender = ctx.sender();
         if (sender instanceof PlayerRef playerRef) {
             senderId = playerRef.getUuid();
         } else if (sender instanceof Player player) {
-            PlayerRef playerRef = player.getPlayerRef();
-            if (playerRef != null) {
-                senderId = playerRef.getUuid();
-            }
+            @SuppressWarnings("removal") // Entity.getUuid() deprecated; no alternative in CommandContext for executeSync
+            UUID uuid = player.getUuid();
+            senderId = uuid;
         }
         
         boolean canSeeVanished = senderId != null && 

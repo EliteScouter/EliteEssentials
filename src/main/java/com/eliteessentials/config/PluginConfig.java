@@ -478,6 +478,24 @@ public class PluginConfig {
         messages.put("playtimeSelf", "&7Your total playtime: &e{time}&7.");
         messages.put("playtimeOther", "&f{player}&7's total playtime: &e{time}&7.");
         messages.put("playtimeNeverJoined", "&c{player} &7has never joined this server.");
+
+        // ==================== PLAYERINFO ====================
+        messages.put("playerinfoHeaderSelf", "=== Your player info ===");
+        messages.put("playerinfoHeaderOther", "=== Player: {player} ===");
+        messages.put("playerinfoLabelUuid", "UUID: ");
+        messages.put("playerinfoLabelUsername", "Username: ");
+        messages.put("playerinfoLabelNickname", "Nickname: ");
+        messages.put("playerinfoLabelFirstJoin", "First join: ");
+        messages.put("playerinfoLabelLastSeen", "Last seen: ");
+        messages.put("playerinfoOnlineNow", "Online now");
+        messages.put("playerinfoLabelWallet", "Wallet: ");
+        messages.put("playerinfoLabelPlaytime", "Playtime: ");
+        messages.put("playerinfoLabelKitClaims", "Kit claims: ");
+        messages.put("playerinfoLabelClaimedMilestones", "Claimed milestones: ");
+        messages.put("playerinfoLabelHomes", "Homes: ");
+        messages.put("playerinfoLabelDefaultGroupChat", "Default group chat: ");
+        messages.put("playerinfoNoData", "No player data found.");
+        messages.put("playerinfoNoDataFor", "No player data for {player}.");
         
         // ==================== IGNORE ====================
         messages.put("ignoreUsage", "&cUsage: &e/ignore <player> &7or &e/ignore list");

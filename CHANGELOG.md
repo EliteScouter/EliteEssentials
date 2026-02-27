@@ -2,6 +2,15 @@
 
 ## 1.1.16 - 2026-02-26
 
+### Added
+- `/playerinfo` command - detailed player info (replaces reliance on Hytale's `/whoami`)
+  - `/playerinfo` - Your own info (requires `misc.playerinfo`)
+  - `/playerinfo <name>` - Another player's info (requires `misc.playerinfo.others`)
+  - Displays: UUID (clickable link to hytaleid.com for lookup/copy), Username, Nickname (if set), First join, Last seen (or "Online now"), Wallet, Playtime, Kit claims, Claimed milestones, Homes count, Default group chat
+  - Permissions: `eliteessentials.command.misc.playerinfo`, `eliteessentials.command.misc.playerinfo.others`
+  - All labels and headers are in `messages.json` for translation (e.g. `playerinfoHeaderSelf`, `playerinfoLabelUuid`, `playerinfoOnlineNow`, etc.)
+  - Listed in `/eehelp`
+
 ### Fixed
 - Nicknames not showing in tab list for players who joined after the nick was set - `TabListService.onPlayerJoin` only pushed the joining player's own entry, so new joiners received Hytale's native player list with real usernames for everyone already online. Now also sends all nicked/prefixed player entries to the new joiner on connect.
 - `/back` teleporting players to wrong locations on death - when a back location referenced a world that no longer exists (e.g. temporary arena world), it silently fell back to the player's current world and used the old coordinates, sending them to seemingly random places. Now properly detects missing worlds, discards the stale location, and tells the player the world no longer exists.
