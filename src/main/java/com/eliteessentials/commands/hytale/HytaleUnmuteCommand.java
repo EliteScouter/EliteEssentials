@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -26,7 +25,6 @@ public class HytaleUnmuteCommand extends AbstractPlayerCommand {
         super("unmute", "Unmute a player");
         this.muteService = muteService;
         this.configManager = configManager;
-        // Register player arg for autocomplete suggestions (execution uses raw input parsing)
         withRequiredArg("player", "Target player", ArgTypes.STRING)
             .suggest(PlayerSuggestionProvider.INSTANCE);
         setAllowsExtraArguments(true);
@@ -50,21 +48,28 @@ public class HytaleUnmuteCommand extends AbstractPlayerCommand {
             return;
         }
         String targetName = parts[1];
+
+        // Try online first
         PlayerRef target = PlayerSuggestionProvider.findPlayer(targetName);
-        if (target == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
-            return;
+        boolean unmuted;
+
+        if (target != null) {
+            unmuted = muteService.unmute(target.getUuid());
+            if (unmuted) {
+                target.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("unmutedNotify"), "#55FF55"));
+            }
+        } else {
+            // Offline - try by name
+            unmuted = muteService.unmuteByName(targetName) != null;
         }
-        boolean unmuted = muteService.unmute(target.getUuid());
+
         if (unmuted) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("unmuteSuccess", "player", target.getUsername()), "#55FF55"));
-            target.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("unmutedNotify"), "#55FF55"));
+                configManager.getMessage("unmuteSuccess", "player", targetName), "#55FF55"));
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("unmuteNotMuted", "player", target.getUsername()), "#FF5555"));
+                configManager.getMessage("unmuteNotMuted", "player", targetName), "#FF5555"));
         }
     }
 }

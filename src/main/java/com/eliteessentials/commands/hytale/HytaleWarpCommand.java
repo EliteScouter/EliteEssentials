@@ -9,6 +9,7 @@ import com.eliteessentials.model.Warp;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.CostService;
 import com.eliteessentials.services.WarpService;
 import com.eliteessentials.services.WarmupService;
@@ -190,7 +191,21 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         
         UUID playerId = player.getUuid();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+        CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         PermissionService perms = PermissionService.get();
+        
+        // Get effective cooldown from permissions (handles bypass + custom values)
+        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(playerId, COMMAND_NAME, config.warps.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                return;
+            }
+        }
         
         if (warmupService.hasActiveWarmup(playerId)) {
             // Always show this error - player needs to know why nothing happened
@@ -257,6 +272,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         final CostService finalCostService = costService;
         final double finalCost = cost;
         final boolean finalSilent = silent;
+        final int finalEffectiveCooldown = effectiveCooldown;
         
         // Always use PlayerRef to get fresh refs at teleport time
         Runnable doTeleport = () -> {
@@ -269,6 +285,9 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                 () -> {
                     if (finalCostService != null) {
                         finalCostService.charge(ctx, player, "warp", finalCost);
+                    }
+                    if (finalEffectiveCooldown > 0) {
+                        cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
                     }
                     if (!finalSilent) {
                         player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warpTeleported", "name", finalWarpName), "#55FF55"));

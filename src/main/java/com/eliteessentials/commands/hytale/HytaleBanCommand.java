@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BanService;
+import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
@@ -12,21 +13,23 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import java.util.Optional;
+import java.util.UUID;
 
 public class HytaleBanCommand extends AbstractPlayerCommand {
 
     private final BanService banService;
     private final ConfigManager configManager;
+    private final PlayerFileStorage playerFileStorage;
 
-    public HytaleBanCommand(BanService banService, ConfigManager configManager) {
+    public HytaleBanCommand(BanService banService, ConfigManager configManager, PlayerFileStorage playerFileStorage) {
         super("ban", "Permanently ban a player");
         this.banService = banService;
         this.configManager = configManager;
-        // Register player arg for autocomplete suggestions (execution uses raw input parsing)
+        this.playerFileStorage = playerFileStorage;
         withRequiredArg("player", "Target player", ArgTypes.STRING)
             .suggest(PlayerSuggestionProvider.INSTANCE);
         setAllowsExtraArguments(true);
@@ -52,34 +55,50 @@ public class HytaleBanCommand extends AbstractPlayerCommand {
         String targetName = parts[1];
         String reason = parts.length >= 3 ? parts[2] : null;
 
+        // Try online first, then offline
         PlayerRef target = PlayerSuggestionProvider.findPlayer(targetName);
-        if (target == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
-            return;
+        UUID targetId;
+        String resolvedName;
+
+        if (target != null) {
+            targetId = target.getUuid();
+            resolvedName = target.getUsername();
+        } else {
+            // Offline lookup
+            Optional<UUID> offlineId = playerFileStorage.getUuidByName(targetName);
+            if (!offlineId.isPresent()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNeverJoined", "player", targetName), "#FF5555"));
+                return;
+            }
+            targetId = offlineId.get();
+            resolvedName = targetName;
         }
-        if (target.getUuid().equals(player.getUuid())) {
+
+        if (targetId.equals(player.getUuid())) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("banSelf"), "#FF5555"));
             return;
         }
 
-        boolean banned = banService.ban(target.getUuid(), target.getUsername(), player.getUsername(), reason);
+        boolean banned = banService.ban(targetId, resolvedName, player.getUsername(), reason);
         if (banned) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("banSuccess", "player", target.getUsername()), "#55FF55"));
-            // Kick the player
-            String kickMsg = reason != null
-                ? configManager.getMessage("banKickReason", "reason", reason, "bannedBy", player.getUsername())
-                : configManager.getMessage("banKick", "bannedBy", player.getUsername());
-            try {
-                target.getPacketHandler().disconnect(MessageFormatter.stripColorCodes(kickMsg));
-            } catch (Exception e) {
-                // Player may have already disconnected
+                configManager.getMessage("banSuccess", "player", resolvedName), "#55FF55"));
+            // Kick if online
+            if (target != null) {
+                String kickMsg = reason != null
+                    ? configManager.getMessage("banKickReason", "reason", reason, "bannedBy", player.getUsername())
+                    : configManager.getMessage("banKick", "bannedBy", player.getUsername());
+                try {
+                    target.getPacketHandler().disconnect(MessageFormatter.stripColorCodes(kickMsg));
+                } catch (Exception e) {
+                    // Player may have already disconnected
+                }
             }
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("banAlready", "player", target.getUsername()), "#FF5555"));
+                configManager.getMessage("banAlready", "player", resolvedName), "#FF5555"));
         }
     }
 }

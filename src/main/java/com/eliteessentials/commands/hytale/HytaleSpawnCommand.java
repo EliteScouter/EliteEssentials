@@ -70,8 +70,11 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             return;
         }
         
-        // Check cooldown (with bypass check)
-        if (!CommandPermissionUtil.canBypassCooldown(playerId, COMMAND_NAME)) {
+        // Get effective cooldown from permissions (handles bypass + custom values)
+        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(playerId, COMMAND_NAME, config.spawn.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
             int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
             if (cooldownRemaining > 0) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
@@ -119,6 +122,9 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
         Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0);
         
+        // Capture effective cooldown for use in lambda
+        final int finalEffectiveCooldown = effectiveCooldown;
+        
         // Define the actual teleport action - always use PlayerRef for fresh refs
         Runnable doTeleport = () -> {
             // Save location for /back
@@ -134,8 +140,10 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
                 }
             );
             
-            // Set cooldown
-            cooldownService.setCooldown(COMMAND_NAME, playerId, config.spawn.cooldownSeconds);
+            // Set cooldown using effective value
+            if (finalEffectiveCooldown > 0) {
+                cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
+            }
         };
         
         // Get effective warmup (check bypass permission)

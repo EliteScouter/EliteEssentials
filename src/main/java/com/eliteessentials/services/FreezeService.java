@@ -80,6 +80,21 @@ public class FreezeService {
         }
         return false;
     }
+    /**
+     * Unfreeze by player name (for offline players where UUID may not be known).
+     * @return the UUID that was unfrozen, or null if not found
+     */
+    public UUID unfreezeByName(String playerName) {
+        for (Map.Entry<String, FreezeEntry> entry : frozenPlayers.entrySet()) {
+            if (entry.getValue().playerName != null && entry.getValue().playerName.equalsIgnoreCase(playerName)) {
+                UUID uuid = UUID.fromString(entry.getKey());
+                frozenPlayers.remove(entry.getKey());
+                save();
+                return uuid;
+            }
+        }
+        return null;
+    }
 
     public boolean isFrozen(UUID playerId) {
         return frozenPlayers.containsKey(playerId.toString());

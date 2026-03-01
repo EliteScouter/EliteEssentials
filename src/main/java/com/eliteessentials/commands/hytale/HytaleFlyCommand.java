@@ -1,10 +1,13 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.api.EconomyAPI;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.CooldownService;
+import com.eliteessentials.services.CostService;
+import com.eliteessentials.services.FlyService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -38,11 +41,16 @@ public class HytaleFlyCommand extends AbstractPlayerCommand {
     
     private final ConfigManager configManager;
     private final CooldownService cooldownService;
+    private final CostService costService;
+    private final FlyService flyService;
 
-    public HytaleFlyCommand(ConfigManager configManager, CooldownService cooldownService) {
+    public HytaleFlyCommand(ConfigManager configManager, CooldownService cooldownService,
+                            CostService costService, FlyService flyService) {
         super(COMMAND_NAME, "Toggle flight mode");
         this.configManager = configManager;
         this.cooldownService = cooldownService;
+        this.costService = costService;
+        this.flyService = flyService;
     }
 
     @Override
@@ -74,8 +82,22 @@ public class HytaleFlyCommand extends AbstractPlayerCommand {
             }
         }
 
+        // Cost per minute: charge upfront and schedule auto-disable (unless player bypasses cost)
+        double costPerMinute = flyConfig.costPerMinute;
+        int durationSeconds = flyConfig.costPerMinuteDurationSeconds;
+        boolean useCostPerMinute = costPerMinute > 0 && EconomyAPI.isEnabled();
+        boolean bypassCostPerMinute = costService.canBypassCost(playerId, COMMAND_NAME);
+        // Only charge and apply timer when cost-per-minute is on and player does NOT bypass
+        boolean applyCostPerMinuteToPlayer = useCostPerMinute && !bypassCostPerMinute;
+        if (applyCostPerMinuteToPlayer) {
+            if (!costService.chargeIfNeeded(ctx, player, COMMAND_NAME, costPerMinute)) {
+                return;
+            }
+        }
+
         // Execute on world thread like simple-fly does
         final int finalEffectiveCooldown = effectiveCooldown;
+        final boolean applyTimerAndTimedMessage = applyCostPerMinuteToPlayer;
         world.execute(() -> {
             // Get movement manager
             MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
@@ -94,8 +116,16 @@ public class HytaleFlyCommand extends AbstractPlayerCommand {
 
             // Send message
             if (newState) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("flyEnabled"), "#55FF55"));
+                if (applyTimerAndTimedMessage) {
+                    String timeStr = durationSeconds == 60 ? "1 minute" : durationSeconds + " seconds";
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("flyEnabledTimed", "time", timeStr), "#55FF55"));
+                    flyService.scheduleExpiry(playerId, durationSeconds);
+                } else {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("flyEnabled"), "#55FF55"));
+                }
             } else {
+                flyService.cancelExpiry(playerId);
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("flyDisabled"), "#FFAA00"));
                 
                 // When disabling flight, also stop the player from flying if they're currently in the air

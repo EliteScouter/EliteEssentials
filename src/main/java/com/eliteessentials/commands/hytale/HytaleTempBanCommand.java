@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.TempBanService;
+import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
@@ -12,21 +13,24 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import java.util.Optional;
+import java.util.UUID;
 
 public class HytaleTempBanCommand extends AbstractPlayerCommand {
 
     private final TempBanService tempBanService;
     private final ConfigManager configManager;
+    private final PlayerFileStorage playerFileStorage;
 
-    public HytaleTempBanCommand(TempBanService tempBanService, ConfigManager configManager) {
+    public HytaleTempBanCommand(TempBanService tempBanService, ConfigManager configManager,
+                                 PlayerFileStorage playerFileStorage) {
         super("tempban", "Temporarily ban a player");
         this.tempBanService = tempBanService;
         this.configManager = configManager;
-        // Register player arg for autocomplete suggestions (execution uses raw input parsing)
+        this.playerFileStorage = playerFileStorage;
         withRequiredArg("player", "Target player", ArgTypes.STRING)
             .suggest(PlayerSuggestionProvider.INSTANCE);
         setAllowsExtraArguments(true);
@@ -42,7 +46,6 @@ public class HytaleTempBanCommand extends AbstractPlayerCommand {
                 configManager.getConfig().ban.enabled)) {
             return;
         }
-        // Usage: /tempban <player> <time> [reason]
         String rawInput = ctx.getInputString();
         String[] parts = rawInput.split("\\s+", 4);
         if (parts.length < 3) {
@@ -61,39 +64,54 @@ public class HytaleTempBanCommand extends AbstractPlayerCommand {
             return;
         }
 
+        // Try online first, then offline
         PlayerRef target = PlayerSuggestionProvider.findPlayer(targetName);
-        if (target == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
-            return;
+        UUID targetId;
+        String resolvedName;
+
+        if (target != null) {
+            targetId = target.getUuid();
+            resolvedName = target.getUsername();
+        } else {
+            Optional<UUID> offlineId = playerFileStorage.getUuidByName(targetName);
+            if (!offlineId.isPresent()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNeverJoined", "player", targetName), "#FF5555"));
+                return;
+            }
+            targetId = offlineId.get();
+            resolvedName = targetName;
         }
-        if (target.getUuid().equals(player.getUuid())) {
+
+        if (targetId.equals(player.getUuid())) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("tempbanSelf"), "#FF5555"));
             return;
         }
 
-        boolean banned = tempBanService.tempBan(target.getUuid(), target.getUsername(),
+        boolean banned = tempBanService.tempBan(targetId, resolvedName,
                 player.getUsername(), reason, durationMs);
         if (banned) {
             String durationFormatted = TempBanService.formatDuration(durationMs);
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanSuccess", "player", target.getUsername(),
+                configManager.getMessage("tempbanSuccess", "player", resolvedName,
                     "time", durationFormatted), "#55FF55"));
-            // Kick the player
-            String kickMsg = reason != null
-                ? configManager.getMessage("tempbanKickReason", "reason", reason,
-                    "time", durationFormatted, "bannedBy", player.getUsername())
-                : configManager.getMessage("tempbanKick", "time", durationFormatted,
-                    "bannedBy", player.getUsername());
-            try {
-                target.getPacketHandler().disconnect(MessageFormatter.stripColorCodes(kickMsg));
-            } catch (Exception e) {
-                // Player may have already disconnected
+            // Kick if online
+            if (target != null) {
+                String kickMsg = reason != null
+                    ? configManager.getMessage("tempbanKickReason", "reason", reason,
+                        "time", durationFormatted, "bannedBy", player.getUsername())
+                    : configManager.getMessage("tempbanKick", "time", durationFormatted,
+                        "bannedBy", player.getUsername());
+                try {
+                    target.getPacketHandler().disconnect(MessageFormatter.stripColorCodes(kickMsg));
+                } catch (Exception e) {
+                    // Player may have already disconnected
+                }
             }
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanAlready", "player", target.getUsername()), "#FF5555"));
+                configManager.getMessage("tempbanAlready", "player", resolvedName), "#FF5555"));
         }
     }
 }

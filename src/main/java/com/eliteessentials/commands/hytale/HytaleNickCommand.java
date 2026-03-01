@@ -31,7 +31,8 @@ import java.util.UUID;
  *
  * Permissions:
  *   eliteessentials.command.misc.nick            - Set own nickname (admin only in simple mode)
- *   eliteessentials.command.misc.nick.color      - Use color codes in nickname
+ *   eliteessentials.command.misc.nick.color      - Use color codes in nickname (when requireColorPermission is true)
+ *   eliteessentials.command.misc.nick.formatting - Use formatting codes in nickname (when requireFormattingPermission is true)
  *   eliteessentials.command.misc.nickname.others - Set/clear other players' nicknames
  */
 public class HytaleNickCommand extends AbstractPlayerCommand {
@@ -126,9 +127,14 @@ public class HytaleNickCommand extends AbstractPlayerCommand {
         boolean clearing = nickArg.equalsIgnoreCase("off") || nickArg.equalsIgnoreCase("reset");
 
         if (!clearing) {
-            // Strip color codes if sender doesn't have color permission
-            if (!hasColorPermission(senderId)) {
-                nickArg = MessageFormatter.toRawString(nickArg);
+            com.eliteessentials.config.PluginConfig.NickConfig nickCfg = configManager.getConfig().nick;
+            // Strip formatting if required and sender doesn't have permission
+            if (nickCfg.requireFormattingPermission && !hasFormattingPermission(senderId)) {
+                nickArg = MessageFormatter.stripFormatting(nickArg);
+            }
+            // Strip colors if required and sender doesn't have permission
+            if (nickCfg.requireColorPermission && !hasColorPermission(senderId)) {
+                nickArg = MessageFormatter.stripColors(nickArg);
             }
         }
 
@@ -219,6 +225,13 @@ public class HytaleNickCommand extends AbstractPlayerCommand {
             return PermissionService.get().isAdmin(playerId);
         }
         return PermissionService.get().hasPermission(playerId, Permissions.NICK_COLOR);
+    }
+
+    private boolean hasFormattingPermission(UUID playerId) {
+        if (!configManager.getConfig().advancedPermissions) {
+            return PermissionService.get().isAdmin(playerId);
+        }
+        return PermissionService.get().hasPermission(playerId, Permissions.NICK_FORMATTING);
     }
 
     private PlayerRef findOnlinePlayer(String name) {

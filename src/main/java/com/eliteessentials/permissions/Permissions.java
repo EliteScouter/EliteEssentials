@@ -38,6 +38,8 @@ public final class Permissions {
     public static final String HOME_BYPASS = HOME_CATEGORY + ".bypass";
     public static final String HOME_BYPASS_COOLDOWN = HOME_BYPASS + ".cooldown";
     public static final String HOME_BYPASS_WARMUP = HOME_BYPASS + ".warmup";
+    // Home cooldown overrides: eliteessentials.command.home.cooldown.<seconds>
+    public static final String HOME_COOLDOWN_PREFIX = HOME_CATEGORY + ".cooldown.";
     // Home warmup overrides: eliteessentials.command.home.warmup.<seconds>
     public static final String HOME_WARMUP_PREFIX = HOME_CATEGORY + ".warmup.";
 
@@ -90,6 +92,8 @@ public final class Permissions {
     public static final String WARP_BYPASS = WARP_CATEGORY + ".bypass";
     public static final String WARP_BYPASS_COOLDOWN = WARP_BYPASS + ".cooldown";
     public static final String WARP_BYPASS_WARMUP = WARP_BYPASS + ".warmup";
+    // Warp cooldown overrides: eliteessentials.command.warp.cooldown.<seconds>
+    public static final String WARP_COOLDOWN_PREFIX = WARP_CATEGORY + ".cooldown.";
     // Warp warmup overrides: eliteessentials.command.warp.warmup.<seconds>
     public static final String WARP_WARMUP_PREFIX = WARP_CATEGORY + ".warmup.";
 
@@ -104,6 +108,8 @@ public final class Permissions {
     public static final String SPAWN_BYPASS = SPAWN_CATEGORY + ".bypass";
     public static final String SPAWN_BYPASS_COOLDOWN = SPAWN_BYPASS + ".cooldown";
     public static final String SPAWN_BYPASS_WARMUP = SPAWN_BYPASS + ".warmup";
+    // Spawn cooldown overrides: eliteessentials.command.spawn.cooldown.<seconds>
+    public static final String SPAWN_COOLDOWN_PREFIX = SPAWN_CATEGORY + ".cooldown.";
     // Spawn warmup overrides: eliteessentials.command.spawn.warmup.<seconds>
     public static final String SPAWN_WARMUP_PREFIX = SPAWN_CATEGORY + ".warmup.";
 
@@ -145,6 +151,7 @@ public final class Permissions {
     public static final String REPAIR_ALL = MISC_CATEGORY + ".repair.all";
     public static final String REPAIR_BYPASS_COOLDOWN = MISC_CATEGORY + ".repair.bypass.cooldown";
     public static final String REPAIR_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.cooldown.";
+    public static final String REPAIR_ALL_COOLDOWN_PREFIX = MISC_CATEGORY + ".repair.all.cooldown.";
     public static final String GROUP_CHAT = MISC_CATEGORY + ".groupchat";
     public static final String GROUP_CHAT_SPY = MISC_CATEGORY + ".groupchat.spy";
     public static final String IGNORE = MISC_CATEGORY + ".ignore";
@@ -156,6 +163,8 @@ public final class Permissions {
     public static final String INVSEE = MISC_CATEGORY + ".invsee";
     public static final String NICK = MISC_CATEGORY + ".nick";
     public static final String NICK_COLOR = MISC_CATEGORY + ".nick.color";
+    /** Permission to use formatting codes (bold, italic, etc.) in nickname */
+    public static final String NICK_FORMATTING = MISC_CATEGORY + ".nick.formatting";
     public static final String NICK_OTHERS = MISC_CATEGORY + ".nickname.others";
     public static final String NICK_LOOKUP = MISC_CATEGORY + ".nickname.lookup";
     /** @deprecated use NICK_LOOKUP */
@@ -324,7 +333,16 @@ public final class Permissions {
     public static String repairCooldown(int seconds) {
         return REPAIR_COOLDOWN_PREFIX + seconds;
     }
-    
+
+    /**
+     * Get repair all cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.misc.repair.all.cooldown.<seconds>
+     */
+    public static String repairAllCooldown(int seconds) {
+        return REPAIR_ALL_COOLDOWN_PREFIX + seconds;
+    }
+
     /**
      * Get clearinv cooldown permission for a specific duration.
      * @param seconds Cooldown in seconds
@@ -391,6 +409,15 @@ public final class Permissions {
     }
     
     /**
+     * Get home cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.home.cooldown.<seconds>
+     */
+    public static String homeCooldown(int seconds) {
+        return HOME_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
      * Get home warmup permission for a specific duration.
      * @param seconds Warmup in seconds
      * @return eliteessentials.command.home.warmup.<seconds>
@@ -400,12 +427,30 @@ public final class Permissions {
     }
     
     /**
+     * Get spawn cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.spawn.cooldown.<seconds>
+     */
+    public static String spawnCooldown(int seconds) {
+        return SPAWN_COOLDOWN_PREFIX + seconds;
+    }
+    
+    /**
      * Get spawn warmup permission for a specific duration.
      * @param seconds Warmup in seconds
      * @return eliteessentials.command.spawn.warmup.<seconds>
      */
     public static String spawnWarmup(int seconds) {
         return SPAWN_WARMUP_PREFIX + seconds;
+    }
+    
+    /**
+     * Get warp cooldown permission for a specific duration.
+     * @param seconds Cooldown in seconds
+     * @return eliteessentials.command.warp.cooldown.<seconds>
+     */
+    public static String warpCooldown(int seconds) {
+        return WARP_COOLDOWN_PREFIX + seconds;
     }
     
     /**
@@ -441,6 +486,12 @@ public final class Permissions {
             case "warp", "warps" -> WARP_BYPASS_COOLDOWN;
             case "spawn" -> SPAWN_BYPASS_COOLDOWN;
             case "heal" -> HEAL_BYPASS_COOLDOWN;
+            case "god" -> GOD_BYPASS_COOLDOWN;
+            case "fly" -> FLY_BYPASS_COOLDOWN;
+            case "repair" -> REPAIR_BYPASS_COOLDOWN;
+            case "clearinv" -> CLEARINV_BYPASS_COOLDOWN;
+            case "trash" -> TRASH_BYPASS_COOLDOWN;
+            case "top" -> TOP_BYPASS_COOLDOWN;
             default -> TP_BYPASS_COOLDOWN_PREFIX + command;
         };
     }

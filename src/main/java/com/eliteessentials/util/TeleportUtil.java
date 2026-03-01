@@ -27,6 +27,11 @@ import java.util.logging.Logger;
  *           thread - the deferred execution causes the ref to go stale.
  * CRITICAL: Call these methods ONLY from the world thread (command execute, or
  *           inside an existing world.execute() block).
+ *
+ * For the PlayerRef overload: if the caller is on a different world thread than
+ * the player's current store (e.g. cross-world TPA warmup completed on instance
+ * thread but player was moved to spawn after world unload), we dispatch the
+ * addComponent to the store's world thread to avoid Store.assertThread().
  */
 public class TeleportUtil {
 
@@ -65,12 +70,15 @@ public class TeleportUtil {
     }
 
     /**
-     * Teleport a player using PlayerRef. MUST be called on the world thread.
+     * Teleport a player using PlayerRef. May be called from any thread.
      * Used for cross-world teleports or when store/ref are not available.
      *
-     * Gets fresh store/ref from PlayerRef and calls addComponent IMMEDIATELY.
+     * Gets the player's current store and runs addComponent on that store's
+     * world thread. This avoids IllegalStateException when e.g. TPA warmup
+     * completes on one world thread but the player has since been moved to
+     * another world (e.g. instance unloaded, player in spawn).
      *
-     * @param world       The CURRENT world the player is in
+     * @param world       The CURRENT world the player is in (caller's view; may be stale)
      * @param targetWorld The destination world
      * @param targetPos   The destination position
      * @param targetRot   The destination rotation (head rotation)
@@ -95,11 +103,36 @@ public class TeleportUtil {
             return;
         }
 
-        Teleport teleport = Teleport.createForPlayer(targetWorld, targetPos, targetRot);
-        freshStore.addComponent(freshRef, Teleport.getComponentType(), teleport);
-
-        if (onSuccess != null) {
-            onSuccess.run();
+        // Run addComponent on the world thread that owns this store. After world
+        // unload/recovery the player may be in a different world than the one
+        // that's running the warmup callback (e.g. instance thread vs spawn store).
+        EntityStore entityStore = freshStore.getExternalData();
+        World storeWorld = entityStore != null ? entityStore.getWorld() : null;
+        final World runWorld = storeWorld != null ? storeWorld : world;
+        if (runWorld == null) {
+            logger.warning("[TeleportUtil] Could not resolve world for player store, aborting teleport");
+            if (onFailure != null) onFailure.run();
+            return;
         }
+
+        runWorld.execute(() -> {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) {
+                logger.warning("[TeleportUtil] Player ref no longer valid on store thread, aborting teleport");
+                if (onFailure != null) onFailure.run();
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                logger.warning("[TeleportUtil] Player store null on store thread, aborting teleport");
+                if (onFailure != null) onFailure.run();
+                return;
+            }
+            Teleport teleport = Teleport.createForPlayer(targetWorld, targetPos, targetRot);
+            store.addComponent(ref, Teleport.getComponentType(), teleport);
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+        });
     }
 }

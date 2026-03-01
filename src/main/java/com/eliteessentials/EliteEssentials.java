@@ -33,6 +33,7 @@ import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.BanService;
 import com.eliteessentials.services.TempBanService;
 import com.eliteessentials.services.IpBanService;
+import com.eliteessentials.services.FlyService;
 import com.eliteessentials.services.FreezeService;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
@@ -105,6 +106,7 @@ public class EliteEssentials extends JavaPlugin {
     private AliasService aliasService;
     private PlayerService playerService;
     private CostService costService;
+    private FlyService flyService;
     private MailService mailService;
     private PlayTimeRewardStorage playTimeRewardStorage;
     private PlayTimeRewardService playTimeRewardService;
@@ -223,6 +225,7 @@ public class EliteEssentials extends JavaPlugin {
         aliasService = new AliasService(this.dataFolder, getCommandRegistry());
         playerService = new PlayerService(playerFileStorage, configManager);
         costService = new CostService(configManager);
+        flyService = new FlyService(configManager);
         mailService = new MailService(playerFileStorage, configManager);
         afkService = new AfkService(configManager);
         // Nick service - uses PlayerFileStorage, no separate file needed
@@ -265,15 +268,19 @@ public class EliteEssentials extends JavaPlugin {
         }
         
         // Register custom UseBlock interaction for spawn protection (flower/pebble pickup blocking).
-        // InteractivelyPickupItemEvent.setCancelled() is broken in Hytale API, so we intercept
-        // at the interaction level instead - same approach as SimpleClaims.
-        try {
-            var interaction = getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC);
-            interaction.register("UseBlock", com.eliteessentials.interactions.SpawnUseBlockInteraction.class, 
-                com.eliteessentials.interactions.SpawnUseBlockInteraction.CUSTOM_CODEC);
-            getLogger().at(Level.INFO).log("Custom UseBlock interaction registered for spawn pickup protection.");
-        } catch (Exception e) {
-            getLogger().at(Level.WARNING).log("Could not register custom UseBlock interaction: " + e.getMessage());
+        // Only when spawn protection is enabled - otherwise we would replace the "UseBlock" handler
+        // in the codec registry and break other mods (e.g. PlotMod/SimpleClaims) that also register
+        // a UseBlock interaction for claim checks. InteractivelyPickupItemEvent.setCancelled() is
+        // broken in Hytale API, so we intercept at the interaction level when we need it.
+        if (configManager.getConfig().spawnProtection.enabled) {
+            try {
+                var interaction = getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC);
+                interaction.register("UseBlock", com.eliteessentials.interactions.SpawnUseBlockInteraction.class,
+                    com.eliteessentials.interactions.SpawnUseBlockInteraction.CUSTOM_CODEC);
+                getLogger().at(Level.INFO).log("Custom UseBlock interaction registered for spawn pickup protection.");
+            } catch (Exception e) {
+                getLogger().at(Level.WARNING).log("Could not register custom UseBlock interaction: " + e.getMessage());
+            }
         }
         
         getLogger().at(Level.INFO).log("EliteEssentials setup complete.");
@@ -483,6 +490,9 @@ public class EliteEssentials extends JavaPlugin {
         if (autoBroadcastService != null) {
             autoBroadcastService.shutdown();
         }
+        if (flyService != null) {
+            flyService.shutdown();
+        }
         if (playTimeRewardService != null) {
             playTimeRewardService.stop();
         }
@@ -621,7 +631,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // Fly commands
         if (config.fly.enabled) {
-            flyCommand = new HytaleFlyCommand(configManager, cooldownService);
+            flyCommand = new HytaleFlyCommand(configManager, cooldownService, costService, flyService);
             getCommandRegistry().registerCommand(flyCommand);
             getCommandRegistry().registerCommand(new HytaleFlySpeedCommand(configManager));
             registeredCommands.append("/fly, /flyspeed, ");
@@ -730,23 +740,23 @@ public class EliteEssentials extends JavaPlugin {
         
         // Ignore commands
         if (config.ignore.enabled) {
-            getCommandRegistry().registerCommand(new HytaleIgnoreCommand(ignoreService, configManager));
+            getCommandRegistry().registerCommand(new HytaleIgnoreCommand(ignoreService, configManager, playerFileStorage));
             getCommandRegistry().registerCommand(new HytaleUnignoreCommand(ignoreService, configManager, playerFileStorage));
             registeredCommands.append(", /ignore, /unignore");
         }
         
         // Mute commands (admin only)
         if (config.mute.enabled) {
-            getCommandRegistry().registerCommand(new HytaleMuteCommand(muteService, configManager));
+            getCommandRegistry().registerCommand(new HytaleMuteCommand(muteService, configManager, playerFileStorage));
             getCommandRegistry().registerCommand(new HytaleUnmuteCommand(muteService, configManager));
             registeredCommands.append(", /mute, /unmute");
         }
         
         // Ban commands (admin only)
         if (config.ban.enabled) {
-            getCommandRegistry().registerCommand(new HytaleBanCommand(banService, configManager));
+            getCommandRegistry().registerCommand(new HytaleBanCommand(banService, configManager, playerFileStorage));
             getCommandRegistry().registerCommand(new HytaleUnbanCommand(banService, configManager));
-            getCommandRegistry().registerCommand(new HytaleTempBanCommand(tempBanService, configManager));
+            getCommandRegistry().registerCommand(new HytaleTempBanCommand(tempBanService, configManager, playerFileStorage));
             getCommandRegistry().registerCommand(new HytaleIpBanCommand(ipBanService, configManager));
             getCommandRegistry().registerCommand(new HytaleUnIpBanCommand(ipBanService, configManager));
             registeredCommands.append(", /ban, /unban, /tempban, /ipban, /unipban");
@@ -754,7 +764,7 @@ public class EliteEssentials extends JavaPlugin {
         
         // Freeze command (admin only)
         if (config.freeze.enabled) {
-            getCommandRegistry().registerCommand(new HytaleFreezeCommand(freezeService, configManager));
+            getCommandRegistry().registerCommand(new HytaleFreezeCommand(freezeService, configManager, playerFileStorage));
             registeredCommands.append(", /freeze");
         }
         

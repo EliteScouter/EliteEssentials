@@ -1,10 +1,12 @@
 package com.eliteessentials.commands.hytale;
 
+import com.eliteessentials.EliteEssentials;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.CooldownService;
+import com.eliteessentials.services.CostService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
@@ -28,15 +30,18 @@ import javax.annotation.Nonnull;
  * Admin command only.
  * 
  * Permissions:
- * - eliteessentials.command.misc.repair - Use /repair command
+ * - eliteessentials.command.misc.repair - Use /repair (single item)
  * - eliteessentials.command.misc.repair.all - Use /repair all
  * - eliteessentials.command.misc.repair.bypass.cooldown - Skip cooldown
- * - eliteessentials.command.misc.repair.cooldown.<seconds> - Set specific cooldown
+ * - eliteessentials.command.misc.repair.cooldown.<seconds> - Cooldown for single repair
+ * - eliteessentials.command.misc.repair.all.cooldown.<seconds> - Cooldown for repair all
+ * Cost bypass: eliteessentials.bypass.cost.repair / eliteessentials.bypass.cost.repair.all
  */
 public class HytaleRepairCommand extends AbstractPlayerCommand {
 
     private static final String COMMAND_NAME = "repair";
-    
+    private static final String COMMAND_NAME_ALL = "repair.all";
+
     private final ConfigManager configManager;
     private final CooldownService cooldownService;
 
@@ -59,71 +64,84 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef playerRef, @Nonnull World world) {
         PluginConfig config = configManager.getConfig();
         UUID playerId = playerRef.getUuid();
-        
+
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, playerRef, Permissions.REPAIR, config.repair.enabled)) {
             return;
         }
-        
-        // Get effective cooldown from permissions
-        int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME, config.repair.cooldownSeconds);
-        
-        // Check cooldown if player has one
-        if (effectiveCooldown > 0) {
-            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
-            if (cooldownRemaining > 0) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(
-                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
-                return;
-            }
-        }
-        
-        // Get player component
+
+        // Get player component (needed for repair)
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("repairNoItem"), "#FF5555"));
             return;
         }
-        
-        // Check if "all" argument is provided by parsing raw input
+
         String rawInput = ctx.getInputString();
         String[] parts = rawInput.trim().split("\\s+");
         boolean repairAll = parts.length >= 2 && parts[1].equalsIgnoreCase("all");
-        
+
+        CostService costService = EliteEssentials.getInstance().getCostService();
+
         if (repairAll) {
-            // Check permission for repair all
-            if (!PermissionService.get().hasPermission(playerId, Permissions.REPAIR_ALL) 
+            // Permission for repair all
+            if (!PermissionService.get().hasPermission(playerId, Permissions.REPAIR_ALL)
                 && !PermissionService.get().isAdmin(playerId)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairNoPermissionAll"), "#FF5555"));
                 return;
             }
-            
+            // Cost check
+            if (costService != null && !costService.checkCanAfford(ctx, playerRef, COMMAND_NAME_ALL, config.repair.costAll)) {
+                return;
+            }
+            int cooldownAll = config.repair.cooldownAllSeconds > 0 ? config.repair.cooldownAllSeconds : config.repair.cooldownSeconds;
+            int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME_ALL, cooldownAll);
+            if (effectiveCooldown > 0) {
+                int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME_ALL, playerId);
+                if (cooldownRemaining > 0) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                    return;
+                }
+            }
+
             int repairedCount = repairAllItems(player);
             if (repairedCount > 0) {
+                CommandPermissionUtil.chargeCost(ctx, playerRef, COMMAND_NAME_ALL, config.repair.costAll);
+                if (effectiveCooldown > 0) {
+                    cooldownService.setCooldown(COMMAND_NAME_ALL, playerId, effectiveCooldown);
+                }
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairAllSuccess", "count", String.valueOf(repairedCount)), "#55FF55"));
-                
-                // Set cooldown after successful repair
-                if (effectiveCooldown > 0) {
-                    cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
-                }
             } else {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairNothingToRepair"), "#FF5555"));
             }
         } else {
-            // Repair item in hand
+            // Single repair: cost check
+            if (costService != null && !costService.checkCanAfford(ctx, playerRef, COMMAND_NAME, config.repair.cost)) {
+                return;
+            }
+            int effectiveCooldown = PermissionService.get().getCommandCooldown(playerId, COMMAND_NAME, config.repair.cooldownSeconds);
+            if (effectiveCooldown > 0) {
+                int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+                if (cooldownRemaining > 0) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                    return;
+                }
+            }
+
             boolean repaired = repairItemInHand(player);
             if (repaired) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(
-                    configManager.getMessage("repairSuccess"), "#55FF55"));
-                
-                // Set cooldown after successful repair
+                CommandPermissionUtil.chargeCost(ctx, playerRef, COMMAND_NAME, config.repair.cost);
                 if (effectiveCooldown > 0) {
                     cooldownService.setCooldown(COMMAND_NAME, playerId, effectiveCooldown);
                 }
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("repairSuccess"), "#55FF55"));
             } else {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("repairNotDamaged"), "#FF5555"));

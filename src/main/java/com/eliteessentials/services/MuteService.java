@@ -76,6 +76,21 @@ public class MuteService {
         }
         return false;
     }
+    /**
+     * Unmute by player name (for offline players where UUID may not be known).
+     * @return the UUID that was unmuted, or null if not found
+     */
+    public UUID unmuteByName(String playerName) {
+        for (Map.Entry<String, MuteEntry> entry : mutes.entrySet()) {
+            if (entry.getValue().playerName != null && entry.getValue().playerName.equalsIgnoreCase(playerName)) {
+                UUID uuid = UUID.fromString(entry.getKey());
+                mutes.remove(entry.getKey());
+                save();
+                return uuid;
+            }
+        }
+        return null;
+    }
 
     public boolean isMuted(UUID playerId) {
         return mutes.containsKey(playerId.toString());

@@ -3,6 +3,7 @@ package com.eliteessentials.commands.hytale;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.FreezeService;
+import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
@@ -15,28 +16,31 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayer
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementConfig;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
  * Toggle freeze on a player. Frozen players cannot move, jump, or fly.
  * Works by setting all movement speeds to 0 via MovementSettings.
- * Persists across restarts.
+ * Persists across restarts. Supports offline players (freeze applied on join).
  */
 public class HytaleFreezeCommand extends AbstractPlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final FreezeService freezeService;
     private final ConfigManager configManager;
+    private final PlayerFileStorage playerFileStorage;
 
-    public HytaleFreezeCommand(FreezeService freezeService, ConfigManager configManager) {
+    public HytaleFreezeCommand(FreezeService freezeService, ConfigManager configManager,
+                                PlayerFileStorage playerFileStorage) {
         super("freeze", "Toggle freeze on a player");
         this.freezeService = freezeService;
         this.configManager = configManager;
-        // Register player arg for autocomplete suggestions (execution uses raw input parsing)
+        this.playerFileStorage = playerFileStorage;
         withRequiredArg("player", "Target player", ArgTypes.STRING)
             .suggest(PlayerSuggestionProvider.INSTANCE);
         setAllowsExtraArguments(true);
@@ -61,14 +65,19 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
         }
         String targetName = parts[1];
 
+        // Try online first
         PlayerRef target = PlayerSuggestionProvider.findPlayer(targetName);
-        if (target == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
-            return;
-        }
 
-        // Get the target's entity ref
+        if (target != null) {
+            // Online player - apply movement changes immediately
+            handleOnlineFreeze(ctx, player, target);
+        } else {
+            // Offline player - toggle freeze state in data only (applied on join)
+            handleOfflineFreeze(ctx, player, targetName);
+        }
+    }
+
+    private void handleOnlineFreeze(CommandContext ctx, PlayerRef player, PlayerRef target) {
         Ref<EntityStore> tRef = target.getReference();
         if (tRef == null || !tRef.isValid()) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
@@ -85,11 +94,9 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
             return;
         }
 
-        // Execute on the target's world thread to safely access components
         final PlayerRef finalTarget = target;
         targetWorld.execute(() -> {
             try {
-
                 MovementManager movementManager = tStore.getComponent(tRef, MovementManager.getComponentType());
                 if (movementManager == null) {
                     ctx.sendMessage(MessageFormatter.formatWithFallback(
@@ -100,7 +107,7 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
                 MovementSettings settings = movementManager.getSettings();
 
                 if (freezeService.isFrozen(finalTarget.getUuid())) {
-                    // Unfreeze - restore default movement
+                    // Unfreeze
                     freezeService.unfreeze(finalTarget.getUuid());
                     settings.baseSpeed = MovementConfig.DEFAULT_MOVEMENT.getBaseSpeed();
                     settings.jumpForce = MovementConfig.DEFAULT_MOVEMENT.getJumpForce();
@@ -113,7 +120,7 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
                     finalTarget.sendMessage(MessageFormatter.formatWithFallback(
                         configManager.getMessage("unfreezeNotify"), "#55FF55"));
                 } else {
-                    // Freeze - zero out all movement
+                    // Freeze
                     freezeService.freeze(finalTarget.getUuid(), finalTarget.getUsername(), player.getUsername());
                     settings.baseSpeed = 0f;
                     settings.jumpForce = 0f;
@@ -132,5 +139,27 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
                     configManager.getMessage("freezeError"), "#FF5555"));
             }
         });
+    }
+
+    private void handleOfflineFreeze(CommandContext ctx, PlayerRef player, String targetName) {
+        Optional<UUID> offlineId = playerFileStorage.getUuidByName(targetName);
+        if (!offlineId.isPresent()) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("playerNeverJoined", "player", targetName), "#FF5555"));
+            return;
+        }
+        UUID targetId = offlineId.get();
+
+        if (freezeService.isFrozen(targetId)) {
+            // Unfreeze offline player
+            freezeService.unfreeze(targetId);
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("unfreezeSuccess", "player", targetName), "#55FF55"));
+        } else {
+            // Freeze offline player - movement will be zeroed on join via ConnectListener
+            freezeService.freeze(targetId, targetName, player.getUsername());
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("freezeSuccess", "player", targetName), "#55FF55"));
+        }
     }
 }

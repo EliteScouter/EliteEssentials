@@ -26,7 +26,8 @@ import javax.annotation.Nonnull;
  * Usage:
  * - /eco check <player> - Check player's balance
  * - /eco set <player> <amount> - Set player's balance
- * - /eco add <player> <amount> - Add to player's balance  
+ * - /eco add <player> <amount> - Add to player's balance
+ * - /eco give <player> <amount> - Same as add (give money to player)
  * - /eco remove <player> <amount> - Remove from player's balance
  * 
  * Examples:
@@ -44,7 +45,7 @@ public class HytaleEcoCommand extends CommandBase {
     private final PlayerService playerService;
 
     public HytaleEcoCommand(ConfigManager configManager, PlayerService playerService) {
-        super("eco", "Economy management (check/set/add/remove)");
+        super("eco", "Economy management (check/set/add/give/remove)");
         this.configManager = configManager;
         this.playerService = playerService;
         
@@ -102,7 +103,7 @@ public class HytaleEcoCommand extends CommandBase {
                     "player", playerName,
                     "balance", EconomyAPI.format(balance),
                     "currency", EconomyAPI.getCurrencyNamePlural()), "#55FF55"));
-        } else if (action.equals("set") || action.equals("add") || action.equals("remove")) {
+        } else if (action.equals("set") || action.equals("add") || action.equals("give") || action.equals("remove")) {
             if (parts.length < 4) {
                 showUsage(ctx);
                 return;
@@ -128,6 +129,9 @@ public class HytaleEcoCommand extends CommandBase {
             String senderName = ctx.sender() instanceof PlayerRef ? 
                 ((PlayerRef) ctx.sender()).getUsername() : "Server";
             
+            if (action.equals("give")) {
+                action = "add";
+            }
             switch (action) {
                 case "set" -> {
                     if (playerService.setBalance(targetId, amount, targetPlayer, senderName)) {
@@ -204,7 +208,7 @@ public class HytaleEcoCommand extends CommandBase {
             super("eco");
             this.configManager = configManager;
             this.playerService = playerService;
-            this.actionArg = withRequiredArg("action", "set, add, or remove", ArgTypes.STRING);
+            this.actionArg = withRequiredArg("action", "set, add, give, or remove", ArgTypes.STRING);
             this.playerArg = withRequiredArg("player", "Player name (online or offline)", ArgTypes.STRING)
                 .suggest(PlayerSuggestionProvider.INSTANCE);
             this.amountArg = withRequiredArg("amount", "Amount of currency", ArgTypes.DOUBLE);
@@ -234,10 +238,13 @@ public class HytaleEcoCommand extends CommandBase {
             String playerName = ctx.get(playerArg);
             double amount = ctx.get(amountArg);
             
-            // Validate action
-            if (!action.equals("set") && !action.equals("add") && !action.equals("remove")) {
-                ctx.sendMessage(Message.raw("Invalid action. Use: set, add, remove, or check").color("#FF5555"));
+            // Validate action (give is alias for add)
+            if (!action.equals("set") && !action.equals("add") && !action.equals("give") && !action.equals("remove")) {
+                ctx.sendMessage(Message.raw("Invalid action. Use: set, add, give, remove, or check").color("#FF5555"));
                 return;
+            }
+            if (action.equals("give")) {
+                action = "add";
             }
             
             // Validate amount

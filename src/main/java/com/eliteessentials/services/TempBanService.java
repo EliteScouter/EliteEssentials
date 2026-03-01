@@ -96,6 +96,21 @@ public class TempBanService {
         }
         return false;
     }
+    /**
+     * Unban by player name (for offline players where UUID may not be known).
+     * @return the UUID that was unbanned, or null if not found
+     */
+    public UUID unbanByName(String playerName) {
+        for (Map.Entry<String, TempBanEntry> entry : tempBans.entrySet()) {
+            if (entry.getValue().playerName != null && entry.getValue().playerName.equalsIgnoreCase(playerName)) {
+                UUID uuid = UUID.fromString(entry.getKey());
+                tempBans.remove(entry.getKey());
+                save();
+                return uuid;
+            }
+        }
+        return null;
+    }
 
     /**
      * Check if a player is currently temp banned (not expired).

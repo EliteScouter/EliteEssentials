@@ -188,6 +188,14 @@ public class HytaleHelpCommand extends CommandBase {
         if (config.groupChat.enabled && canUse(sender, Permissions.GROUP_CHAT, true)) {
             available.add(new CommandInfo("/gc [chat] <message>", "Send group chat message"));
             available.add(new CommandInfo("/chats", "List available chat channels"));
+            available.add(new CommandInfo("/gcset [chat]", "Set your default group chat"));
+        }
+
+        if (config.nick.enabled && canUse(sender, Permissions.NICK, true)) {
+            available.add(new CommandInfo("/nick [nickname|off]", "Set your display nickname"));
+        }
+        if (config.nick.enabled && canUse(sender, Permissions.NICK_LOOKUP, true)) {
+            available.add(new CommandInfo("/realname <player>", "Look up the real name of a nicknamed player"));
         }
         
         // ==================== ADMIN COMMANDS ====================
@@ -234,6 +242,13 @@ public class HytaleHelpCommand extends CommandBase {
             if (config.freeze.enabled) {
                 available.add(new CommandInfo("/freeze <player>", "Freeze/unfreeze a player"));
             }
+
+            if (config.groupChat.enabled) {
+                available.add(new CommandInfo("/gcspy", "Toggle group chat spy mode"));
+            }
+
+            available.add(new CommandInfo("/sendmessage <player|group|all> <message>", "Send a formatted message to player/group/all"));
+            available.add(new CommandInfo("/eemigration", "Migrate data from other essentials plugins"));
             
             available.add(new CommandInfo("/invsee <player>", "View a player's inventory"));
             available.add(new CommandInfo("/sleeppercent <0-100>", "Set sleep percentage"));

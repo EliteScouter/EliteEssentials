@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.1.17 - 2026-03-01
+
+### Added
+- Eco command: `/eco give <player> <amount>`: alias for add (same behavior, permission, and messages as `/eco add`)
+- Fly command: cost-per-minute mode: pay for a fixed duration of flight, then flight auto-disables. Feature is only enabled when `fly.costPerMinute` is not 0. Price can be overridden by permission `eliteessentials.cost.fly.<amount>`. Duration is set in config.
+  - Config: `fly.costPerMinute` (0 = free/unlimited, feature off; when &gt; 0, player pays this amount and flight turns off after the duration), `fly.costPerMinuteDurationSeconds` (default 60, duration in seconds)
+  - When enabled, using `/fly` charges the cost (respects economy and `eliteessentials.bypass.cost.fly`), enables flight, and after the configured duration flight is automatically turned off and the player is notified
+  - Config: `fly.expiryWarningSeconds`: list of seconds before expiry to notify the player (default `[30, 10, 5]`). Empty list = no warnings.
+  - Messages: `flyEnabledTimed` (placeholder `{time}`), `flyExpired`, `flyExpiringIn` (placeholder `{seconds}`) for warnings
+- Repair command: cost and cooldown for single repair and repair all
+  - Config: `repair.cost`, `repair.costAll` (0 = free), `repair.cooldownSeconds`, `repair.cooldownAllSeconds` (0 = use single cooldown)
+  - Permissions: `eliteessentials.command.misc.repair` (single), `eliteessentials.command.misc.repair.all` (all); cooldown bypass and per-command cooldown `.repair.cooldown.<s>` / `.repair.all.cooldown.<s>`; cost bypass `eliteessentials.bypass.cost.repair` / `.bypass.cost.repair.all`
+  - Permission-based costs (LuckPerms/HyperPerms): `eliteessentials.cost.repair.<amount>` and `eliteessentials.cost.repair.all.<amount>` override config cost per player/group
+- Nick command: separate permissions for color vs formatting (like chat formatting)
+  - `eliteessentials.command.misc.nick.color` - allows color codes in nicknames (when `nick.requireColorPermission` is true)
+  - `eliteessentials.command.misc.nick.formatting` - allows formatting codes (bold, italic) in nicknames (when `nick.requireFormattingPermission` is true)
+  - Config under `nick`: `requireColorPermission` and `requireFormattingPermission` (both default `false`) so basic-permission servers can allow color/format for everyone; set to `true` to require the respective permission
+- Offline player support for all moderation commands - you can now `/ban`, `/tempban`, `/mute`, `/freeze`, and `/ignore` players who are not currently online, as long as they have joined the server before
+  - Uses the player name index to resolve offline player names to UUIDs
+  - If the target is online, they are still kicked/notified as before
+  - If the target is offline, the action is recorded and enforced when they next connect
+  - `/unmute` now also works on offline players (searches mutes by name)
+  - `/unban`, `/unipban`, and `/unignore` already supported offline players
+  - New config message `playerNeverJoined` distinguishes "not online" from "never joined this server"
+- Added `unmuteByName()` to MuteService, `unfreezeByName()` to FreezeService, and `unbanByName()` to TempBanService for offline player lookups
+
+### Fixed
+- Cross-world TPA crash when warmup is 0 seconds - `IllegalStateException: Assert not in thread` caused by teleport callback executing on the wrong world thread (e.g. acceptor's thread instead of requester's thread). WarmupService now dispatches via `world.execute()` even for zero-warmup teleports.
+- Cross-world TPA crash after world unload: when a world (e.g. instance) unloads and the player is moved to another world (e.g. spawn), TPA warmup could still complete on the old world's thread, causing `Store.assertThread` when adding the Teleport component to the player's current (spawn) store. `TeleportUtil.safeTeleport` (PlayerRef overload) now always runs the teleport on the world thread that owns the player's current store, so "fall out of world" / thread assertion no longer occurs after unload/recovery.
+- Permission-based custom cooldown values not working for `/spawn`, `/home`, and `/warp` commands
+  - `/spawn` only checked bypass permission (boolean), ignoring custom cooldown values like `eliteessentials.command.spawn.cooldown.30`
+  - `/home` had no cooldown support at all - now fully supports config cooldown + permission-based overrides
+  - `/warp` had no cooldown support at all - now fully supports config cooldown + permission-based overrides
+  - Added missing cooldown prefix constants: `HOME_COOLDOWN_PREFIX`, `SPAWN_COOLDOWN_PREFIX`, `WARP_COOLDOWN_PREFIX`
+  - `getTpCommandCooldown()` now correctly routes home/spawn/warp to their own category prefixes instead of falling through to the generic `tp.cooldown.<cmd>.` pattern
+  - Bypass checks in `getTpCommandCooldown()` and `getTpCommandWarmup()` now use `bypassCooldown()`/`bypassWarmup()` routing methods so spawn/home/warp resolve to their correct bypass permissions (e.g. `eliteessentials.command.spawn.bypass.cooldown` instead of `eliteessentials.command.tp.bypass.cooldown.spawn`)
+  - Added `trash` to `getCommandCooldown()` switch (was falling through to default and returning config value without checking permissions)
+  - Permission format: `eliteessentials.command.home.cooldown.<seconds>`, `eliteessentials.command.spawn.cooldown.<seconds>`, `eliteessentials.command.warp.cooldown.<seconds>`
+- Spawn protection: custom UseBlock interaction is now only registered when `spawnProtection.enabled` is true. When disabled, we no longer replace the "UseBlock" handler in the codec registry, so other mods (e.g. PlotMod, SimpleClaims) that register their own UseBlock interaction for claim checks work correctly. Previously, registering our handler unconditionally overwrote theirs and their block-use/claim logic never ran.
+
 ## 1.1.16 - 2026-02-26
 
 ### Added

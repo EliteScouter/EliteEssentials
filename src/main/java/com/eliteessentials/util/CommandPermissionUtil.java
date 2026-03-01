@@ -106,12 +106,27 @@ public class CommandPermissionUtil {
 
     /**
      * Get the effective cooldown for a player (0 if they can bypass).
+     * For simple bypass-only check. Does NOT support permission-based custom values.
+     * Use getEffectiveTpCooldown() for commands that support custom cooldown permissions.
      */
     public static int getEffectiveCooldown(UUID playerId, String commandName, int configCooldown) {
         if (canBypassCooldown(playerId, commandName)) {
             return 0;
         }
         return configCooldown;
+    }
+
+    /**
+     * Get the effective cooldown for a teleport command.
+     * 
+     * Priority:
+     * 1. Bypass permission (returns 0)
+     * 2. LuckPerms permission-based cooldown (any value)
+     * 3. Config default
+     */
+    public static int getEffectiveTpCooldown(UUID playerId, String commandName, int configCooldown) {
+        // Use PermissionService to get cooldown (handles bypass + LuckPerms lookup)
+        return PermissionService.get().getTpCommandCooldown(playerId, commandName, configCooldown);
     }
 
     /**

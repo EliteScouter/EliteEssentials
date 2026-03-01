@@ -97,6 +97,7 @@ public class PluginConfig {
         messages.put("prefix", "&7[&bEliteEssentials&7]&r ");
         messages.put("noPermission", "&cYou don't have permission to use this command.");
         messages.put("playerNotFound", "&cPlayer '&e{player}&c' is not online.");
+        messages.put("playerNeverJoined", "&cPlayer '&e{player}&c' has never joined this server.");
         messages.put("commandDisabled", "&cThis command is disabled.");
         messages.put("onCooldown", "&eYou must wait &c{seconds} &eseconds before using this command again.");
         messages.put("warmupStarted", "&eTeleporting in &a{seconds} &eseconds. Don't move!");
@@ -226,6 +227,9 @@ public class PluginConfig {
         
         // ==================== FLY ====================
         messages.put("flyEnabled", "&aFlight mode enabled! Double-tap jump to fly.");
+        messages.put("flyEnabledTimed", "&aFlight enabled for &e{time}&a. Double-tap jump to fly.");
+        messages.put("flyExpired", "&cYour flight time has expired.");
+        messages.put("flyExpiringIn", "&eFlight will turn off in &c{seconds} &eseconds.");
         messages.put("flyDisabled", "&cFlight mode disabled.");
         messages.put("flyFailed", "&cCould not access movement settings.");
         messages.put("flySpeedSet", "&aFly speed set to &e{speed}x&a.");
@@ -358,7 +362,7 @@ public class PluginConfig {
         messages.put("payInsufficientFunds", "&cInsufficient funds. Your balance: &e{balance}");
         messages.put("payFailed", "&cPayment failed.");
         messages.put("balanceChangeNotify", "&a{sender} {changeType} &e{amount} &ato {target} wallet. Balance: &e{oldBalance} &7->&e{newBalance}");
-        messages.put("ecoUsage", "&eUsage: &f/eco <check|set|add|remove> <player> [amount]");
+        messages.put("ecoUsage", "&eUsage: &f/eco <check|set|add|give|remove> <player> [amount]");
         messages.put("baltopHeader", "&b&l=== &fRichest Players &b&l===");
         messages.put("baltopEntry", "&e{rank}. &f{player} &7- &a{balance}");
         
@@ -924,6 +928,15 @@ public class PluginConfig {
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
+        
+        /** Cost per minute of flight (0 = free/unlimited). When > 0, player pays this amount and flight auto-disables after costPerMinuteDurationSeconds. */
+        public double costPerMinute = 0.0;
+        
+        /** Duration in seconds for one "minute" of paid flight when costPerMinute > 0 (default 60). */
+        public int costPerMinuteDurationSeconds = 60;
+        
+        /** Seconds before expiry to send a warning (e.g. 30, 10, 5). Empty list = no warnings. */
+        public java.util.List<Integer> expiryWarningSeconds = java.util.Arrays.asList(30, 10, 5);
     }
 
     // ==================== VANISH ====================
@@ -1032,9 +1045,18 @@ public class PluginConfig {
     public static class RepairConfig {
         /** Enable/disable the /repair command */
         public boolean enabled = true;
-        
-        /** Cooldown in seconds between uses (0 = no cooldown) */
+
+        /** Cooldown in seconds between /repair uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
+
+        /** Cooldown in seconds between /repair all uses (0 = use cooldownSeconds) */
+        public int cooldownAllSeconds = 0;
+
+        /** Cost for /repair (single item) (0 = free, requires economy) */
+        public double cost = 0.0;
+
+        /** Cost for /repair all (0 = free, requires economy) */
+        public double costAll = 0.0;
     }
 
     // ==================== TOP ====================
@@ -1513,6 +1535,18 @@ public class PluginConfig {
          * In advanced mode, grant eliteessentials.command.misc.nick.color to allow it.
          */
         public boolean allowColors = false;
+
+        /**
+         * When true, only players with eliteessentials.command.misc.nick.color can use colors in nicknames.
+         * When false (default), anyone who can use /nick can use colors (basic permissions).
+         */
+        public boolean requireColorPermission = false;
+
+        /**
+         * When true, only players with eliteessentials.command.misc.nick.formatting can use formatting (bold, italic) in nicknames.
+         * When false (default), anyone who can use /nick can use formatting (basic permissions).
+         */
+        public boolean requireFormattingPermission = false;
     }
     
     // ==================== PLAYTIME REWARDS ====================

@@ -312,8 +312,11 @@ eliteessentials
 | `eliteessentials.command.misc.clearinv` | Clear inventory (Admin) |
 | `eliteessentials.command.misc.repair` | Repair items (Admin) |
 | `eliteessentials.command.misc.repair.all` | Repair all items (Admin) |
-| `eliteessentials.command.misc.repair.bypass.cooldown` | Bypass repair cooldown |
-| `eliteessentials.command.misc.repair.cooldown.<seconds>` | Custom repair cooldown (any value, requires LuckPerms) |
+| `eliteessentials.command.misc.repair.bypass.cooldown` | Bypass repair cooldown (single and all) |
+| `eliteessentials.command.misc.repair.cooldown.<seconds>` | Cooldown for single repair |
+| `eliteessentials.command.misc.repair.all.cooldown.<seconds>` | Cooldown for /repair all |
+| `eliteessentials.bypass.cost.repair` | Bypass cost for /repair |
+| `eliteessentials.bypass.cost.repair.all` | Bypass cost for /repair all |
 | `eliteessentials.command.misc.sleeppercent` | Set sleep percentage (Admin) |
 | `eliteessentials.command.misc.afk` | Toggle AFK status |
 | `eliteessentials.command.misc.joindate` | View own join date |

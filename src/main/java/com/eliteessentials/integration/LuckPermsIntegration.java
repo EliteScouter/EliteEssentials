@@ -338,6 +338,8 @@ public class LuckPermsIntegration {
         perms.add(Permissions.bypassCost("rtp"));
         perms.add(Permissions.bypassCost("tpa"));
         perms.add(Permissions.bypassCost("tpahere"));
+        perms.add(Permissions.bypassCost("repair"));
+        perms.add(Permissions.bypassCost("repair.all"));
         perms.add("eliteessentials.bypass.*");
         perms.add("eliteessentials.bypass.cost.*");
         

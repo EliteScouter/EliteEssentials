@@ -450,6 +450,10 @@ public class PermissionService {
                 bypassPermission = Permissions.REPAIR_BYPASS_COOLDOWN;
                 cooldownPrefix = Permissions.REPAIR_COOLDOWN_PREFIX;
                 break;
+            case "repair.all":
+                bypassPermission = Permissions.REPAIR_BYPASS_COOLDOWN;
+                cooldownPrefix = Permissions.REPAIR_ALL_COOLDOWN_PREFIX;
+                break;
             case "clearinv":
                 bypassPermission = Permissions.CLEARINV_BYPASS_COOLDOWN;
                 cooldownPrefix = Permissions.CLEARINV_COOLDOWN_PREFIX;
@@ -457,6 +461,10 @@ public class PermissionService {
             case "top":
                 bypassPermission = Permissions.TOP_BYPASS_COOLDOWN;
                 cooldownPrefix = Permissions.TOP_COOLDOWN_PREFIX;
+                break;
+            case "trash":
+                bypassPermission = Permissions.TRASH_BYPASS_COOLDOWN;
+                cooldownPrefix = Permissions.TRASH_COOLDOWN_PREFIX;
                 break;
             case "heal":
                 // Use existing heal method for consistency
@@ -495,23 +503,23 @@ public class PermissionService {
 
     /**
      * Get the cooldown for a teleport command based on permissions.
-     * Supports: rtp, tpa, tpahere, back
+     * Supports: rtp, tpa, tpahere, back, home, spawn, warp
      * 
      * Priority:
      * 1. Bypass permission (returns 0)
-     * 2. LuckPerms permission-based cooldown (any value via eliteessentials.command.tp.cooldown.<cmd>.<seconds>)
+     * 2. LuckPerms permission-based cooldown (any value)
      * 3. Config default
      * 
      * Note: Custom cooldown values require LuckPerms. Without LuckPerms, only config default is used.
      * 
      * @param playerId Player UUID
-     * @param commandName Command name (rtp, tpa, tpahere, back)
+     * @param commandName Command name (rtp, tpa, tpahere, back, home, spawn, warp)
      * @param defaultCooldown Default cooldown from config
      * @return Effective cooldown in seconds
      */
     public int getTpCommandCooldown(UUID playerId, String commandName, int defaultCooldown) {
-        // Check for bypass permission first
-        if (hasPermission(playerId, Permissions.tpBypassCooldown(commandName))) {
+        // Check for bypass permission first (command-specific, routes to correct category)
+        if (hasPermission(playerId, Permissions.bypassCooldown(commandName))) {
             return 0;
         }
         
@@ -520,9 +528,27 @@ public class PermissionService {
             return 0;
         }
         
-        // Try to get custom cooldown from LuckPerms
+        // Try to get custom cooldown from LuckPerms based on command type
         if (LuckPermsIntegration.isAvailable()) {
-            String cooldownPrefix = Permissions.TP_COOLDOWN_PREFIX + commandName + ".";
+            String cooldownPrefix;
+            
+            // Route to appropriate cooldown prefix based on command
+            switch (commandName.toLowerCase()) {
+                case "home":
+                    cooldownPrefix = Permissions.HOME_COOLDOWN_PREFIX;
+                    break;
+                case "spawn":
+                    cooldownPrefix = Permissions.SPAWN_COOLDOWN_PREFIX;
+                    break;
+                case "warp":
+                    cooldownPrefix = Permissions.WARP_COOLDOWN_PREFIX;
+                    break;
+                default:
+                    // TP commands (rtp, back, tpa, tpahere, top)
+                    cooldownPrefix = Permissions.TP_COOLDOWN_PREFIX + commandName + ".";
+                    break;
+            }
+            
             int lpCooldown = LuckPermsIntegration.getInheritedPermissionValue(playerId, cooldownPrefix);
             if (lpCooldown >= 0) {
                 return lpCooldown;
@@ -531,7 +557,23 @@ public class PermissionService {
         
         // Try HyperPerms as fallback
         if (HyperPermsIntegration.isAvailable()) {
-            String cooldownPrefix = Permissions.TP_COOLDOWN_PREFIX + commandName + ".";
+            String cooldownPrefix;
+            
+            switch (commandName.toLowerCase()) {
+                case "home":
+                    cooldownPrefix = Permissions.HOME_COOLDOWN_PREFIX;
+                    break;
+                case "spawn":
+                    cooldownPrefix = Permissions.SPAWN_COOLDOWN_PREFIX;
+                    break;
+                case "warp":
+                    cooldownPrefix = Permissions.WARP_COOLDOWN_PREFIX;
+                    break;
+                default:
+                    cooldownPrefix = Permissions.TP_COOLDOWN_PREFIX + commandName + ".";
+                    break;
+            }
+            
             int hpCooldown = HyperPermsIntegration.getInheritedPermissionValue(playerId, cooldownPrefix);
             if (hpCooldown >= 0) {
                 return hpCooldown;
@@ -561,8 +603,8 @@ public class PermissionService {
      * @return Effective warmup in seconds
      */
     public int getTpCommandWarmup(UUID playerId, String commandName, int defaultWarmup) {
-        // Check for bypass permission first (command-specific)
-        if (hasPermission(playerId, Permissions.tpBypassWarmup(commandName))) {
+        // Check for bypass permission first (command-specific, routes to correct category)
+        if (hasPermission(playerId, Permissions.bypassWarmup(commandName))) {
             return 0;
         }
         

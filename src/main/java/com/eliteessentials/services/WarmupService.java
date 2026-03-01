@@ -67,16 +67,29 @@ public class WarmupService {
             existing.cancelled = true;
         }
         
-        // If no warmup needed, execute immediately
+        // If no warmup needed, execute immediately on the correct world thread.
+        // We may be called from a different world's thread (e.g., cross-world TPA
+        // where acceptor's world thread calls startWarmup for the requester).
+        // Dispatching via world.execute() ensures the onComplete callback runs on
+        // the teleporting player's world thread, avoiding IllegalStateException
+        // from Store.assertThread().
         if (warmupSeconds <= 0) {
-            onComplete.run();
+            if (world != null) {
+                world.execute(onComplete);
+            } else {
+                onComplete.run();
+            }
             return;
         }
         
-        // If missing required context, execute immediately
+        // If missing required context, execute immediately on correct thread if possible
         if (startPosition == null || world == null || store == null || ref == null) {
             logger.warning("[Warmup] Missing context for " + commandName + ", executing immediately");
-            onComplete.run();
+            if (world != null) {
+                world.execute(onComplete);
+            } else {
+                onComplete.run();
+            }
             return;
         }
         

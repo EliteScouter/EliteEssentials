@@ -7,6 +7,7 @@ import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.gui.HomeSelectionPage;
@@ -107,6 +108,20 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         UUID playerId = player.getUuid();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
+        CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+        
+        // Get effective cooldown from permissions (handles bypass + custom values)
+        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(playerId, COMMAND_NAME, config.homes.cooldownSeconds);
+        
+        // Check cooldown if player has one
+        if (effectiveCooldown > 0) {
+            int cooldownRemaining = cooldownService.getCooldownRemaining(COMMAND_NAME, playerId);
+            if (cooldownRemaining > 0) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                return;
+            }
+        }
         
         // Check if already warming up
         if (warmupService.hasActiveWarmup(playerId)) {
@@ -158,6 +173,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         final World finalWorld = targetWorld;
         final String finalHomeName = homeName;
         final boolean finalSilent = silent;
+        final int finalEffectiveCooldown = effectiveCooldown;
 
         // Define the teleport action - always use PlayerRef to get fresh refs at teleport time
         Runnable doTeleport = () -> {
@@ -170,6 +186,9 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,
                 () -> {
                     CommandPermissionUtil.chargeCost(ctx, player, "home", config.homes.cost);
+                    if (finalEffectiveCooldown > 0) {
+                        cooldownService.setCooldown(COMMAND_NAME, playerId, finalEffectiveCooldown);
+                    }
                     if (!finalSilent) {
                         player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("homeTeleported", "name", finalHomeName), "#55FF55"));
                     }
