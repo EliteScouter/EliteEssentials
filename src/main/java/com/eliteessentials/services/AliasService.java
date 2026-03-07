@@ -824,7 +824,7 @@ public class AliasService {
             }
             
             var vanishService = EliteEssentials.getInstance().getVanishService();
-            boolean vanished = vanishService.toggleVanish(playerId, player.getUsername());
+            boolean vanished = vanishService.toggleVanish(playerId, player.getUsername(), store, ref);
             if (!silent) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage(vanished ? "vanishEnabled" : "vanishDisabled"), vanished ? "#55FF55" : "#FF5555"));
             }

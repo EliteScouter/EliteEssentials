@@ -5,6 +5,7 @@ import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.util.CommandPermissionUtil;
+import com.eliteessentials.util.HytaleSaveFileReader;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.component.Ref;
@@ -12,10 +13,13 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.component.Holder;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -150,11 +154,29 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelLastSeen"), "#AAAAAA"),
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoOnlineNow"), "#55FF55")
             ));
+            // Show coordinates for online players
+            String coords = formatPlayerCoordinates(data.getUuid());
+            if (coords != null) {
+                ctx.sendMessage(Message.join(
+                    MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelCoordinates"), "#AAAAAA"),
+                    Message.raw(coords).color("#55FF55")
+                ));
+            }
         } else {
             ctx.sendMessage(Message.join(
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelLastSeen"), "#AAAAAA"),
                 Message.raw(formatRelativeTime(lastSeen)).color("#FFFFFF")
             ));
+            // Show last saved coordinates from Hytale save file (e.g. spawn-on-logout position)
+            HytaleSaveFileReader.readPosition(data.getUuid()).ifPresent(saved -> {
+                String coords = String.format("%.1f, %.1f, %.1f (%s)%s",
+                    saved.x, saved.y, saved.z, saved.world,
+                    configManager.getMessage("playerinfoCoordinatesLastSaved"));
+                ctx.sendMessage(Message.join(
+                    MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelCoordinates"), "#AAAAAA"),
+                    Message.raw(coords).color("#AAAAAA")
+                ));
+            });
         }
 
         ctx.sendMessage(Message.join(
@@ -206,6 +228,26 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
 
     private boolean isPlayerOnline(@Nonnull UUID uuid) {
         return Universe.get().getPlayer(uuid) != null;
+    }
+
+    /**
+     * Returns formatted coordinates "x, y, z (world)" for an online player, or null if unavailable.
+     */
+    private String formatPlayerCoordinates(@Nonnull UUID playerUuid) {
+        PlayerRef ref = Universe.get().getPlayer(playerUuid);
+        if (ref == null) return null;
+        Holder<EntityStore> holder = ref.getHolder();
+        if (holder == null) return null;
+        TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+        if (transform == null) return null;
+        Vector3d pos = transform.getPosition();
+        String worldName = "?";
+        UUID worldUuid = ref.getWorldUuid();
+        if (worldUuid != null) {
+            World w = Universe.get().getWorld(worldUuid);
+            if (w != null) worldName = w.getName();
+        }
+        return String.format("%.1f, %.1f, %.1f (%s)", pos.getX(), pos.getY(), pos.getZ(), worldName);
     }
 
     private static String formatTimestamp(long millis) {

@@ -12,6 +12,7 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -175,6 +176,16 @@ public class HytaleRtpCommand extends CommandBase {
             plugin.getDeathTrackingService().trackPlayer(playerId);
         }
         
+        // World blacklist check for self-RTP (admin RTP bypasses)
+        if (isSelfRtp) {
+            World senderWorld = findPlayerWorld(targetPlayer);
+            if (senderWorld != null && WorldBlacklistUtil.isWorldBlacklisted(senderWorld.getName(), rtpConfig.blacklistedWorlds)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                return;
+            }
+        }
+
         // Permission check for self-RTP (with cost)
         if (isSelfRtp) {
             if (!CommandPermissionUtil.canExecuteWithCost(ctx, targetPlayer, Permissions.RTP, 

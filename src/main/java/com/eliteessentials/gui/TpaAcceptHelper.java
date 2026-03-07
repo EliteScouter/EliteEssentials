@@ -6,6 +6,7 @@ import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.TpaRequest;
 import com.eliteessentials.services.BackService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
@@ -109,6 +110,8 @@ public final class TpaAcceptHelper {
                 Store<EntityStore> teleportingStore;
                 Ref<EntityStore> teleportingRef;
                 
+                String cooldownCommandName;
+                int configCooldown;
                 if (isTpaHere) {
                     // TPAHERE: acceptor teleports to requester
                     teleportingPlayerId = acceptor.getUuid();
@@ -117,6 +120,8 @@ public final class TpaAcceptHelper {
                     teleportingWorld = acceptorWorld;
                     teleportingStore = acceptorStore;
                     teleportingRef = acceptorRef;
+                    cooldownCommandName = "tpahere";
+                    configCooldown = config.tpa.tpahereCooldownSeconds;
                     
                     Location backLoc = new Location(acceptorWorld.getName(), 
                         acceptorPos.getX(), acceptorPos.getY(), acceptorPos.getZ(), acceptorYaw, 0f);
@@ -128,6 +133,13 @@ public final class TpaAcceptHelper {
                             Teleport teleport = new Teleport(requesterWorld, requesterPos, new Vector3f(0, requesterYaw, 0));
                             acceptorStore.putComponent(acceptorRef, Teleport.getComponentType(), teleport);
                             CommandPermissionUtil.chargeCostDirect(requester.getUuid(), "tpahere", config.tpa.tpahereCost);
+                            int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                            if (effectiveCooldown > 0) {
+                                CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                                if (cooldownService != null) {
+                                    cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                                }
+                            }
                         });
                     };
                 } else {
@@ -138,6 +150,8 @@ public final class TpaAcceptHelper {
                     teleportingWorld = requesterWorld;
                     teleportingStore = requesterStore;
                     teleportingRef = requesterRef;
+                    cooldownCommandName = "tpa";
+                    configCooldown = config.tpa.cooldownSeconds;
                     
                     Location backLoc = new Location(requesterWorld.getName(),
                         requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), requesterYaw, 0f);
@@ -151,12 +165,34 @@ public final class TpaAcceptHelper {
                             CommandPermissionUtil.chargeCostDirect(request.getRequesterId(), "tpa", config.tpa.cost);
                             requester.sendMessage(MessageFormatter.formatWithFallback(
                                 configManager.getMessage("tpaAcceptedRequester", "player", acceptor.getUsername()), "#55FF55"));
+                            int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                            if (effectiveCooldown > 0) {
+                                CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                                if (cooldownService != null) {
+                                    cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                                }
+                            }
                         });
                     };
                 }
                 
-                // Check warmup
-                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, "tpa", config.tpa.warmupSeconds);
+                // Check cooldown (use tpa vs tpahere based on who teleports - permissions differ)
+                int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                if (effectiveCooldown > 0) {
+                    CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                    if (cooldownService != null) {
+                        int cooldownRemaining = cooldownService.getCooldownRemaining(cooldownCommandName, teleportingPlayerId);
+                        if (cooldownRemaining > 0) {
+                            acceptor.sendMessage(MessageFormatter.formatWithFallback(
+                                configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                            return;
+                        }
+                    }
+                }
+                
+                // Check warmup (use tpa vs tpahere based on who teleports - permissions differ)
+                String warmupCommandName = isTpaHere ? "tpahere" : "tpa";
+                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, warmupCommandName, config.tpa.warmupSeconds);
                 WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
                 
                 if (warmupService.hasActiveWarmup(teleportingPlayerId)) {

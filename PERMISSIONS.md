@@ -48,7 +48,8 @@ Commands are either available to Everyone or Admin only:
 | `/playtime [player]` | View own playtime | Everyone |
 | `/playtime <player>` | View other's playtime | Everyone |
 | `/god` | Toggle invincibility | Admin |
-| `/heal` | Restore full health | Admin |
+| `/heal` | Restore your health | Everyone |
+| `/heal <player>` | Restore another player's health | Admin |
 | `/fly` | Toggle flight mode | Admin |
 | `/flyspeed <speed>` | Set fly speed (10-100) | Admin |
 | `/broadcast <message>` | Server announcement | Admin |
@@ -165,7 +166,8 @@ eliteessentials
 │   │   ├── playerinfo              # /playerinfo command
 │   │   │   └── others              # View other players' player info
 │   │   ├── god                     # /god command (Admin)
-│   │   ├── heal                    # /heal command (Admin)
+│   │   ├── heal                    # /heal command (self)
+│   │   │   └── others              # Heal other players
 │   │   │   ├── bypass
 │   │   │   │   └── cooldown        # Bypass heal cooldown
 │   │   │   └── cooldown
@@ -302,7 +304,8 @@ eliteessentials
 | `eliteessentials.command.misc.playtime` | View own playtime |
 | `eliteessentials.command.misc.playtime.others` | View other players' playtime |
 | `eliteessentials.command.misc.god` | Toggle god mode (Admin) |
-| `eliteessentials.command.misc.heal` | Heal to full health (Admin) |
+| `eliteessentials.command.misc.heal` | Heal yourself |
+| `eliteessentials.command.misc.heal.others` | Heal other players |
 | `eliteessentials.command.misc.heal.bypass.cooldown` | Bypass heal cooldown |
 | `eliteessentials.command.misc.heal.cooldown.<seconds>` | Custom heal cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.fly` | Toggle flight mode (Admin) |
@@ -403,6 +406,7 @@ eliteessentials.command.tp.bypass.warmup
 eliteessentials.command.warp.use
 eliteessentials.command.economy.wallet.others
 eliteessentials.command.misc.playerinfo.others
+eliteessentials.command.misc.heal.others
 eliteessentials.command.misc.joindate.others
 eliteessentials.command.misc.playtime.others
 eliteessentials.command.home.limit.20

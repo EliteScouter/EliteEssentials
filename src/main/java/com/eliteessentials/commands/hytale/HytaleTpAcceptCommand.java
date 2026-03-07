@@ -7,6 +7,7 @@ import com.eliteessentials.model.Location;
 import com.eliteessentials.model.TpaRequest;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
+import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.TpaService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
@@ -38,6 +39,9 @@ import javax.annotation.Nonnull;
  * Permissions:
  * - eliteessentials.command.tpaccept - Accept teleport requests
  * - eliteessentials.bypass.warmup.tpa - Skip warmup for TPA
+ * - eliteessentials.bypass.warmup.tpahere - Skip warmup for TPAHERE
+ * - eliteessentials.bypass.cooldown.tpa - Skip cooldown for TPA
+ * - eliteessentials.bypass.cooldown.tpahere - Skip cooldown for TPAHERE
  */
 public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
 
@@ -171,6 +175,11 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                                           targetHeadRot != null ? targetHeadRot.getRotation().y : 0, 0f);
         
         // Define teleport action
+        boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
+        String cooldownCommandName = isTpaHere ? "tpahere" : "tpa";
+        int configCooldown = isTpaHere ? config.tpa.tpahereCooldownSeconds : config.tpa.cooldownSeconds;
+        UUID teleportingPlayerId = isTpaHere ? playerId : request.getRequesterId();
+        
         Runnable doTeleport = () -> {
             if (request.getType() == TpaRequest.Type.TPA) {
                 // Requester teleports to acceptor - use PlayerRef for fresh refs
@@ -180,6 +189,13 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     () -> {
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                        if (effectiveCooldown > 0) {
+                            CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                            if (cooldownService != null) {
+                                cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                            }
+                        }
                     },
                     () -> {
                         requester.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
@@ -194,6 +210,13 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
                         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
                         requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                        if (effectiveCooldown > 0) {
+                            CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                            if (cooldownService != null) {
+                                cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                            }
+                        }
                     },
                     () -> {
                         ctx.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
@@ -260,6 +283,12 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                 Location requesterLoc = new Location(requesterWorld.getName(), requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), reqRot.y, 0f);
                 Location targetLoc = new Location(acceptorWorld.getName(), targetPos.getX(), targetPos.getY(), targetPos.getZ(), targetRot.y, 0f);
                 
+                // Determine who gets warmup/cooldown based on request type
+                boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
+                UUID teleportingPlayerId = isTpaHere ? playerId : request.getRequesterId();
+                String cooldownCommandName = isTpaHere ? "tpahere" : "tpa";
+                int configCooldown = isTpaHere ? config.tpa.tpahereCooldownSeconds : config.tpa.cooldownSeconds;
+                
                 // Define teleport action
                 Runnable doTeleport = () -> {
                     if (request.getType() == TpaRequest.Type.TPA) {
@@ -269,9 +298,15 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                         TeleportUtil.safeTeleport(requesterWorld, acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0),
                             requester,
                             () -> {
-                                // Charge cost AFTER successful teleport
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
                                 requester.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAcceptedRequester", "player", player.getUsername()), "#55FF55"));
+                                int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                                if (effectiveCooldown > 0) {
+                                    CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                                    if (cooldownService != null) {
+                                        cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                                    }
+                                }
                             },
                             () -> {
                                 requester.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
@@ -280,13 +315,18 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     } else {
                         // Acceptor teleports to requester (TPAHERE cross-world)
                         backService.pushLocation(playerId, targetLoc);
-                        // Pre-load destination chunk before teleporting
                         TeleportUtil.safeTeleport(acceptorWorld, requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0),
                             player,
                             () -> {
-                                // Charge cost AFTER successful teleport (charge the requester who sent tpahere)
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
                                 player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpahereAcceptedTarget", "player", request.getRequesterName()), "#55FF55"));
+                                int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                                if (effectiveCooldown > 0) {
+                                    CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                                    if (cooldownService != null) {
+                                        cooldownService.setCooldown(cooldownCommandName, teleportingPlayerId, effectiveCooldown);
+                                    }
+                                }
                             },
                             () -> {
                                 player.sendMessage(MessageFormatter.formatWithFallback("&cTeleport failed - destination chunk could not be loaded.", "#FF5555"));
@@ -299,18 +339,27 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                 // Send acceptance message
                 player.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaAccepted", "player", request.getRequesterName()), "#55FF55"));
                 
-                // Determine who gets the warmup based on request type
-                // TPA: requester teleports, so warmup on requester
-                // TPAHERE: acceptor teleports, so warmup on acceptor
-                boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
-                UUID teleportingPlayerId = isTpaHere ? playerId : request.getRequesterId();
+                // Check cooldown before warmup
+                int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+                if (effectiveCooldown > 0) {
+                    CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+                    if (cooldownService != null) {
+                        int cooldownRemaining = cooldownService.getCooldownRemaining(cooldownCommandName, teleportingPlayerId);
+                        if (cooldownRemaining > 0) {
+                            player.sendMessage(MessageFormatter.formatWithFallback(
+                                configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                            return;
+                        }
+                    }
+                }
                 PlayerRef teleportingPlayer = isTpaHere ? player : requester;
                 Vector3d teleportingPlayerPos = isTpaHere ? targetPos : requesterPos;
                 World teleportingWorld = isTpaHere ? acceptorWorld : requesterWorld;
                 Store<EntityStore> teleportingStore = isTpaHere ? store : requesterStore;
                 Ref<EntityStore> teleportingRef = isTpaHere ? ref : requesterRef;
                 
-                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, "tpa", config.tpa.warmupSeconds);
+                String warmupCommandName = isTpaHere ? "tpahere" : "tpa";
+                int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, warmupCommandName, config.tpa.warmupSeconds);
                 WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
                 
                 if (warmupService.hasActiveWarmup(teleportingPlayerId)) {
@@ -342,19 +391,37 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                                          Runnable doTeleport, World world, 
                                          Store<EntityStore> acceptorStore, Ref<EntityStore> acceptorRef,
                                          Store<EntityStore> requesterStore, Ref<EntityStore> requesterRef) {
+        boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
+        String cooldownCommandName = isTpaHere ? "tpahere" : "tpa";
+        int configCooldown = isTpaHere ? config.tpa.tpahereCooldownSeconds : config.tpa.cooldownSeconds;
+        UUID teleportingPlayerId = isTpaHere ? player.getUuid() : request.getRequesterId();
+        
+        // Check cooldown before warmup
+        int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
+        if (effectiveCooldown > 0) {
+            CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
+            if (cooldownService != null) {
+                int cooldownRemaining = cooldownService.getCooldownRemaining(cooldownCommandName, teleportingPlayerId);
+                if (cooldownRemaining > 0) {
+                    ctx.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("onCooldown", "seconds", String.valueOf(cooldownRemaining)), "#FF5555"));
+                    return;
+                }
+            }
+        }
+        
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         
         // Determine who gets the warmup based on request type
         // TPA: requester teleports, so warmup on requester
         // TPAHERE: acceptor teleports, so warmup on acceptor
-        boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
-        UUID teleportingPlayerId = isTpaHere ? player.getUuid() : request.getRequesterId();
         PlayerRef teleportingPlayer = isTpaHere ? player : requester;
         Vector3d teleportingPlayerPos = isTpaHere ? acceptorPos : requesterPos;
         Store<EntityStore> teleportingStore = isTpaHere ? acceptorStore : requesterStore;
         Ref<EntityStore> teleportingRef = isTpaHere ? acceptorRef : requesterRef;
         
-        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, "tpa", config.tpa.warmupSeconds);
+        String warmupCommandName = isTpaHere ? "tpahere" : "tpa";
+        int warmupSeconds = CommandPermissionUtil.getEffectiveWarmup(teleportingPlayerId, warmupCommandName, config.tpa.warmupSeconds);
         
         if (warmupService.hasActiveWarmup(teleportingPlayerId)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tpaRequesterInProgress"), "#FF5555"));

@@ -282,6 +282,7 @@ public class LuckPermsIntegration {
         perms.add(Permissions.SLEEPPERCENT);
         perms.add(Permissions.GOD);
         perms.add(Permissions.HEAL);
+        perms.add(Permissions.HEAL_OTHERS);
         perms.add(Permissions.HEAL_BYPASS_COOLDOWN);
         perms.add(Permissions.MSG);
         perms.add(Permissions.FLY);

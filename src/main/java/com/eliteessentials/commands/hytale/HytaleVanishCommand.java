@@ -52,8 +52,8 @@ public class HytaleVanishCommand extends AbstractPlayerCommand {
             return;
         }
         
-        // Toggle vanish
-        boolean nowVanished = vanishService.toggleVanish(playerId, player.getUsername());
+        // Toggle vanish (pass store/ref for synchronous component update - avoids stale-ref crash)
+        boolean nowVanished = vanishService.toggleVanish(playerId, player.getUsername(), store, ref);
         
         if (nowVanished) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(

@@ -8,6 +8,7 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.GodService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -62,6 +63,12 @@ public class HytaleGodCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
         PluginConfig.GodConfig godConfig = configManager.getConfig().god;
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), godConfig.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.GOD, 

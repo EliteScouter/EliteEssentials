@@ -371,35 +371,34 @@ public class TpaSelectionPage extends InteractiveCustomUIPage<TpaSelectionPage.T
         this.close();
     }
 
-    private boolean chargeCostIfNeeded(String commandName, double cost) {
-        if (cost <= 0 || !EconomyAPI.isEnabled()) {
-            return true;
-        }
-
+    private boolean chargeCostIfNeeded(String commandName, double configCost) {
         UUID playerId = playerRef.getUuid();
         CostService costService = EliteEssentials.getInstance().getCostService();
-        if (costService != null && costService.canBypassCost(playerId, commandName)) {
+        double effectiveCost = costService != null
+            ? costService.getEffectiveCost(playerId, commandName, configCost)
+            : configCost;
+        if (effectiveCost <= 0 || !EconomyAPI.isEnabled()) {
             return true;
         }
 
         double balance = EconomyAPI.getBalance(playerId);
-        if (balance < cost) {
+        if (balance < effectiveCost) {
             String message = configManager.getMessage("costInsufficientFunds",
-                "cost", String.format("%.2f", cost),
+                "cost", String.format("%.2f", effectiveCost),
                 "balance", String.format("%.2f", balance),
                 "currency", EconomyAPI.getCurrencyNamePlural());
             sendMessage(message, "#FF5555");
             return false;
         }
 
-        if (!EconomyAPI.withdraw(playerId, cost)) {
+        if (!EconomyAPI.withdraw(playerId, effectiveCost)) {
             sendMessage(configManager.getMessage("costFailed"), "#FF5555");
             return false;
         }
 
         String message = configManager.getMessage("costCharged",
-            "cost", String.format("%.2f", cost),
-            "currency", cost == 1.0 ? EconomyAPI.getCurrencyName() : EconomyAPI.getCurrencyNamePlural());
+            "cost", String.format("%.2f", effectiveCost),
+            "currency", effectiveCost == 1.0 ? EconomyAPI.getCurrencyName() : EconomyAPI.getCurrencyNamePlural());
         sendMessage(message, "#AAAAAA");
         return true;
     }

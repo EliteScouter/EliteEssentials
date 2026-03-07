@@ -8,6 +8,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.KitService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -72,6 +73,12 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         if (configManager.isDebugEnabled()) {
             logger.info("[Kit] Player " + player.getUsername() + " executing /kit");
@@ -329,6 +336,12 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
             UUID playerId = player.getUuid();
+            
+            if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                return;
+            }
             
             // Check base kit permission
             if (!PermissionService.get().canUseEveryoneCommand(playerId, Permissions.KIT, 

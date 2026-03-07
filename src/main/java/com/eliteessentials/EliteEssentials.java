@@ -267,19 +267,22 @@ public class EliteEssentials extends JavaPlugin {
             vaultUnlockedIntegration = null;
         }
         
-        // Register custom UseBlock interaction for spawn protection (flower/pebble pickup blocking).
-        // Only when spawn protection is enabled - otherwise we would replace the "UseBlock" handler
-        // in the codec registry and break other mods (e.g. PlotMod/SimpleClaims) that also register
-        // a UseBlock interaction for claim checks. InteractivelyPickupItemEvent.setCancelled() is
-        // broken in Hytale API, so we intercept at the interaction level when we need it.
+        // Register custom UseBlock/UseEntity interactions for spawn protection pickup blocking.
+        // UseBlock covers block-type pickups (flowers, pebbles); UseEntity covers entity-type
+        // decorations (mushrooms, placed items). Only when spawn protection is enabled - otherwise
+        // we'd replace handlers in the codec registry and break other mods (e.g. PlotMod/SimpleClaims).
+        // InteractivelyPickupItemEvent.setCancelled() is broken in Hytale API, so we intercept
+        // at the interaction level.
         if (configManager.getConfig().spawnProtection.enabled) {
             try {
                 var interaction = getCodecRegistry(com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction.CODEC);
                 interaction.register("UseBlock", com.eliteessentials.interactions.SpawnUseBlockInteraction.class,
                     com.eliteessentials.interactions.SpawnUseBlockInteraction.CUSTOM_CODEC);
-                getLogger().at(Level.INFO).log("Custom UseBlock interaction registered for spawn pickup protection.");
+                interaction.register("UseEntity", com.eliteessentials.interactions.SpawnUseEntityInteraction.class,
+                    com.eliteessentials.interactions.SpawnUseEntityInteraction.CUSTOM_CODEC);
+                getLogger().at(Level.INFO).log("Custom UseBlock/UseEntity interactions registered for spawn pickup protection.");
             } catch (Exception e) {
-                getLogger().at(Level.WARNING).log("Could not register custom UseBlock interaction: " + e.getMessage());
+                getLogger().at(Level.WARNING).log("Could not register custom interactions: " + e.getMessage());
             }
         }
         

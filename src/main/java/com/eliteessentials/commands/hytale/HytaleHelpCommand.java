@@ -139,8 +139,8 @@ public class HytaleHelpCommand extends CommandBase {
             available.add(new CommandInfo("/god", "Toggle god mode"));
         }
         
-        if (config.heal.enabled && canUse(sender, Permissions.HEAL, false)) {
-            available.add(new CommandInfo("/heal", "Restore health"));
+        if (config.heal.enabled && (canUse(sender, Permissions.HEAL, false) || canUse(sender, Permissions.HEAL_OTHERS, false))) {
+            available.add(new CommandInfo("/heal [player]", "Restore health (self or target)"));
         }
         
         if (config.clearInv.enabled && canUse(sender, Permissions.CLEARINV, false)) {

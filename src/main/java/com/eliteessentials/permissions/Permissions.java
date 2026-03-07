@@ -122,6 +122,7 @@ public final class Permissions {
     public static final String GOD_BYPASS_COOLDOWN = MISC_CATEGORY + ".god.bypass.cooldown";
     public static final String GOD_COOLDOWN_PREFIX = MISC_CATEGORY + ".god.cooldown.";
     public static final String HEAL = MISC_CATEGORY + ".heal";
+    public static final String HEAL_OTHERS = MISC_CATEGORY + ".heal.others";
     public static final String HEAL_BYPASS_COOLDOWN = MISC_CATEGORY + ".heal.bypass.cooldown";
     public static final String HEAL_COOLDOWN_PREFIX = MISC_CATEGORY + ".heal.cooldown.";
     public static final String MSG = MISC_CATEGORY + ".msg";

@@ -10,6 +10,7 @@ import com.eliteessentials.model.Location;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -66,6 +67,12 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
         PluginConfig.TopConfig topConfig = configManager.getConfig().top;
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), topConfig.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.TOP, topConfig.enabled)) {

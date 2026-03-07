@@ -14,6 +14,7 @@ import com.eliteessentials.gui.HomeSelectionPage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -72,6 +73,13 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.homes.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                EliteEssentials.getInstance().getConfigManager().getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOME, config.homes.enabled)) {
             return;
         }
@@ -100,6 +108,13 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
                        PlayerRef player, World world, String homeName,
                        HomeService homeService, BackService backService, boolean silent) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.homes.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                EliteEssentials.getInstance().getConfigManager().getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.HOME, 
                 config.homes.enabled, "home", config.homes.cost)) {
             return;

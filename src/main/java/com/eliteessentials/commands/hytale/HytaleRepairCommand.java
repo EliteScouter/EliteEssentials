@@ -9,6 +9,7 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.CostService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -64,6 +65,12 @@ public class HytaleRepairCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef playerRef, @Nonnull World world) {
         PluginConfig config = configManager.getConfig();
         UUID playerId = playerRef.getUuid();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.repair.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
 
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, playerRef, Permissions.REPAIR, config.repair.enabled)) {

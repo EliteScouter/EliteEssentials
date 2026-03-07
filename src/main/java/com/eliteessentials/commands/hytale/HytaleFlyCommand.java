@@ -10,6 +10,7 @@ import com.eliteessentials.services.CostService;
 import com.eliteessentials.services.FlyService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -63,6 +64,12 @@ public class HytaleFlyCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         UUID playerId = player.getUuid();
         PluginConfig.FlyConfig flyConfig = configManager.getConfig().fly;
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), flyConfig.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         // Check permission (Admin command)
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.FLY, flyConfig.enabled)) {

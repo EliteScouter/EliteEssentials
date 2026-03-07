@@ -79,6 +79,17 @@ public class VanishService {
      * @param playerName The player's username (for fake messages)
      */
     public void setVanished(UUID playerId, String playerName, boolean vanished) {
+        setVanished(playerId, playerName, vanished, null, null);
+    }
+    
+    /**
+     * Set a player's vanish state with optional store/ref for synchronous component updates.
+     * When store and ref are provided and valid, Invulnerable is applied immediately on the
+     * current thread (avoids world.execute() stale-ref leading to IndexOutOfBoundsException).
+     * Call from command handlers that run on the world thread.
+     */
+    public void setVanished(UUID playerId, String playerName, boolean vanished,
+                            Store<EntityStore> store, Ref<EntityStore> ref) {
         if (vanished) {
             vanishedPlayers.add(playerId);
         } else {
@@ -97,16 +108,11 @@ public class VanishService {
         }
         
         // Update visibility + player list in a single pass over all players
-        // This avoids multiple separate iterations which caused lag on 50+ player servers
         updateAllPlayersInSinglePass(playerId, vanished, config);
-        
-        // Map filters do NOT need updating here - the filter lambda already references
-        // the live vanishedPlayers set, so it picks up changes automatically each tick.
-        // The filter is only set once per player in onPlayerReady().
         
         // Update mob immunity (invulnerability) if enabled
         if (config.vanish.mobImmunity) {
-            updateMobImmunity(playerId, vanished);
+            updateMobImmunity(playerId, vanished, store, ref);
         }
         
         // Send fake join/leave message if enabled
@@ -138,8 +144,17 @@ public class VanishService {
      * @return true if now vanished, false if now visible
      */
     public boolean toggleVanish(UUID playerId, String playerName) {
+        return toggleVanish(playerId, playerName, null, null);
+    }
+    
+    /**
+     * Toggle vanish with optional store/ref for synchronous component updates.
+     * Pass store and ref when calling from a command handler on the world thread.
+     */
+    public boolean toggleVanish(UUID playerId, String playerName,
+                               Store<EntityStore> store, Ref<EntityStore> ref) {
         boolean nowVanished = !isVanished(playerId);
-        setVanished(playerId, playerName, nowVanished);
+        setVanished(playerId, playerName, nowVanished, store, ref);
         return nowVanished;
     }
     
@@ -501,24 +516,23 @@ public class VanishService {
     
     /**
      * Update invulnerability for a vanished player.
-     * 
-     * NOTE: True mob immunity (NPCs not detecting player) only works in Creative mode
-     * with allowNPCDetection=false. Since we don't want to force players into Creative
-     * mode (security concern for mods), we only provide damage immunity via the
-     * Invulnerable component. Mobs will still detect and attack vanished players,
-     * but they won't take damage.
-     * 
-     * If you're already in Creative mode, you can manually disable "Allow NPC Detection"
-     * in your settings for full mob immunity.
+     * When store and ref are provided and valid (caller on world thread), applies the
+     * component synchronously to avoid world.execute() stale-ref causing IndexOutOfBoundsException.
      */
-    private void updateMobImmunity(UUID playerId, boolean vanished) {
+    private void updateMobImmunity(UUID playerId, boolean vanished,
+                                   Store<EntityStore> callerStore, Ref<EntityStore> callerRef) {
         try {
-            // Use stored ref instead of iterating all players to find the target
+            // Prefer synchronous path when caller provided fresh store/ref (command context)
+            if (callerStore != null && callerRef != null && callerRef.isValid()) {
+                applyMobImmunitySync(callerStore, callerRef, playerId, vanished);
+                return;
+            }
+            
+            // Fallback: deferred via world.execute (e.g. non-command call path)
             PlayerStoreRef psr = playerStoreRefs.get(playerId);
             if (psr == null || psr.ref == null || !psr.ref.isValid()) return;
             
-            Store<EntityStore> store = psr.ref.getStore();
-            EntityStore entityStore = store.getExternalData();
+            EntityStore entityStore = psr.store.getExternalData();
             if (entityStore == null) return;
             
             World world = entityStore.getWorld();
@@ -531,33 +545,35 @@ public class VanishService {
                     if (!storedRef.isValid()) return;
                     
                     Store<EntityStore> currentStore = storedRef.getStore();
-                    
-                    if (vanished) {
-                        currentStore.putComponent(storedRef, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
-                        
-                        if (configManager.isDebugEnabled()) {
-                            logger.info("[Vanish] Applied invulnerability (damage immunity) for vanished player");
-                        }
-                    } else {
-                        // Remove invulnerability (unless they have god mode)
-                        GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
-                        if (godService == null || !godService.isGodMode(playerId)) {
-                            try {
-                                currentStore.removeComponent(storedRef, Invulnerable.getComponentType());
-                                if (configManager.isDebugEnabled()) {
-                                    logger.info("[Vanish] Removed invulnerability for unvanished player");
-                                }
-                            } catch (IllegalArgumentException e) {
-                                // Component not present, ignore
-                            }
-                        }
-                    }
+                    applyMobImmunitySync(currentStore, storedRef, playerId, vanished);
                 } catch (Exception e) {
                     logger.warning("[Vanish] Failed to update invulnerability: " + e.getMessage());
                 }
             });
         } catch (Exception e) {
             logger.warning("[Vanish] Failed to update invulnerability: " + e.getMessage());
+        }
+    }
+    
+    private void applyMobImmunitySync(Store<EntityStore> store, Ref<EntityStore> ref,
+                                      UUID playerId, boolean vanished) {
+        if (vanished) {
+            store.putComponent(ref, Invulnerable.getComponentType(), Invulnerable.INSTANCE);
+            if (configManager.isDebugEnabled()) {
+                logger.info("[Vanish] Applied invulnerability (damage immunity) for vanished player");
+            }
+        } else {
+            GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
+            if (godService == null || !godService.isGodMode(playerId)) {
+                try {
+                    store.removeComponent(ref, Invulnerable.getComponentType());
+                    if (configManager.isDebugEnabled()) {
+                        logger.info("[Vanish] Removed invulnerability for unvanished player");
+                    }
+                } catch (IllegalArgumentException e) {
+                    // Component not present, ignore
+                }
+            }
         }
     }
 }

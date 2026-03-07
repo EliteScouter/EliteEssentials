@@ -12,6 +12,7 @@ import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -61,6 +62,13 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.back.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                EliteEssentials.getInstance().getConfigManager().getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.BACK, 
                 config.back.enabled, "back", config.back.cost)) {
             return;

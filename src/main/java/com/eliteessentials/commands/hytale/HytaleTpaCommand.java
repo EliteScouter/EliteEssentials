@@ -10,6 +10,7 @@ import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -57,6 +58,13 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.tpa.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         // Only check affordability - cost will be charged when teleport actually happens in /tpaccept
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA,
                 config.tpa.enabled, "tpa", config.tpa.cost)) {
@@ -97,9 +105,25 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
         return perms.isAdmin(playerId) || perms.hasPermission(playerId, Permissions.VANISH);
     }
 
+    private String findPlayerWorldName(PlayerRef player) {
+        for (var entry : Universe.get().getWorlds().entrySet()) {
+            if (entry.getValue().getPlayerRefs().contains(player)) {
+                return entry.getKey();
+            }
+        }
+        return "";
+    }
+
     private void sendRequest(@Nonnull CommandContext ctx, @Nonnull PlayerRef player, @Nonnull String targetName) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(findPlayerWorldName(player), config.tpa.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.TPA,
                 config.tpa.enabled, COMMAND_NAME, config.tpa.cost)) {
             return;

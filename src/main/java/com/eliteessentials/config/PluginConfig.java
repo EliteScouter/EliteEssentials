@@ -215,6 +215,8 @@ public class PluginConfig {
         // ==================== HEAL ====================
         messages.put("healSuccess", "&aYou have been healed to full health!");
         messages.put("healFailed", "&cCould not heal you.");
+        messages.put("healOthersSuccess", "&aYou have healed &e{player}&a to full health!");
+        messages.put("healTargetNotify", "&aYou have been healed by &e{player}&a!");
         
         // ==================== PRIVATE MESSAGING ====================
         messages.put("msgUsage", "&cUsage: &e/msg <player> <message>");
@@ -499,6 +501,8 @@ public class PluginConfig {
         messages.put("playerinfoLabelClaimedMilestones", "Claimed milestones: ");
         messages.put("playerinfoLabelHomes", "Homes: ");
         messages.put("playerinfoLabelDefaultGroupChat", "Default group chat: ");
+        messages.put("playerinfoLabelCoordinates", "Coordinates: ");
+        messages.put("playerinfoCoordinatesLastSaved", " (last saved)");
         messages.put("playerinfoNoData", "No player data found.");
         messages.put("playerinfoNoDataFor", "No player data for {player}.");
         
@@ -572,6 +576,9 @@ public class PluginConfig {
         messages.put("unfreezeNotify", "&aYou have been unfrozen.");
         messages.put("freezeStillFrozen", "&cYou are still frozen. You cannot move.");
 
+        // ==================== WORLD BLACKLIST ====================
+        messages.put("commandBlacklistedWorld", "&cThis command cannot be used in this world.");
+        
         // ==================== NICK ====================
         messages.put("nickUsage", "&cUsage: &e/nick <nickname|off> &cor &e/nick <player> <nickname|off>");
         messages.put("nickSet", "&aYour nickname is now &r{nick}&a.");
@@ -592,6 +599,13 @@ public class PluginConfig {
     public static class RtpConfig {
         /** Enable/disable the /rtp command */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /rtp cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*" matches any world starting with "arena").
+         * Example: ["pvparena_world", "arena*"]
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Minimum distance from player for random location (default for all worlds) */
         public int minRange = 100;
@@ -706,6 +720,12 @@ public class PluginConfig {
         /** Enable/disable the /back command */
         public boolean enabled = true;
         
+        /**
+         * Worlds where /back cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+        
         /** How many previous locations to remember per player */
         public int maxHistory = 5;
         
@@ -728,8 +748,20 @@ public class PluginConfig {
         /** Enable/disable /tpa, /tpaccept, /tpdeny commands */
         public boolean enabled = true;
         
+        /**
+         * Worlds where /tpa and /tpahere cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+        
         /** Seconds before a TPA request expires */
         public int timeoutSeconds = 30;
+        
+        /** Cooldown in seconds between /tpa uses - applies to requester when they teleport (0 = no cooldown) */
+        public int cooldownSeconds = 0;
+        
+        /** Cooldown in seconds between /tpahere uses - applies to acceptor when they teleport (0 = no cooldown) */
+        public int tpahereCooldownSeconds = 0;
         
         /** Warmup in seconds after accepting - requester must stand still (0 = instant) */
         public int warmupSeconds = 3;
@@ -746,6 +778,12 @@ public class PluginConfig {
     public static class HomesConfig {
         /** Enable/disable /home, /sethome, /delhome, /homes commands */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /home, /sethome cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Maximum homes per player */
         public int maxHomes = 3;
@@ -771,6 +809,12 @@ public class PluginConfig {
     public static class SpawnConfig {
         /** Enable/disable the /spawn command */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /spawn cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
@@ -819,6 +863,12 @@ public class PluginConfig {
     public static class WarpsConfig {
         /** Enable/disable warp commands (/warp, /setwarp, /delwarp, /warps) */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /warp cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Cooldown in seconds between /warp uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
@@ -890,6 +940,12 @@ public class PluginConfig {
         /** Enable/disable the /god command */
         public boolean enabled = true;
         
+        /**
+         * Worlds where /god cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+        
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
     }
@@ -899,6 +955,12 @@ public class PluginConfig {
     public static class HealConfig {
         /** Enable/disable the /heal command */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /heal cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
@@ -925,6 +987,12 @@ public class PluginConfig {
     public static class FlyConfig {
         /** Enable/disable the /fly command */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /fly cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
@@ -1046,6 +1114,12 @@ public class PluginConfig {
         /** Enable/disable the /repair command */
         public boolean enabled = true;
 
+        /**
+         * Worlds where /repair cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+
         /** Cooldown in seconds between /repair uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
 
@@ -1065,6 +1139,12 @@ public class PluginConfig {
         /** Enable/disable the /top command */
         public boolean enabled = true;
         
+        /**
+         * Worlds where /top cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+        
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 0;
         
@@ -1077,6 +1157,12 @@ public class PluginConfig {
     public static class KitsConfig {
         /** Enable/disable kit commands */
         public boolean enabled = true;
+        
+        /**
+         * Worlds where /kit cannot be used.
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
     }
 
     // ==================== SPAWN PROTECTION ====================

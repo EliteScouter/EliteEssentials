@@ -12,6 +12,7 @@ import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -63,6 +64,12 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         CooldownService cooldownService = EliteEssentials.getInstance().getCooldownService();
         WarmupService warmupService = EliteEssentials.getInstance().getWarmupService();
         SpawnStorage spawnStorage = EliteEssentials.getInstance().getSpawnStorage();
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.spawn.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         // Check permission and enabled state with cost
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.SPAWN, 

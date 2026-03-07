@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.1.18 - 2026-03-01
+
+### Fixed
+- Vanish: rare `IndexOutOfBoundsException` in `ArchetypeChunk.getComponent` when toggling `/vanish` (1 in 1000s reports). Root cause: `updateMobImmunity` used `world.execute()` with a cached ref; deferring to a later tick can make the ref stale (same pattern as TeleportUtil). Fix: when the vanish command runs on the world thread (HytaleVanishCommand, AliasService alias), we now pass the caller's fresh store/ref and apply the Invulnerable component synchronously, avoiding deferred execution. Fallback to `world.execute()` remains for non-command call paths.
+- Spawn protection: decorations (mushrooms, flowers, and other entity-based placed items) could still be picked up even with `disableItemPickup` enabled. The existing `UseBlock` interaction hook only covered block-type pickups; decorations use `UseEntity` which was unprotected. Added a custom `UseEntity` interaction handler to block decoration pickups in spawn.
+- TPA/TPAHERE: cooldown, warmup, and cost permission options now work like home/spawn/rtp
+  - **Warmup bypass for TPAHERE:** `getEffectiveWarmup` always used `"tpa"`; for TPAHERE requests (acceptor teleports), `eliteessentials.bypass.warmup.tpahere` is now respected
+  - **Cooldown support:** TPA had no cooldown config or logic. Added `tpa.cooldownSeconds` and `tpa.tpahereCooldownSeconds` (both default 0). Cooldown applies when the teleport executes (TPA: requester; TPAHERE: acceptor). Bypass: `eliteessentials.bypass.cooldown.tpa`, `eliteessentials.bypass.cooldown.tpahere`; LuckPerms overrides: `eliteessentials.command.tp.cooldown.tpa.<seconds>`, `.tp.cooldown.tpahere.<seconds>`
+  - **Cost in GUI:** TpaSelectionPage used raw config cost instead of `getEffectiveCost`, so permission-based costs (`eliteessentials.cost.tpa.<amount>`, `.cost.tpahere.<amount>`) and bypass (`eliteessentials.bypass.cost.tpa`, `.bypass.cost.tpahere`) did not apply when sending requests from the player-selection GUI. Now uses `getEffectiveCost` for both checks and charges
+
+### Added
+- `/heal` command: self and others support (like `/playerinfo`)
+  - `/heal` - Heal yourself (requires `misc.heal`; simple mode = everyone when enabled)
+  - `/heal <player>` - Heal another player (requires `misc.heal.others`; simple mode = OP only)
+  - Permissions: `eliteessentials.command.misc.heal`, `eliteessentials.command.misc.heal.others`
+  - Messages: `healOthersSuccess`, `healTargetNotify` (target notified when healed by someone else)
+- `/playerinfo` now shows **coordinates** for the player
+  - **Online:** live position (x, y, z) and world from the player's entity
+  - **Offline:** last saved position read from the player's Hytale save file (`universe/players/{uuid}.json`). When spawn-on-logout is enabled, this is the spawn position we write on disconnect, so it reflects where they logged out or where they will spawn
+  - Messages: `playerinfoLabelCoordinates` ("Coordinates: "), `playerinfoCoordinatesLastSaved` (" (last saved)") for offline coords
+  - New util: `HytaleSaveFileReader.readPosition(UUID)` to read Transform.Position and world from the Hytale save file
+- **World blacklist** for most gameplay commands. Server owners can now restrict commands from being used in specific worlds (e.g. PvP arenas, minigame worlds). Supports wildcard patterns using `*` (e.g. `"arena*"` blocks any world starting with "arena").
+  - Config: `<feature>.blacklistedWorlds` — empty list by default (no worlds blocked). Add world names or wildcard patterns to restrict usage.
+  - Applies to: `/heal`, `/god`, `/fly`, `/repair`, `/tpa`, `/tpahere`, `/rtp`, `/back`, `/top`, `/home`, `/sethome`, `/spawn`, `/warp`, `/kit`
+  - Message key: `commandBlacklistedWorld` (default: `"&cThis command cannot be used in this world."`)
+  - Example config: `"blacklistedWorlds": ["pvparena_world", "arena*", "minigame_*"]`
+  - New shared utility: `WorldBlacklistUtil` consolidates wildcard matching logic (same pattern as `respawnExcludedWorlds`)
+
 ## 1.1.17 - 2026-03-01
 
 ### Added

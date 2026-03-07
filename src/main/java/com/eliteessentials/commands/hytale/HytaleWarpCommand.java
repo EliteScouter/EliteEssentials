@@ -16,6 +16,7 @@ import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -72,6 +73,12 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                           @Nonnull PlayerRef player, @Nonnull World world) {
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
+        
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.warps.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
         
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARPS, config.warps.enabled)) {
             return;
@@ -131,6 +138,12 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
                               @Nonnull PlayerRef player, @Nonnull World world) {
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             PluginConfig config = configManager.getConfig();
+            
+            if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.warps.blacklistedWorlds)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                return;
+            }
             
             if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.WARPS, config.warps.enabled)) {
                 return;

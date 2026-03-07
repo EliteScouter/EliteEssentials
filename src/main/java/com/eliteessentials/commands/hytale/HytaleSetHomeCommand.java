@@ -7,6 +7,7 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.HomeService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -70,6 +71,13 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     static void setHome(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                         PlayerRef player, World world, String homeName, HomeService homeService) {
         var config = EliteEssentials.getInstance().getConfigManager().getConfig();
+
+        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.homes.blacklistedWorlds)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                EliteEssentials.getInstance().getConfigManager().getMessage("commandBlacklistedWorld"), "#FF5555"));
+            return;
+        }
+
         if (!CommandPermissionUtil.canExecuteWithCost(ctx, player, Permissions.SETHOME, 
                 config.homes.enabled, "sethome", config.homes.setHomeCost)) {
             return;
