@@ -558,6 +558,14 @@ public class EliteEssentials extends JavaPlugin {
             getCommandRegistry().registerCommand(new HytaleSpawnsCommand(spawnStorage));
             registeredCommands.append("/spawn, /setspawn, /delspawn, /spawns, ");
         }
+
+        // First-join spawn commands (under spawn section, but registered separately since
+        // they're useful even if /spawn itself is disabled)
+        if (config.firstJoinSpawn.enabled) {
+            getCommandRegistry().registerCommand(new HytaleSetFirstJoinSpawnCommand(spawnStorage));
+            getCommandRegistry().registerCommand(new HytaleDelFirstJoinSpawnCommand(spawnStorage));
+            registeredCommands.append("/setfirstjoinspawn, /delfirstjoinspawn, ");
+        }
         
         // Warp commands
         if (config.warps.enabled) {

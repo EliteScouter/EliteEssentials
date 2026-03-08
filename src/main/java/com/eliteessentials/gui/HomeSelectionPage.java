@@ -314,7 +314,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
     private void buildHomeList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         Map<String, Home> homes = homeService.getHomes(playerRef.getUuid());
         List<Home> homeList = new ArrayList<>(homes.values());
-        homeList.sort(Comparator.comparing(Home::getName));
+        homeList.sort(Comparator.comparing(Home::getName, Comparator.nullsLast(Comparator.naturalOrder())));
 
         if (homeList.isEmpty()) {
             commandBuilder.clear("#HomeCards");

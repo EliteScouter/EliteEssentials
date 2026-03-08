@@ -213,6 +213,10 @@ public final class Permissions {
     // Kit access: eliteessentials.command.kit.<kitname>
     // (handled by kitAccess() method)
 
+    // First-join spawn
+    public static final String SETFIRSTJOINSPAWN = SPAWN_CATEGORY + ".setfirstjoin";
+    public static final String DELFIRSTJOINSPAWN = SPAWN_CATEGORY + ".delfirstjoin";
+
     // ==================== SPAWN PROTECTION ====================
     public static final String SPAWN_PROTECTION_BYPASS = SPAWN_CATEGORY + ".protection.bypass";
 

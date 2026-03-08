@@ -60,11 +60,12 @@ public class HytaleReloadCommand extends CommandBase {
         if ("reload".equalsIgnoreCase(action)) {
             handleReload(ctx);
         } else if ("migration".equalsIgnoreCase(action)) {
-            ctx.sendMessage(Message.raw("Usage: /eemigration <essentialscore|hyssentials|essentialsplus|homesplus>").color("#FFAA00"));
-            ctx.sendMessage(Message.raw("  essentialscore - Import warps, kits, and homes from nhulston's EssentialsCore").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("Usage: /eemigration <source> [force]").color("#FFAA00"));
+            ctx.sendMessage(Message.raw("  essentialscore - Import warps, spawn, kits, homes, and cooldowns from EssentialsCore").color("#AAAAAA"));
             ctx.sendMessage(Message.raw("  hyssentials - Import homes and warps from Hyssentials").color("#AAAAAA"));
-            ctx.sendMessage(Message.raw("  essentialsplus - Import warps, kits, and homes from fof1092's EssentialsPlus").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("  essentialsplus - Import warps, kits, and homes from EssentialsPlus").color("#AAAAAA"));
             ctx.sendMessage(Message.raw("  homesplus - Import homes from HomesPlus").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("  force - Add after source to overwrite existing data").color("#AAAAAA"));
         } else {
             ctx.sendMessage(Message.raw("Unknown action. Available: reload, migration").color("#FF5555"));
         }

@@ -73,6 +73,7 @@ public class PluginConfig {
     public BanConfig ban = new BanConfig();
     public FreezeConfig freeze = new FreezeConfig();
     public NickConfig nick = new NickConfig();
+    public FirstJoinSpawnConfig firstJoinSpawn = new FirstJoinSpawnConfig();
     
     // ==================== MESSAGES ====================
     
@@ -207,6 +208,12 @@ public class PluginConfig {
         messages.put("spawnListEmpty", "&7No spawn points set in this world.");
         messages.put("spawnRespawnedAt", "&7You respawned at spawn '&e{name}&7'.");
         messages.put("spawnMultiSpawnDisabled", "&cMulti-spawn requires perWorld mode. Set &espawn.perWorld = true &cin config.");
+        
+        // ==================== FIRST JOIN SPAWN ====================
+        messages.put("firstJoinSpawnSet", "&aFirst-join spawn set at &e{location} &ain world '&e{world}&a'.");
+        messages.put("firstJoinSpawnDeleted", "&aFirst-join spawn point removed.");
+        messages.put("firstJoinSpawnNotSet", "&cNo first-join spawn point is set.");
+        messages.put("firstJoinSpawnTeleported", "&aWelcome! You've been teleported to the starting area.");
         
         // ==================== RTP ====================
         messages.put("rtpSearching", "&eSearching for a safe location...");
@@ -1707,5 +1714,23 @@ public class PluginConfig {
          * Recommended: 5-10 minutes.
          */
         public int periodicSaveMinutes = 5;
+    }
+
+    // ==================== FIRST JOIN SPAWN ====================
+
+    public static class FirstJoinSpawnConfig {
+        /**
+         * Enable/disable the first-join spawn feature.
+         * When enabled and a first-join spawn is set (via /setfirstjoinspawn),
+         * new players are teleported there on their first join.
+         */
+        public boolean enabled = true;
+
+        /**
+         * Delay in seconds before teleporting first-join players.
+         * Allows the player to fully load in before teleporting.
+         * Minimum 1 second recommended.
+         */
+        public int delaySeconds = 2;
     }
 }

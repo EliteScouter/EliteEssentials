@@ -42,14 +42,18 @@ public class SpawnStorage {
             .create();
     private static final Type SPAWN_LIST_MAP_TYPE = new TypeToken<Map<String, List<SpawnData>>>(){}.getType();
 
+    private static final String FIRST_JOIN_SPAWN_FILE = "firstjoinspawn.json";
+
     private final File dataFolder;
     private Map<String, List<SpawnData>> spawns = new HashMap<>();
+    private SpawnData firstJoinSpawn;
 
     public SpawnStorage(File dataFolder) {
         this.dataFolder = dataFolder;
     }
 
     public void load() {
+        loadFirstJoinSpawn();
         File file = new File(dataFolder, "spawn.json");
         logger.info("Looking for spawn.json at: " + file.getAbsolutePath());
         
@@ -420,6 +424,69 @@ public class SpawnStorage {
             }
         }
         return result;
+    }
+
+    // ==================== FIRST-JOIN SPAWN ====================
+
+    public SpawnData getFirstJoinSpawn() {
+        return firstJoinSpawn;
+    }
+
+    public boolean hasFirstJoinSpawn() {
+        return firstJoinSpawn != null;
+    }
+
+    public void setFirstJoinSpawn(String world, double x, double y, double z, float yaw, float pitch) {
+        firstJoinSpawn = new SpawnData(world, x, y, z, yaw, pitch);
+        firstJoinSpawn.name = "__firstjoin";
+        firstJoinSpawn.primary = false;
+        firstJoinSpawn.protection = false;
+        saveFirstJoinSpawn();
+    }
+
+    public boolean deleteFirstJoinSpawn() {
+        if (firstJoinSpawn == null) return false;
+        firstJoinSpawn = null;
+        File file = new File(dataFolder, FIRST_JOIN_SPAWN_FILE);
+        if (file.exists()) {
+            file.delete();
+        }
+        logger.info("First-join spawn point removed.");
+        return true;
+    }
+
+    private void loadFirstJoinSpawn() {
+        File file = new File(dataFolder, FIRST_JOIN_SPAWN_FILE);
+        if (!file.exists()) {
+            firstJoinSpawn = null;
+            return;
+        }
+        try (Reader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+            firstJoinSpawn = gson.fromJson(reader, SpawnData.class);
+            if (firstJoinSpawn != null && firstJoinSpawn.world != null) {
+                logger.info("Loaded first-join spawn at " +
+                    String.format("%.1f, %.1f, %.1f", firstJoinSpawn.x, firstJoinSpawn.y, firstJoinSpawn.z) +
+                    " in world '" + firstJoinSpawn.world + "'");
+            } else {
+                firstJoinSpawn = null;
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to load " + FIRST_JOIN_SPAWN_FILE + ": " + e.getMessage());
+            firstJoinSpawn = null;
+        }
+    }
+
+    private void saveFirstJoinSpawn() {
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs();
+        }
+        File file = new File(dataFolder, FIRST_JOIN_SPAWN_FILE);
+        try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
+            gson.toJson(firstJoinSpawn, writer);
+            logger.info("First-join spawn saved to " + FIRST_JOIN_SPAWN_FILE);
+        } catch (Exception e) {
+            logger.warning("Failed to save " + FIRST_JOIN_SPAWN_FILE + ": " + e.getMessage());
+        }
     }
 
     // ==================== WORLD SYNC ====================

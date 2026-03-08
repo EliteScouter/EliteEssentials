@@ -19,6 +19,8 @@ Commands are either available to Everyone or Admin only:
 | `/setspawn [name]` | Set spawn location (named when perWorld=true) | Admin |
 | `/delspawn <name>` | Delete a named spawn point | Admin |
 | `/spawns` | List spawn points in current world | Admin |
+| `/setfirstjoinspawn` | Set first-join spawn for new players | Admin |
+| `/delfirstjoinspawn` | Remove first-join spawn point | Admin |
 | `/rtp` | Random teleport | Everyone |
 | `/tpa <player>` | Request teleport | Everyone |
 | `/tpahere <player>` | Request player to you | Everyone |
@@ -277,6 +279,8 @@ eliteessentials
 | `eliteessentials.command.spawn.set` | Set spawn location (Admin) |
 | `eliteessentials.command.spawn.delete` | Delete a spawn point (Admin) |
 | `eliteessentials.command.spawn.list` | List spawn points (Admin) |
+| `eliteessentials.command.spawn.setfirstjoin` | Set first-join spawn point (Admin) |
+| `eliteessentials.command.spawn.delfirstjoin` | Remove first-join spawn point (Admin) |
 | `eliteessentials.command.spawn.protection.bypass` | Bypass spawn protection |
 | `eliteessentials.command.spawn.bypass.cooldown` | Bypass spawn cooldown |
 | `eliteessentials.command.spawn.bypass.warmup` | Bypass spawn warmup |

@@ -1,7 +1,6 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
-import com.eliteessentials.commands.args.SimpleStringArg;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.EssentialsCoreMigrationService;
@@ -11,13 +10,12 @@ import com.eliteessentials.services.HyssentialsMigrationService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 
 import javax.annotation.Nonnull;
 
 /**
- * Command: /eemigration <source>
+ * Command: /eemigration <source> [force]
  * Migrates data from other essentials plugins.
  * 
  * Sources:
@@ -26,18 +24,18 @@ import javax.annotation.Nonnull;
  * - essentialsplus: Migrate from fof1092's EssentialsPlus
  * - homesplus: Migrate from HomesPlus
  * 
+ * Options:
+ * - force: Overwrite existing homes/cooldowns with EssentialsCore data
+ * 
  * Permissions:
  * - Admin only (simple mode)
  * - eliteessentials.admin.reload (advanced mode)
  */
 public class HytaleMigrationCommand extends CommandBase {
 
-    private final RequiredArg<String> sourceArg;
-
     public HytaleMigrationCommand() {
         super("eemigration", "Migrate data from other essentials plugins");
-        
-        this.sourceArg = withRequiredArg("source", "Source plugin (essentialscore, hyssentials)", SimpleStringArg.ACTION);
+        setAllowsExtraArguments(true);
     }
 
     @Override
@@ -55,10 +53,20 @@ public class HytaleMigrationCommand extends CommandBase {
             return;
         }
         
-        String source = ctx.get(sourceArg);
+        // Parse raw input: /eemigration <source> [force]
+        String rawInput = ctx.getInputString();
+        String[] parts = rawInput.split("\\s+");
+        
+        if (parts.length < 2 || parts[1].isEmpty()) {
+            showUsage(ctx);
+            return;
+        }
+        
+        String source = parts[1];
+        boolean force = parts.length >= 3 && "force".equalsIgnoreCase(parts[2]);
         
         if ("essentialscore".equalsIgnoreCase(source)) {
-            handleEssentialsCoreMigration(ctx);
+            handleEssentialsCoreMigration(ctx, force);
         } else if ("hyssentials".equalsIgnoreCase(source)) {
             handleHyssentialsMigration(ctx);
         } else if ("essentialsplus".equalsIgnoreCase(source)) {
@@ -66,17 +74,29 @@ public class HytaleMigrationCommand extends CommandBase {
         } else if ("homesplus".equalsIgnoreCase(source)) {
             handleHomesPlusMigration(ctx);
         } else {
-            ctx.sendMessage(Message.raw("Unknown source. Available: essentialscore, hyssentials, essentialsplus, homesplus").color("#FF5555"));
-            ctx.sendMessage(Message.raw("Usage: /eemigration <source>").color("#AAAAAA"));
+            showUsage(ctx);
         }
     }
     
-    private void handleEssentialsCoreMigration(CommandContext ctx) {
+    private void showUsage(CommandContext ctx) {
+        ctx.sendMessage(Message.raw("Usage: /eemigration <source> [force]").color("#FFAA00"));
+        ctx.sendMessage(Message.raw("Sources:").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("  essentialscore - Import from nhulston's EssentialsCore").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("  hyssentials - Import from Hyssentials").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("  essentialsplus - Import from EssentialsPlus").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("  homesplus - Import from HomesPlus").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("Options:").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("  force - Overwrite existing homes/cooldowns (use if re-migrating)").color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("Example: /eemigration essentialscore force").color("#777777"));
+    }
+    
+    private void handleEssentialsCoreMigration(CommandContext ctx, boolean force) {
         EliteEssentials plugin = EliteEssentials.getInstance();
         
         EssentialsCoreMigrationService migrationService = new EssentialsCoreMigrationService(
             plugin.getDataFolder(),
             plugin.getWarpStorage(),
+            plugin.getSpawnStorage(),
             plugin.getKitService(),
             plugin.getPlayerFileStorage()
         );
@@ -89,10 +109,13 @@ public class HytaleMigrationCommand extends CommandBase {
         }
         
         ctx.sendMessage(Message.raw("Starting EssentialsCore migration...").color("#FFAA00"));
+        if (force) {
+            ctx.sendMessage(Message.raw("Force mode: existing homes/cooldowns will be overwritten.").color("#FFAA00"));
+        }
         ctx.sendMessage(Message.raw("Source: " + migrationService.getEssentialsCoreFolder().getAbsolutePath()).color("#AAAAAA"));
         
         // Run migration
-        EssentialsCoreMigrationService.MigrationResult result = migrationService.migrate();
+        EssentialsCoreMigrationService.MigrationResult result = migrationService.migrate(force);
         
         // Report results
         if (result.isSuccess()) {
@@ -102,9 +125,15 @@ public class HytaleMigrationCommand extends CommandBase {
         }
         
         ctx.sendMessage(Message.raw("- Warps imported: " + result.getWarpsImported()).color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("- Spawns imported: " + result.getSpawnsImported()).color("#AAAAAA"));
         ctx.sendMessage(Message.raw("- Kits imported: " + result.getKitsImported()).color("#AAAAAA"));
-        ctx.sendMessage(Message.raw("- Players with homes: " + result.getPlayersImported()).color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("- Player files found: " + result.getPlayerFilesFound()).color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("- Players migrated: " + result.getPlayersImported()).color("#AAAAAA"));
+        if (result.getPlayersSkippedExist() > 0) {
+            ctx.sendMessage(Message.raw("- Players skipped (already migrated): " + result.getPlayersSkippedExist()).color("#AAAAAA"));
+        }
         ctx.sendMessage(Message.raw("- Total homes imported: " + result.getHomesImported()).color("#AAAAAA"));
+        ctx.sendMessage(Message.raw("- Kit cooldowns imported: " + result.getKitCooldownsImported()).color("#AAAAAA"));
         
         if (!result.getErrors().isEmpty()) {
             ctx.sendMessage(Message.raw("Errors (" + result.getErrors().size() + "):").color("#FF5555"));
@@ -113,9 +142,14 @@ public class HytaleMigrationCommand extends CommandBase {
             }
         }
         
-        // Remind about existing data
-        if (result.getWarpsImported() == 0 && result.getKitsImported() == 0 && result.getHomesImported() == 0) {
-            ctx.sendMessage(Message.raw("No new data imported. Existing data was preserved.").color("#AAAAAA"));
+        if (result.getTotalImported() == 0) {
+            if (result.getPlayersSkippedExist() > 0) {
+                ctx.sendMessage(Message.raw("No new data imported. All player data was already migrated.").color("#AAAAAA"));
+            } else if (result.getPlayerFilesFound() == 0) {
+                ctx.sendMessage(Message.raw("No new data imported. No player files found in players/ folder.").color("#AAAAAA"));
+            } else {
+                ctx.sendMessage(Message.raw("No new data imported. Existing data was preserved.").color("#AAAAAA"));
+            }
         }
     }
     

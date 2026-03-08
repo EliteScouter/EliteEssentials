@@ -14,6 +14,7 @@ import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportGuard;
+import com.eliteessentials.util.TeleportUtil;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -21,6 +22,8 @@ import com.google.gson.JsonParser;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -356,9 +359,46 @@ public class JoinQuitListener {
                     broadcastMessage(message, "#FFFF55", playerRef);
                 }
 
-                // First-join spawn is handled by Hytale's native ISpawnProvider.
-                // New players with no saved TransformComponent land at the
-                // default spawn location automatically.
+                // First-join spawn teleport: if a first-join spawn is set and the feature
+                // is enabled, teleport the new player there after a short delay.
+                // Falls back to Hytale's native ISpawnProvider if not configured.
+                if (config.firstJoinSpawn.enabled && spawnStorage != null && spawnStorage.hasFirstJoinSpawn()) {
+                    SpawnStorage.SpawnData fjSpawn = spawnStorage.getFirstJoinSpawn();
+                    int delay = Math.max(1, config.firstJoinSpawn.delaySeconds);
+                    final PlayerRef fjPlayer = playerRef;
+                    final World fjCurrentWorld = world;
+
+                    scheduler.schedule(() -> {
+                        try {
+                            World targetWorld = fjCurrentWorld;
+                            if (!fjSpawn.world.equalsIgnoreCase(fjCurrentWorld.getName())) {
+                                World resolved = Universe.get().getWorld(fjSpawn.world);
+                                if (resolved != null) {
+                                    targetWorld = resolved;
+                                }
+                            }
+
+                            Vector3d spawnPos = new Vector3d(fjSpawn.x, fjSpawn.y, fjSpawn.z);
+                            Vector3f spawnRot = new Vector3f(0, fjSpawn.yaw, 0);
+
+                            TeleportUtil.safeTeleport(fjCurrentWorld, targetWorld, spawnPos, spawnRot, fjPlayer,
+                                () -> {
+                                    String msg = configManager.getMessage("firstJoinSpawnTeleported");
+                                    fjPlayer.sendMessage(MessageFormatter.format(msg));
+                                    if (configManager.isDebugEnabled()) {
+                                        logger.info("[FirstJoinSpawn] Teleported " + playerName + " to first-join spawn at " +
+                                            String.format("%.1f, %.1f, %.1f in '%s'", fjSpawn.x, fjSpawn.y, fjSpawn.z, fjSpawn.world));
+                                    }
+                                },
+                                () -> {
+                                    logger.warning("[FirstJoinSpawn] Failed to teleport " + playerName + " - player ref no longer valid");
+                                }
+                            );
+                        } catch (Exception e) {
+                            logger.warning("[FirstJoinSpawn] Error teleporting " + playerName + ": " + e.getMessage());
+                        }
+                    }, delay, TimeUnit.SECONDS);
+                }
 
             } else {
                 // Regular join message (unless player is vanished)

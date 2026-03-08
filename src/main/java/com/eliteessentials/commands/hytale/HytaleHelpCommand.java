@@ -207,6 +207,11 @@ public class HytaleHelpCommand extends CommandBase {
             available.add(new CommandInfo("/setspawn [name]", "Set server spawn point"));
             available.add(new CommandInfo("/delspawn <name>", "Delete a spawn point"));
             available.add(new CommandInfo("/spawns", "List spawn points in current world"));
+
+            if (config.firstJoinSpawn.enabled) {
+                available.add(new CommandInfo("/setfirstjoinspawn", "Set first-join spawn for new players"));
+                available.add(new CommandInfo("/delfirstjoinspawn", "Remove first-join spawn point"));
+            }
             available.add(new CommandInfo("/tphere <player>", "Teleport player to you"));
             
             if (config.warps.enabled) {
@@ -254,7 +259,7 @@ public class HytaleHelpCommand extends CommandBase {
             }
 
             available.add(new CommandInfo("/sendmessage <player|group|all> <message>", "Send a formatted message to player/group/all"));
-            available.add(new CommandInfo("/eemigration", "Migrate data from other essentials plugins"));
+            available.add(new CommandInfo("/eemigration <source> [force]", "Migrate data from other essentials plugins"));
             
             available.add(new CommandInfo("/invsee <player>", "View a player's inventory"));
             available.add(new CommandInfo("/sleeppercent <0-100>", "Set sleep percentage"));

@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.19 - 2026-03-07
+
+### Added
+* **First-join spawn** — teleport new players to a dedicated spawn point (e.g. a tutorial island) on their first join. Completely independent from the regular spawn system
+  * `/setfirstjoinspawn` — stand at the desired location and run the command. New players will be teleported there on first join
+  * `/delfirstjoinspawn` — remove the first-join spawn point (new players will use Hytale's default spawn)
+  * **Config:** `firstJoinSpawn.enabled` (default: `true`), `firstJoinSpawn.delaySeconds` (default: `2` — delay before teleporting to let the player fully load)
+  * **Permissions:** `eliteessentials.command.spawn.setfirstjoin` (Admin), `eliteessentials.command.spawn.delfirstjoin` (Admin)
+  * **Messages:** `firstJoinSpawnSet`, `firstJoinSpawnDeleted`, `firstJoinSpawnNotSet`, `firstJoinSpawnTeleported`
+  * **No conflict** with `teleportOnEveryLogin`: first-join teleport happens at login, every-login rewrite happens at disconnect. First session goes to tutorial, second login onwards goes to regular spawn
+  * **Storage:** Saved in `firstjoinspawn.json` (separate from `spawn.json`), supports cross-world teleport
+* **Migration force mode** — `/eemigration <source> force` overwrites existing homes and kit cooldowns with source data instead of skipping them. Useful when re-migrating after a failed or partial migration
+  * Usage: `/eemigration essentialscore force`
+  * Without `force`, existing data is preserved (same behavior as before)
+  * `/eemigration` with no args now shows full usage help with all sources and options
+
+### Fixed
+* **EssentialsCore migration** (`/eemigration essentialscore`): fixed several missing data migrations
+  * **Kit cooldowns** — player kit cooldowns from `players/{uuid}.json` are now migrated so claimed-kit timers carry over
+  * **Spawn** — `spawn.json` is now imported as the primary spawn for its world (skipped if a spawn already exists)
+  * **Player names** — reads `uuids.json` to resolve player names instead of defaulting to "Unknown" for migrated player files
+  * Migration result now reports player files found, players skipped (already migrated), spawns imported, and kit cooldowns imported
+* **Home GUI crash** — fixed `NullPointerException` in `HomeSelectionPage` when sorting homes with a null name (could occur with corrupted or partially-migrated home data). Sort is now null-safe
+
 ## 1.1.18 - 2026-03-01
 
 ### Added
