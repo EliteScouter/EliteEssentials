@@ -171,14 +171,8 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelLastSeen"), "#AAAAAA"),
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoOnlineNow"), "#55FF55")
             ));
-            // Show coordinates for online players
-            String coords = formatPlayerCoordinates(data.getUuid());
-            if (coords != null) {
-                ctx.sendMessage(Message.join(
-                    MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelCoordinates"), "#AAAAAA"),
-                    Message.raw(coords).color("#55FF55")
-                ));
-            }
+            // Show coordinates for online players - must run on the target player's world thread
+            sendPlayerCoordinates(ctx, data.getUuid());
         } else {
             ctx.sendMessage(Message.join(
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelLastSeen"), "#AAAAAA"),
@@ -334,25 +328,36 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
     }
 
     /**
-     * Returns formatted coordinates "x, y, z (world)" for an online player, or null if unavailable.
+     * Sends formatted coordinates "x, y, z (world)" for an online player.
+     * Dispatches the store read to the player's world thread to avoid
+     * IllegalStateException when the command executor is on a different world.
      */
-    private String formatPlayerCoordinates(@Nonnull UUID playerUuid) {
-        PlayerRef playerRef = Universe.get().getPlayer(playerUuid);
-        if (playerRef == null) return null;
-        Ref<EntityStore> entityRef = playerRef.getReference();
-        if (entityRef == null || !entityRef.isValid()) return null;
-        Store<EntityStore> store = entityRef.getStore();
-        if (store == null) return null;
-        TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
-        if (transform == null) return null;
-        Vector3d pos = transform.getPosition();
-        String worldName = "?";
-        UUID worldUuid = playerRef.getWorldUuid();
-        if (worldUuid != null) {
-            World w = Universe.get().getWorld(worldUuid);
-            if (w != null) worldName = w.getName();
-        }
-        return String.format("%.1f, %.1f, %.1f (%s)", pos.getX(), pos.getY(), pos.getZ(), worldName);
+    private void sendPlayerCoordinates(@Nonnull CommandContext ctx, @Nonnull UUID playerUuid) {
+        PlayerRef targetRef = Universe.get().getPlayer(playerUuid);
+        if (targetRef == null) return;
+
+        // Resolve the world that owns the target player's store
+        UUID worldUuid = targetRef.getWorldUuid();
+        if (worldUuid == null) return;
+        World targetWorld = Universe.get().getWorld(worldUuid);
+        if (targetWorld == null) return;
+
+        // Run the component read on the correct world thread
+        targetWorld.execute(() -> {
+            Ref<EntityStore> entityRef = targetRef.getReference();
+            if (entityRef == null || !entityRef.isValid()) return;
+            Store<EntityStore> store = entityRef.getStore();
+            if (store == null) return;
+            TransformComponent transform = store.getComponent(entityRef, TransformComponent.getComponentType());
+            if (transform == null) return;
+            Vector3d pos = transform.getPosition();
+            String worldName = targetWorld.getName();
+            String coords = String.format("%.1f, %.1f, %.1f (%s)", pos.getX(), pos.getY(), pos.getZ(), worldName);
+            ctx.sendMessage(Message.join(
+                MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelCoordinates"), "#AAAAAA"),
+                Message.raw(coords).color("#55FF55")
+            ));
+        });
     }
 
     private static String formatTimestamp(long millis) {
