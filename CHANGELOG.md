@@ -3,7 +3,7 @@
 ## 1.1.21 - 2026-03-17
 
 ### Fixed
-* **`/playerinfo` crash when target is in a different world** — Viewing info for a player in another world (e.g. skyblock_islands) caused an `IllegalStateException` because the coordinate lookup ran on the wrong world thread. The store read is now dispatched to the target player's world thread via `world.execute()`
+* **`/playerinfo` crash when target is in a different world** — Viewing info for a player in another world caused an `IllegalStateException` because the coordinate lookup ran on the wrong world thread. The store read is now dispatched to the target player's world thread via `world.execute()`
 
 ## 1.1.20 - 2026-03-16
 
