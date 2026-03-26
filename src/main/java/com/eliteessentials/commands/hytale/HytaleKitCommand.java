@@ -16,8 +16,9 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -203,22 +204,13 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
             return;
         }
 
-        Inventory inventory = playerComponent.getInventory();
-        if (inventory == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
-            return;
-        }
-
         // Clear inventory if replace mode
         if (kit.isReplaceInventory()) {
-            inventory.clear();
+            clearAllInventory(store, ref);
         }
 
         // Apply kit items
-        applyKit(kit, inventory, ref, store);
-
-        // Sync inventory
-        playerComponent.sendInventory();
+        applyKit(kit, store, ref);
 
         // Execute kit commands (run ANY server command as console)
         if (kit.hasCommands()) {
@@ -241,12 +233,12 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     }
 
     /**
-     * Apply kit items to player inventory.
+     * Apply kit items to player inventory using ECS InventoryComponent.
      */
-    private static void applyKit(Kit kit, Inventory inventory, Ref<EntityStore> ref, Store<EntityStore> store) {
+    private static void applyKit(Kit kit, Store<EntityStore> store, Ref<EntityStore> ref) {
         for (KitItem kitItem : kit.getItems()) {
             ItemStack itemStack = new ItemStack(kitItem.itemId(), kitItem.quantity());
-            ItemStack remainder = addItemToInventory(inventory, kitItem, itemStack);
+            ItemStack remainder = addItemToInventory(store, ref, kitItem, itemStack);
             
             // Drop overflow on ground
             if (remainder != null && !remainder.isEmpty()) {
@@ -258,8 +250,9 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     /**
      * Add item to inventory, returning any overflow.
      */
-    private static ItemStack addItemToInventory(Inventory inventory, KitItem kitItem, ItemStack itemStack) {
-        ItemContainer container = getContainer(inventory, kitItem.section());
+    private static ItemStack addItemToInventory(Store<EntityStore> store, Ref<EntityStore> ref,
+                                                 KitItem kitItem, ItemStack itemStack) {
+        ItemContainer container = getContainer(store, ref, kitItem.section());
         
         if (container != null) {
             short slot = (short) kitItem.slot();
@@ -274,7 +267,8 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
             // Slot occupied - try adding anywhere
             String section = kitItem.section().toLowerCase();
             if (section.equals("armor") || section.equals("utility") || section.equals("tools")) {
-                ItemStackTransaction tx = inventory.getCombinedHotbarFirst().addItemStack(itemStack);
+                CombinedItemContainer combined = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+                ItemStackTransaction tx = combined.addItemStack(itemStack);
                 return tx.getRemainder();
             }
             
@@ -283,19 +277,35 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         }
         
         // Unknown section - add to hotbar/storage
-        ItemStackTransaction tx = inventory.getCombinedHotbarFirst().addItemStack(itemStack);
+        CombinedItemContainer combined = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+        ItemStackTransaction tx = combined.addItemStack(itemStack);
         return tx.getRemainder();
     }
 
-    private static ItemContainer getContainer(Inventory inventory, String section) {
-        return switch (section.toLowerCase()) {
-            case "hotbar" -> inventory.getHotbar();
-            case "storage" -> inventory.getStorage();
-            case "armor" -> inventory.getArmor();
-            case "utility" -> inventory.getUtility();
-            case "tools" -> inventory.getTools();
+    private static ItemContainer getContainer(Store<EntityStore> store, Ref<EntityStore> ref, String section) {
+        InventoryComponent comp = switch (section.toLowerCase()) {
+            case "hotbar" -> store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            case "storage" -> store.getComponent(ref, InventoryComponent.Storage.getComponentType());
+            case "armor" -> store.getComponent(ref, InventoryComponent.Armor.getComponentType());
+            case "utility" -> store.getComponent(ref, InventoryComponent.Utility.getComponentType());
+            case "tools" -> store.getComponent(ref, InventoryComponent.Tool.getComponentType());
             default -> null;
         };
+        return comp != null ? comp.getInventory() : null;
+    }
+
+    /**
+     * Clear all inventory sections.
+     */
+    private static void clearAllInventory(Store<EntityStore> store, Ref<EntityStore> ref) {
+        for (String section : new String[]{"hotbar", "storage", "armor", "utility", "tools"}) {
+            ItemContainer container = getContainer(store, ref, section);
+            if (container != null) {
+                for (short slot = 0; slot < container.getCapacity(); slot++) {
+                    container.setItemStackForSlot(slot, null);
+                }
+            }
+        }
     }
 
     /**

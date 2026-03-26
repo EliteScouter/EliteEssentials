@@ -1,0 +1,46 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  Label #WarnLabel { Text: "WARN A PLAYER"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Player"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #WarnPlayerInput { FlexWeight: 1; PlaceholderText: "Player name..."; }
+  }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Reason"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #WarnReasonInput { FlexWeight: 1; PlaceholderText: "Reason for warning..."; }
+  }
+  Group { Anchor: (Height: 8); }
+  Group { LayoutMode: Left; Anchor: (Height: 34);
+    TextButton #WarnButton { Text: "WARN"; Anchor: (Width: 100, Height: 30); Style: $A.@AdminWarnBtn; }
+    Group { Anchor: (Width: 8); }
+    TextButton #ClearWarningsButton { Text: "CLEAR WARNINGS"; Anchor: (Width: 140, Height: 30); Style: $A.@AdminDangerBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  Label #LookupLabel { Text: "LOOKUP WARNINGS"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    $C.@TextField #LookupPlayerInput { FlexWeight: 1; PlaceholderText: "Player name to check warnings..."; }
+    Group { Anchor: (Width: 8); }
+    TextButton #WarnLookupButton { Text: "LOOKUP"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Scrollable warn list - fixed height to fill remaining space
+  Group { Anchor: (Height: 270); Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Label #WarnList { Text: "No warnings found"; Style: (FontSize: 11, TextColor: #6e7da1); }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #WarnStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}

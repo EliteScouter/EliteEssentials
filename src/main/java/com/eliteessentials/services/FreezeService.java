@@ -104,6 +104,11 @@ public class FreezeService {
         return frozenPlayers.get(playerId.toString());
     }
 
+    /** Get the number of currently frozen players. */
+    public int getFrozenCount() {
+        return frozenPlayers.size();
+    }
+
     public void reload() {
         load();
     }

@@ -6,6 +6,7 @@ import com.eliteessentials.services.IpBanService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -83,7 +84,7 @@ public class HytaleIpBanCommand extends AbstractPlayerCommand {
                 ? configManager.getMessage("ipbanKickReason", "reason", reason, "bannedBy", player.getUsername())
                 : configManager.getMessage("ipbanKick", "bannedBy", player.getUsername());
             try {
-                target.getPacketHandler().disconnect(MessageFormatter.stripColorCodes(kickMsg));
+                target.getPacketHandler().disconnect(Message.raw(MessageFormatter.stripColorCodes(kickMsg)));
             } catch (Exception e) {
                 // Player may have already disconnected
             }

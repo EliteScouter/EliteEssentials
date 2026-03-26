@@ -8,13 +8,14 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -157,25 +158,17 @@ public class HytaleClearInvCommand extends CommandBase {
                 return;
             }
 
-            Inventory inventory = player.getInventory();
-            if (inventory == null) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("clearInvFailed"), "#FF5555"));
-                return;
-            }
-
             int totalCleared = 0;
-            ItemContainer hotbar = inventory.getHotbar();
+            ItemContainer hotbar = getContainer(store, ref, InventoryComponent.Hotbar.getComponentType());
             if (hotbar != null) totalCleared += clearContainer(hotbar);
-            ItemContainer storage = inventory.getStorage();
+            ItemContainer storage = getContainer(store, ref, InventoryComponent.Storage.getComponentType());
             if (storage != null) totalCleared += clearContainer(storage);
-            ItemContainer armor = inventory.getArmor();
+            ItemContainer armor = getContainer(store, ref, InventoryComponent.Armor.getComponentType());
             if (armor != null) totalCleared += clearContainer(armor);
-            ItemContainer utility = inventory.getUtility();
+            ItemContainer utility = getContainer(store, ref, InventoryComponent.Utility.getComponentType());
             if (utility != null) totalCleared += clearContainer(utility);
-            ItemContainer tools = inventory.getTools();
+            ItemContainer tools = getContainer(store, ref, InventoryComponent.Tool.getComponentType());
             if (tools != null) totalCleared += clearContainer(tools);
-
-            player.sendInventory();
 
             String message = configManager.getMessage("clearInvSuccess", "count", String.valueOf(totalCleared));
             if (finalIsTargetingOther) {
@@ -206,6 +199,15 @@ public class HytaleClearInvCommand extends CommandBase {
             }
         }
         return cleared;
+    }
+
+    /**
+     * Get an ItemContainer from an InventoryComponent on the entity.
+     */
+    private <T extends InventoryComponent> ItemContainer getContainer(
+            Store<EntityStore> store, Ref<EntityStore> ref, ComponentType<EntityStore, T> type) {
+        T component = store.getComponent(ref, type);
+        return component != null ? component.getInventory() : null;
     }
 
     private World findPlayerWorld(PlayerRef player) {

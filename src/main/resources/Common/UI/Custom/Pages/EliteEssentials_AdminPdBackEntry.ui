@@ -1,0 +1,25 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 3, Height: 28);
+  Background: #1a2332(0.5);
+  Padding: (Left: 8, Right: 8);
+
+  Label #PdBackIndex {
+    Style: (FontSize: 10, TextColor: #ccb588, RenderBold: true, VerticalAlignment: Center);
+    Anchor: (Width: 30, Height: 28);
+  }
+
+  Label #PdBackCoords {
+    Style: (FontSize: 10, TextColor: #4a5568, VerticalAlignment: Center);
+    FlexWeight: 1;
+    Anchor: (Height: 28);
+  }
+
+  TextButton #PdBackGoButton {
+    Text: "TP";
+    Anchor: (Width: 40, Height: 22);
+    Style: $A.@AdminSuccBtn;
+  }
+}

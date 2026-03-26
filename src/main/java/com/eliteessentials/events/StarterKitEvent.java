@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -103,15 +103,11 @@ public class StarterKitEvent {
                     return;
                 }
                 
-                Inventory inventory = eventPlayer.getInventory();
-                if (inventory == null) {
-                    logger.warning("Could not get inventory for new player " + username);
-                    return;
-                }
+                Store<EntityStore> freshStore = ref.getStore();
                 
                 for (Kit kit : starterKits) {
                     logger.info("Applying starter kit '" + kit.getDisplayName() + "' to " + username);
-                    applyKit(kit, inventory);
+                    applyKit(kit, freshStore, ref);
                     
                     // Execute kit commands (run ANY server command as console)
                     if (kit.hasCommands()) {
@@ -125,7 +121,6 @@ public class StarterKitEvent {
                 }
                 
                 // Sync inventory to client
-                eventPlayer.sendInventory();
                 logger.info("Sent inventory update to " + username);
             });
         });
@@ -133,10 +128,10 @@ public class StarterKitEvent {
         logger.info("StarterKitEvent registered successfully");
     }
 
-    private void applyKit(Kit kit, Inventory inventory) {
+    private void applyKit(Kit kit, Store<EntityStore> store, Ref<EntityStore> ref) {
         for (KitItem kitItem : kit.getItems()) {
             ItemStack itemStack = new ItemStack(kitItem.itemId(), kitItem.quantity());
-            ItemContainer container = getContainer(inventory, kitItem.section());
+            ItemContainer container = getContainer(store, ref, kitItem.section());
             
             if (container != null) {
                 short slot = (short) kitItem.slot();
@@ -153,15 +148,16 @@ public class StarterKitEvent {
         }
     }
 
-    private ItemContainer getContainer(Inventory inventory, String section) {
-        return switch (section.toLowerCase()) {
-            case "hotbar" -> inventory.getHotbar();
-            case "storage" -> inventory.getStorage();
-            case "armor" -> inventory.getArmor();
-            case "utility" -> inventory.getUtility();
-            case "tools" -> inventory.getTools();
-            default -> inventory.getHotbar();
+    private ItemContainer getContainer(Store<EntityStore> store, Ref<EntityStore> ref, String section) {
+        InventoryComponent comp = switch (section.toLowerCase()) {
+            case "hotbar" -> store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            case "storage" -> store.getComponent(ref, InventoryComponent.Storage.getComponentType());
+            case "armor" -> store.getComponent(ref, InventoryComponent.Armor.getComponentType());
+            case "utility" -> store.getComponent(ref, InventoryComponent.Utility.getComponentType());
+            case "tools" -> store.getComponent(ref, InventoryComponent.Tool.getComponentType());
+            default -> store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
         };
+        return comp != null ? comp.getInventory() : null;
     }
 
     /**

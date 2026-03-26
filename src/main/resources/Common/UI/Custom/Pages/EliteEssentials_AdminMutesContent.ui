@@ -1,0 +1,46 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  Label #MuteLabel { Text: "MUTE A PLAYER"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Player"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #MutePlayerInput { FlexWeight: 1; PlaceholderText: "Player name..."; }
+  }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Reason"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #MuteReasonInput { FlexWeight: 1; PlaceholderText: "Reason for mute..."; }
+  }
+  Group { Anchor: (Height: 8); }
+  Group { LayoutMode: Left; Anchor: (Height: 34);
+    TextButton #MuteButton { Text: "MUTE"; Anchor: (Width: 100, Height: 30); Style: $A.@AdminWarnBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  Label #UnmuteLabel { Text: "UNMUTE A PLAYER"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    $C.@TextField #UnmutePlayerInput { FlexWeight: 1; PlaceholderText: "Player name to unmute..."; }
+    Group { Anchor: (Width: 8); }
+    TextButton #UnmuteButton { Text: "UNMUTE"; Anchor: (Width: 90, Height: 30); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  Label #ActiveLabel { Text: "ACTIVE MUTES"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  // Scrollable mute list - fixed height to fill remaining space
+  Group { Anchor: (Height: 250); Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Label #MuteList { Text: "No active mutes"; Style: (FontSize: 11, TextColor: #6e7da1); }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #MuteStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}

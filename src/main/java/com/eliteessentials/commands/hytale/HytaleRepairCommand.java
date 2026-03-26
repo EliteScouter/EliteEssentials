@@ -17,7 +17,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -230,7 +230,7 @@ public class HytaleRepairCommand extends CommandBase {
                 }
             }
 
-            int repairedCount = repairAllItems(player);
+            int repairedCount = repairAllItems(store, ref);
             if (repairedCount > 0) {
                 if (!isTargetingOther && senderRef != null) {
                     CommandPermissionUtil.chargeCost(ctx, senderRef, COMMAND_NAME_ALL, config.repair.costAll);
@@ -274,7 +274,7 @@ public class HytaleRepairCommand extends CommandBase {
                 }
             }
 
-            boolean repaired = repairItemInHand(player);
+            boolean repaired = repairItemInHand(store, ref);
             if (repaired) {
                 if (!isTargetingOther && senderRef != null) {
                     CommandPermissionUtil.chargeCost(ctx, senderRef, COMMAND_NAME, config.repair.cost);
@@ -302,10 +302,12 @@ public class HytaleRepairCommand extends CommandBase {
      * Repair the item in the player's active hotbar slot.
      * @return true if an item was repaired, false if no item or not damaged
      */
-    private boolean repairItemInHand(Player player) {
-        Inventory inventory = player.getInventory();
-        ItemContainer hotbar = inventory.getHotbar();
-        short activeSlot = (short) inventory.getActiveHotbarSlot();
+    private boolean repairItemInHand(Store<EntityStore> store, Ref<EntityStore> ref) {
+        InventoryComponent.Hotbar hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+        if (hotbarComp == null) return false;
+        
+        ItemContainer hotbar = hotbarComp.getInventory();
+        short activeSlot = (short) hotbarComp.getActiveSlot();
         
         if (activeSlot < 0 || activeSlot >= hotbar.getCapacity()) {
             return false;
@@ -329,25 +331,32 @@ public class HytaleRepairCommand extends CommandBase {
      * Repair all items in the player's inventory.
      * @return count of items repaired
      */
-    private int repairAllItems(Player player) {
+    private int repairAllItems(Store<EntityStore> store, Ref<EntityStore> ref) {
         int count = 0;
-        Inventory inventory = player.getInventory();
         
-        count += repairContainer(inventory.getArmor());
-        count += repairContainer(inventory.getHotbar());
-        count += repairContainer(inventory.getStorage());
-        count += repairContainer(inventory.getUtility());
+        count += repairComponent(store, ref, InventoryComponent.Armor.getComponentType());
+        count += repairComponent(store, ref, InventoryComponent.Hotbar.getComponentType());
+        count += repairComponent(store, ref, InventoryComponent.Storage.getComponentType());
+        count += repairComponent(store, ref, InventoryComponent.Utility.getComponentType());
         
         try {
-            ItemContainer backpack = inventory.getBackpack();
-            if (backpack != null) {
-                count += repairContainer(backpack);
-            }
+            count += repairComponent(store, ref, InventoryComponent.Backpack.getComponentType());
         } catch (Exception e) {
             // Backpack may not be available
         }
         
         return count;
+    }
+
+    /**
+     * Repair all items in an inventory component.
+     */
+    private <T extends InventoryComponent> int repairComponent(
+            Store<EntityStore> store, Ref<EntityStore> ref,
+            com.hypixel.hytale.component.ComponentType<EntityStore, T> type) {
+        T component = store.getComponent(ref, type);
+        if (component == null) return 0;
+        return repairContainer(component.getInventory());
     }
     
     /**

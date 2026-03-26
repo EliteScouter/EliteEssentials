@@ -256,6 +256,12 @@ public final class Permissions {
     public static final String ADMIN_FREEZE = ADMIN_BASE + ".freeze";
     public static final String ADMIN_WARN = ADMIN_BASE + ".warn";
     public static final String ADMIN_CLEARWARNINGS = ADMIN_BASE + ".clearwarnings";
+    public static final String ADMIN_UI = ADMIN_BASE + ".adminui";
+    public static final String ADMIN_KICK = ADMIN_BASE + ".kick";
+    public static final String ADMIN_HEAL = ADMIN_BASE + ".heal";
+    public static final String ADMIN_ECONOMY = ADMIN_BASE + ".economy";
+    public static final String ADMIN_TELEPORT = ADMIN_BASE + ".teleport";
+    public static final String ADMIN_PLAYERDATA = ADMIN_BASE + ".playerdata";
 
     // ==================== ECONOMY CATEGORY ====================
     // eliteessentials.command.economy.*

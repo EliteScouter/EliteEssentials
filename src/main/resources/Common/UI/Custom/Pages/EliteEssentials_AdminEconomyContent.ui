@@ -1,0 +1,64 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Economy overview stats
+  Group { LayoutMode: Left; Anchor: (Height: 65);
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 8);
+      Label { Text: "TOTAL ECONOMY"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #EcoTotal { Text: "0.00"; Anchor: (Height: 26); Style: (FontSize: 20, TextColor: #2ecc71, RenderBold: true); }
+      Label #EcoTotalSub { Text: "across all players"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 6); }
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 8);
+      Label { Text: "AVERAGE BALANCE"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #EcoAverage { Text: "0.00"; Anchor: (Height: 26); Style: (FontSize: 20, TextColor: #ccb588, RenderBold: true); }
+      Label #EcoAvgSub { Text: "per player"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 6); }
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 8);
+      Label { Text: "TRACKED PLAYERS"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #EcoPlayerCount { Text: "0"; Anchor: (Height: 26); Style: (FontSize: 20, TextColor: #9b59b6, RenderBold: true); }
+      Label { Text: "with balance data"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Manage balance
+  Label #ManageLabel { Text: "MANAGE BALANCE"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Player"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #EcoPlayerInput { FlexWeight: 1; PlaceholderText: "Player name..."; }
+  }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Amount"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #EcoAmountInput { FlexWeight: 1; PlaceholderText: "Amount (e.g. 500)"; }
+  }
+  Group { Anchor: (Height: 8); }
+  Group { LayoutMode: Left; Anchor: (Height: 34);
+    TextButton #EcoSetButton { Text: "SET"; Anchor: (Width: 70, Height: 30); Style: $A.@AdminPrimaryBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #EcoAddButton { Text: "ADD"; Anchor: (Width: 70, Height: 30); Style: $A.@AdminSuccBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #EcoRemoveButton { Text: "REMOVE"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminDangerBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #EcoCheckButton { Text: "CHECK"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminSecBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Top balances
+  Label #TopLabel { Text: "TOP BALANCES"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    Label #EcoTopList { Text: "No balance data"; Style: (FontSize: 11, TextColor: #6e7da1); }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #EcoStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}

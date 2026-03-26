@@ -52,6 +52,17 @@ public class ConfigManager {
         if (!configFile.exists()) {
             logger.info("Config file not found, creating default config.json...");
             config = new PluginConfig();
+            
+            // Fresh install detection: if no existing JSON data files exist,
+            // default to H2 for better performance. Existing installs that lost
+            // their config.json but still have data files stay on JSON to be safe.
+            if (!hasExistingJsonData()) {
+                logger.info("Fresh install detected - defaulting storage to H2.");
+                config.storage.storageType = "h2";
+            } else {
+                logger.info("Existing JSON data found - keeping storage as JSON.");
+            }
+            
             saveConfig();
             // Create default messages.json
             loadMessages();
@@ -300,6 +311,34 @@ public class ConfigManager {
         }
         
         return result;
+    }
+
+    /**
+     * Check if the data folder contains existing JSON storage files.
+     * Used to distinguish a true fresh install from a config-deleted upgrade.
+     * If any player data, warps, or index files exist, this is NOT a fresh install.
+     */
+    private boolean hasExistingJsonData() {
+        // Check for player_index.json (created as soon as any player joins with JSON storage)
+        if (new File(dataFolder, "player_index.json").exists()) {
+            return true;
+        }
+        // Check for players/ folder with at least one .json file
+        File playersFolder = new File(dataFolder, "players");
+        if (playersFolder.isDirectory()) {
+            File[] files = playersFolder.listFiles((dir, name) -> name.endsWith(".json"));
+            if (files != null && files.length > 0) {
+                return true;
+            }
+        }
+        // Check for other common JSON data files
+        if (new File(dataFolder, "warps.json").exists()) {
+            return true;
+        }
+        if (new File(dataFolder, "spawn.json").exists()) {
+            return true;
+        }
+        return false;
     }
 
     public void saveConfig() {

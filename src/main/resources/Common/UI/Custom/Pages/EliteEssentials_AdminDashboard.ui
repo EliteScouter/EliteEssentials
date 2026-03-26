@@ -1,0 +1,151 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  Anchor: (Width: 720, Height: 620);
+  LayoutMode: Left;
+
+  // ===== SIDEBAR =====
+  Group #Sidebar {
+    Anchor: (Width: 180);
+    Background: #0a0f16(0.98);
+    LayoutMode: Top;
+    Padding: (Full: 12);
+
+    Label {
+      Text: "ELITE ESSENTIALS";
+      Anchor: (Height: 32);
+      Style: (FontSize: 13, TextColor: #ccb588, RenderBold: true, LetterSpacing: 2, RenderUppercase: true);
+    }
+
+    Group { Anchor: (Height: 1); Background: #1a2332; }
+    Group { Anchor: (Height: 8); }
+
+    Label #NavHeader {
+      Text: "NAVIGATION";
+      Anchor: (Height: 18);
+      Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2, RenderUppercase: true);
+    }
+
+    Group { Anchor: (Height: 4); }
+
+    TextButton #NavDashboard {
+      Text: "  Dashboard";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+      Disabled: true;
+    }
+
+    TextButton #NavPlayers {
+      Text: "  Players";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavBans {
+      Text: "  Bans";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavMutes {
+      Text: "  Mutes";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavWarns {
+      Text: "  Warnings";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavStats {
+      Text: "  Server Stats";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    Group { Anchor: (Height: 6); }
+    Group { Anchor: (Height: 1); Background: #1a2332; }
+    Group { Anchor: (Height: 6); }
+
+    Label #NavToolsHeader {
+      Text: "TOOLS";
+      Anchor: (Height: 18);
+      Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2, RenderUppercase: true);
+    }
+
+    Group { Anchor: (Height: 4); }
+
+    TextButton #NavActivity {
+      Text: "  Activity Log";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavEconomy {
+      Text: "  Economy";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavTeleports {
+      Text: "  Teleports";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    TextButton #NavPlayerData {
+      Text: "  Player Data";
+      Anchor: (Height: 30);
+      Style: $A.@AdminNavButtonStyle;
+    }
+
+    Group { FlexWeight: 1; }
+
+    Group { Anchor: (Height: 1); Background: #1a2332; }
+    Group { Anchor: (Height: 6); }
+
+    Label #VersionLabel {
+      Text: "EliteEssentials";
+      Anchor: (Height: 16);
+      Style: (FontSize: 9, TextColor: #4a5568);
+    }
+  }
+
+  // ===== MAIN CONTENT =====
+  Group #MainContent {
+    FlexWeight: 1;
+    Background: #111820(0.98);
+    LayoutMode: Top;
+    Padding: (Full: 18);
+
+    // Header Bar (persistent across views)
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 36);
+
+      Label #PageTitle {
+        Text: "Dashboard";
+        FlexWeight: 1;
+        Anchor: (Height: 36);
+        Style: (FontSize: 20, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+      }
+
+      TextButton #CloseButton {
+        Text: "X";
+        Anchor: (Width: 36, Height: 30);
+        Style: $A.@AdminSecBtn;
+      }
+    }
+
+    Group { Anchor: (Height: 2); Background: #1a2332; }
+
+    // Swappable content area
+    Group #ContentArea {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Top: 12);
+    }
+  }
+}

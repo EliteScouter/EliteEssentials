@@ -99,6 +99,13 @@ public class StorageFactory {
         return dataSource != null && !dataSource.isClosed();
     }
 
+    /**
+     * @return the shared HikariDataSource, or null if SQL is not active
+     */
+    public HikariDataSource getDataSource() {
+        return dataSource;
+    }
+
     // ==================== Internal ====================
 
     /**

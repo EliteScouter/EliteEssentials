@@ -9,7 +9,7 @@
     }
   ],
   "Main": "com.eliteessentials.EliteEssentials",
-  "ServerVersion": ">=2026.1.0",
+  "ServerVersion": "${serverVersion}",
   "Dependencies": {},
   "OptionalDependencies": {
     "HelpChat:PlaceholderAPI": "*",

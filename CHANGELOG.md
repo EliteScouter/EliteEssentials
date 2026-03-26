@@ -1,6 +1,18 @@
 # Changelog
 
-## 2.0.0 - 2026-03-23
+## 2.0.0 - 2026-03-26
+
+Thank you all for using EliteEssentials -- we're really proud of how far this addon has come, and that's thanks to every one of you and the suggestions you've sent in. This release brings H2/SQL storage support; fresh installs will default to H2, and existing users can migrate from JSON to H2 or MySQL using `/eemigration`. There's also a brand new `/admin` UI -- the Hytale UI system is not exactly my strong suit, so please go easy on me. If you have any feedback or suggestions, drop them in Discord or GitHub.
+
+Huge thanks again to everyone using EliteEssentials!
+
+### Fixed
+* **Hytale API compatibility** — updated all calls to match Hytale's latest API changes:
+  * `PacketHandler.disconnect()` now requires `Message` instead of `String` — wrapped all disconnect calls with `Message.raw()` across ban, tempban, IP ban, warn, kick, and Admin UI pages
+  * `PlayerSetupConnectEvent.setReason()` now requires `Message` instead of `String` — updated ban/tempban/IP ban connection denial in `ConnectListener`
+  * `Player.sendInventory()` removed from the API — removed all calls in kit claiming, starter kits, clear inventory, and kit selection GUI. Inventory changes are now applied directly without explicit sync
+  * Migrated from deprecated `Inventory` class to new ECS-based `InventoryComponent` system — inventory sections (hotbar, storage, armor, utility, tools, backpack) are now accessed as individual ECS components via `store.getComponent()` instead of the monolithic `player.getInventory()`. Updated across clear inventory, kit claiming, kit creation, repair, starter kits, and kit selection GUI
+  * `manifest.json` now specifies `ServerVersion` matching the build target instead of wildcard `*`, eliminating the "does not specify a target server version" warning on startup. Version is driven from `gradle.properties` for single-source-of-truth updates
 
 ### Added
 * **SQL database storage support** — EliteEssentials can now persist all data to a SQL database instead of JSON files. Choose between three storage backends via `config.json`:
@@ -21,6 +33,7 @@
 * **Graceful shutdown** — all pending SQL writes are flushed before the connection pool closes. Pool waits up to 30 seconds for active queries to complete
 * **Multi-server freshness** — when using MySQL, player data is loaded fresh from the database on join rather than relying on stale cache. Data is flushed to DB and evicted from cache on disconnect
 * **Post-migration cleanup** — `/eemigration cleanup` moves migrated JSON files (`players/`, `warps.json`, `spawn.json`, `firstjoinspawn.json`, `player_index.json`) into a `backup/` subfolder. Only available when `storageType` is not `"json"`. Keeps the data folder clean after switching to SQL
+* **Smart storage defaults for new installs** — fresh installs (no existing data files) now default to `"h2"` storage for better out-of-the-box performance. Existing installs upgrading to 2.0.0 keep `"json"` unless manually changed. If `config.json` is missing but JSON data files exist (e.g. `player_index.json`, `players/`, `warps.json`, `spawn.json`), the plugin stays on `"json"` to protect existing data
 
 ### Configuration
 * New `storage` section in `config.json`:

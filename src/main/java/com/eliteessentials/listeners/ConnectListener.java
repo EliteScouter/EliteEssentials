@@ -6,6 +6,7 @@ import com.eliteessentials.services.FreezeService;
 import com.eliteessentials.services.IpBanService;
 import com.eliteessentials.services.TempBanService;
 import com.eliteessentials.util.MessageFormatter;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.MovementSettings;
@@ -68,7 +69,7 @@ public class ConnectListener {
             String reason = entry != null && entry.reason != null ? entry.reason : "No reason specified";
             String bannedBy = entry != null && entry.bannedBy != null ? entry.bannedBy : "Server";
             String msg = configManager.getMessage("banConnectDenied", "reason", reason, "bannedBy", bannedBy);
-            event.setReason(MessageFormatter.stripColorCodes(msg));
+            event.setReason(Message.raw(MessageFormatter.stripColorCodes(msg)));
             event.setCancelled(true);
             logger.info("[BanService] Blocked banned player: " + username + " (" + playerId + ")");
             return;
@@ -82,7 +83,7 @@ public class ConnectListener {
             String remaining = TempBanService.formatDuration(tempBanService.getRemainingTime(playerId));
             String msg = configManager.getMessage("tempbanConnectDenied", "reason", reason,
                     "time", remaining, "bannedBy", bannedBy);
-            event.setReason(MessageFormatter.stripColorCodes(msg));
+            event.setReason(Message.raw(MessageFormatter.stripColorCodes(msg)));
             event.setCancelled(true);
             logger.info("[TempBanService] Blocked temp-banned player: " + username + " (" + remaining + " remaining)");
             return;
@@ -96,7 +97,7 @@ public class ConnectListener {
                 String reason = entry != null && entry.reason != null ? entry.reason : "No reason specified";
                 String bannedBy = entry != null && entry.bannedBy != null ? entry.bannedBy : "Server";
                 String msg = configManager.getMessage("ipbanConnectDenied", "reason", reason, "bannedBy", bannedBy);
-                event.setReason(MessageFormatter.stripColorCodes(msg));
+                event.setReason(Message.raw(MessageFormatter.stripColorCodes(msg)));
                 event.setCancelled(true);
                 logger.info("[IpBanService] Blocked IP-banned player: " + username + " (IP: " + ip + ")");
             }

@@ -1,0 +1,20 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 3, Height: 28);
+  Background: #1a2332(0.5);
+  Padding: (Left: 8, Right: 8);
+
+  Label #EntryName {
+    Style: (FontSize: 11, TextColor: #bfe3ff, RenderBold: true, VerticalAlignment: Center);
+    FlexWeight: 1;
+    Anchor: (Height: 28);
+  }
+
+  TextButton #EntrySelectButton {
+    Text: "SELECT";
+    Anchor: (Width: 70, Height: 22);
+    Style: $A.@AdminSecBtn;
+  }
+}

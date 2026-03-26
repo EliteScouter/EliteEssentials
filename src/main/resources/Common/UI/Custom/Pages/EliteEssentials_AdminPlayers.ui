@@ -1,0 +1,191 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  Anchor: (Width: 580, Height: 500);
+  Background: #111820(0.98);
+  LayoutMode: Top;
+  Padding: (Full: 18);
+
+  // Header
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 34);
+
+    Label #PageTitle {
+      Text: "Player Management";
+      FlexWeight: 1;
+      Anchor: (Height: 34);
+      Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    TextButton #BackButton {
+      Text: "BACK";
+      Anchor: (Width: 70, Height: 28);
+      Style: $A.@AdminSecBtn;
+    }
+  }
+
+  Group { Anchor: (Height: 2); Background: #1a2332; }
+  Group { Anchor: (Height: 10); }
+
+  // Player Lookup
+  Label #LookupLabel {
+    Text: "PLAYER LOOKUP";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+
+  Group { Anchor: (Height: 4); }
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 38);
+    Background: #1a2332(0.4);
+    Padding: (Left: 10, Right: 10);
+
+    $C.@TextField #LookupInput {
+      FlexWeight: 1;
+      PlaceholderText: "Enter player name...";
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    TextButton #LookupButton {
+      Text: "LOOKUP";
+      Anchor: (Width: 80, Height: 30);
+      Style: $A.@AdminPrimaryBtn;
+    }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Player Info Panel
+  Group {
+    Background: #1a2332(0.4);
+    Padding: (Full: 10);
+    LayoutMode: Top;
+    Anchor: (Height: 60);
+
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 20);
+      Label { Text: "Name:"; Anchor: (Width: 80, Height: 20); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoName { Text: "-"; FlexWeight: 1; Anchor: (Height: 20); Style: (FontSize: 11, TextColor: #ffffff); }
+      Label { Text: "Health:"; Anchor: (Width: 60, Height: 20); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoHealth { Text: "-"; Anchor: (Width: 60, Height: 20); Style: (FontSize: 11, TextColor: #e74c3c); }
+    }
+
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 20);
+      Label { Text: "Location:"; Anchor: (Width: 80, Height: 20); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoLocation { Text: "-"; FlexWeight: 1; Anchor: (Height: 20); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 20);
+      Label { Text: "Status:"; Anchor: (Width: 80, Height: 20); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoStatus { Text: "-"; FlexWeight: 1; Anchor: (Height: 20); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Player Actions
+  Label #ActionsLabel {
+    Text: "PLAYER ACTIONS";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+
+  Group { Anchor: (Height: 4); }
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 34);
+
+    TextButton #TeleportToButton {
+      Text: "TP TO";
+      Anchor: (Width: 70, Height: 30);
+      Style: $A.@AdminSuccBtn;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #TeleportHereButton {
+      Text: "TP HERE";
+      Anchor: (Width: 80, Height: 30);
+      Style: $A.@AdminPrimaryBtn;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #HealButton {
+      Text: "HEAL";
+      Anchor: (Width: 70, Height: 30);
+      Style: $A.@AdminSuccBtn;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #FreezeButton {
+      Text: "FREEZE";
+      Anchor: (Width: 80, Height: 30);
+      Style: $A.@AdminWarnBtn;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #KickButton {
+      Text: "KICK";
+      Anchor: (Width: 70, Height: 30);
+      Style: $A.@AdminDangerBtn;
+    }
+  }
+
+  Group { Anchor: (Height: 12); }
+
+  // Online Players List
+  Label #OnlineLabel {
+    Text: "ONLINE PLAYERS";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+
+  Group { Anchor: (Height: 4); }
+
+  Group {
+    FlexWeight: 1;
+    Background: #1a2332(0.3);
+    Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+    Group #PlayerListCards {
+      LayoutMode: Top;
+    }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Footer
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 28);
+
+    Label #PlayerStatusMsg {
+      Text: "";
+      FlexWeight: 1;
+      Anchor: (Height: 28);
+      Style: (FontSize: 10, TextColor: #2ecc71, VerticalAlignment: Center);
+    }
+
+    TextButton #RefreshButton {
+      Text: "REFRESH";
+      Anchor: (Width: 90, Height: 26);
+      Style: $A.@AdminPrimaryBtn;
+    }
+  }
+}

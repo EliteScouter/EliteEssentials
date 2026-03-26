@@ -1,0 +1,52 @@
+// Shared styles for EliteEssentials Admin UI
+
+@AdminNavButtonStyle = TextButtonStyle(
+  Default: (Background: #0d1520, LabelStyle: (FontSize: 12, TextColor: #6e7da1, RenderBold: false, VerticalAlignment: Center)),
+  Hovered: (Background: #1a2535, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: false, VerticalAlignment: Center)),
+  Pressed: (Background: #0a1018, LabelStyle: (FontSize: 12, TextColor: #ccb588, RenderBold: true, VerticalAlignment: Center)),
+  Disabled: (Background: #1a2535, LabelStyle: (FontSize: 12, TextColor: #ccb588, RenderBold: true, VerticalAlignment: Center))
+);
+
+@AdminActiveNavStyle = TextButtonStyle(
+  Default: (Background: #1a2535, LabelStyle: (FontSize: 12, TextColor: #ccb588, RenderBold: true, VerticalAlignment: Center)),
+  Hovered: (Background: #1a2535, LabelStyle: (FontSize: 12, TextColor: #e0c99a, RenderBold: true, VerticalAlignment: Center)),
+  Pressed: (Background: #1a2535, LabelStyle: (FontSize: 12, TextColor: #ccb588, RenderBold: true, VerticalAlignment: Center))
+);
+
+@AdminPrimaryBtn = TextButtonStyle(
+  Default: (Background: #8b6914, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #a07a1a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #725510, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+@AdminDangerBtn = TextButtonStyle(
+  Default: (Background: #c0392b, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #e74c3c, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #a93226, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+@AdminWarnBtn = TextButtonStyle(
+  Default: (Background: #e67e22, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #f39c12, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #d35400, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+@AdminSuccBtn = TextButtonStyle(
+  Default: (Background: #27ae60, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #2ecc71, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #1e8449, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+@AdminSecBtn = TextButtonStyle(
+  Default: (Background: #2b3542, LabelStyle: (FontSize: 11, TextColor: #96a9be, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #3b4552, LabelStyle: (FontSize: 11, TextColor: #b6c9de, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #1b2532, LabelStyle: (FontSize: 11, TextColor: #96a9be, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);
+
+// Filter button: grey when inactive, gold when Disabled (active filter)
+@AdminFilterBtn = TextButtonStyle(
+  Default: (Background: #2b3542, LabelStyle: (FontSize: 11, TextColor: #96a9be, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #3b4552, LabelStyle: (FontSize: 11, TextColor: #b6c9de, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #1b2532, LabelStyle: (FontSize: 11, TextColor: #96a9be, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Disabled: (Background: #8b6914, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center))
+);

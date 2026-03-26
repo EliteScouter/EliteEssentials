@@ -1,0 +1,39 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  Label #ActivityHeader { Text: "RECENT ACTIVITY"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+
+  // Filter row - uses @AdminFilterBtn with Disabled = active (gold)
+  Group { LayoutMode: Left; Anchor: (Height: 34);
+    TextButton #FilterAll { Text: "ALL"; Anchor: (Width: 60, Height: 28); Style: $A.@AdminFilterBtn; Disabled: true; }
+    Group { Anchor: (Width: 4); }
+    TextButton #FilterBans { Text: "BANS"; Anchor: (Width: 60, Height: 28); Style: $A.@AdminFilterBtn; }
+    Group { Anchor: (Width: 4); }
+    TextButton #FilterMutes { Text: "MUTES"; Anchor: (Width: 70, Height: 28); Style: $A.@AdminFilterBtn; }
+    Group { Anchor: (Width: 4); }
+    TextButton #FilterWarns { Text: "WARNS"; Anchor: (Width: 70, Height: 28); Style: $A.@AdminFilterBtn; }
+    Group { Anchor: (Width: 4); }
+    TextButton #FilterKicks { Text: "KICKS"; Anchor: (Width: 70, Height: 28); Style: $A.@AdminFilterBtn; }
+    Group { FlexWeight: 1; }
+    TextButton #RefreshActivityButton { Text: "REFRESH"; Anchor: (Width: 80, Height: 28); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Activity log list (scrollable) - fixed height to fill available space
+  Group { Anchor: (Height: 430); Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Label #ActivityLog { Text: "No activity recorded yet."; Style: (FontSize: 11, TextColor: #6e7da1); }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 20);
+    Label #ActivityCount { Text: ""; FlexWeight: 1; Anchor: (Height: 20); Style: (FontSize: 10, TextColor: #4a5568, VerticalAlignment: Center); }
+    Label #ActivityStatusMsg { Text: ""; Anchor: (Width: 200, Height: 20); Style: (FontSize: 10, TextColor: #2ecc71, HorizontalAlignment: End, VerticalAlignment: Center); }
+  }
+}

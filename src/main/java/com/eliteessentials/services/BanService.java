@@ -105,6 +105,16 @@ public class BanService {
         return bans.get(playerId.toString());
     }
 
+    /** Get the number of active permanent bans. */
+    public int getBanCount() {
+        return bans.size();
+    }
+
+    /** Get all ban entries (unmodifiable view). */
+    public Map<String, BanEntry> getAllBans() {
+        return Collections.unmodifiableMap(bans);
+    }
+
     public void reload() {
         load();
     }

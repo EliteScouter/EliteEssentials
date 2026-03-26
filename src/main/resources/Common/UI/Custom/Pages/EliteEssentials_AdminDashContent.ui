@@ -1,0 +1,123 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Welcome Message
+  Label #WelcomeMsg {
+    Text: "Welcome, Admin!";
+    Anchor: (Height: 28);
+    Style: (FontSize: 14, TextColor: #96a9be);
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Quick Stats Row
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 65);
+
+    Group {
+      FlexWeight: 1;
+      Background: #1a2332(0.6);
+      LayoutMode: Top;
+      Padding: (Full: 8);
+      Label #StatPlayersLabel { Text: "ONLINE"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StatPlayers { Text: "0"; Anchor: (Height: 26); Style: (FontSize: 22, TextColor: #ccb588, RenderBold: true); }
+      Label { Text: "players"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 6); }
+    Group {
+      FlexWeight: 1;
+      Background: #1a2332(0.6);
+      LayoutMode: Top;
+      Padding: (Full: 8);
+      Label #StatTpsLabel { Text: "TPS"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StatTPS { Text: "--"; Anchor: (Height: 26); Style: (FontSize: 22, TextColor: #2ecc71, RenderBold: true); }
+      Label { Text: "ticks/sec"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 6); }
+    Group {
+      FlexWeight: 1;
+      Background: #1a2332(0.6);
+      LayoutMode: Top;
+      Padding: (Full: 8);
+      Label #StatMemLabel { Text: "MEMORY"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StatMemory { Text: "0 MB"; Anchor: (Height: 26); Style: (FontSize: 22, TextColor: #e67e22, RenderBold: true); }
+      Label #StatMemMax { Text: "/ 0 MB"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 6); }
+    Group {
+      FlexWeight: 1;
+      Background: #1a2332(0.6);
+      LayoutMode: Top;
+      Padding: (Full: 8);
+      Label #StatUptimeLabel { Text: "UPTIME"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StatUptime { Text: "0h 0m"; Anchor: (Height: 26); Style: (FontSize: 22, TextColor: #9b59b6, RenderBold: true); }
+      Label { Text: "since start"; Anchor: (Height: 12); Style: (FontSize: 9, TextColor: #4a5568); }
+    }
+  }
+
+  Group { Anchor: (Height: 14); }
+
+  // Quick Actions
+  Label #QuickActionsLabel {
+    Text: "QUICK ACTIONS";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2, RenderUppercase: true);
+  }
+  Group { Anchor: (Height: 6); }
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 36);
+    TextButton #QuickPlayers { Text: "PLAYERS"; Anchor: (Width: 100, Height: 32); Style: $A.@AdminSecBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #QuickBans { Text: "BANS"; Anchor: (Width: 100, Height: 32); Style: $A.@AdminSecBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #QuickStats { Text: "STATS"; Anchor: (Width: 100, Height: 32); Style: $A.@AdminSecBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #QuickReload { Text: "RELOAD"; Anchor: (Width: 100, Height: 32); Style: $A.@AdminWarnBtn; }
+  }
+
+  Group { Anchor: (Height: 14); }
+
+  // Server Info
+  Label #RecentLabel {
+    Text: "SERVER INFO";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2, RenderUppercase: true);
+  }
+  Group { Anchor: (Height: 4); }
+  Group {
+    FlexWeight: 1;
+    Background: #1a2332(0.3);
+    Padding: (Full: 10);
+    LayoutMode: Top;
+
+    Group { LayoutMode: Left; Anchor: (Height: 18);
+      Label { Text: "Active Bans:"; Anchor: (Width: 120, Height: 18); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoBans { Text: "0"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+    Group { LayoutMode: Left; Anchor: (Height: 18);
+      Label { Text: "Active Mutes:"; Anchor: (Width: 120, Height: 18); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoMutes { Text: "0"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+    Group { LayoutMode: Left; Anchor: (Height: 18);
+      Label { Text: "Frozen Players:"; Anchor: (Width: 120, Height: 18); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoFrozen { Text: "0"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+    Group { LayoutMode: Left; Anchor: (Height: 18);
+      Label { Text: "Total Warps:"; Anchor: (Width: 120, Height: 18); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoWarps { Text: "0"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+    Group { LayoutMode: Left; Anchor: (Height: 18);
+      Label { Text: "Total Kits:"; Anchor: (Width: 120, Height: 18); Style: (FontSize: 11, TextColor: #4a5568); }
+      Label #InfoKits { Text: "0"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 11, TextColor: #ffffff); }
+    }
+  }
+
+  Group { Anchor: (Height: 8); }
+  Group { Anchor: (Height: 1); Background: #1a2332; }
+  Group { Anchor: (Height: 6); }
+  Label #StatusBar { Text: "Ready"; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+}

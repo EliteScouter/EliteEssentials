@@ -9,6 +9,7 @@ import com.eliteessentials.storage.PlayerStorageProvider;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -143,7 +144,7 @@ public class HytaleWarnCommand extends AbstractPlayerCommand {
             if (target != null) {
                 try {
                     target.getPacketHandler().disconnect(
-                        com.eliteessentials.util.MessageFormatter.stripColorCodes(autoReason));
+                        Message.raw(com.eliteessentials.util.MessageFormatter.stripColorCodes(autoReason)));
                 } catch (Exception e) {
                     // Player may have already disconnected
                 }

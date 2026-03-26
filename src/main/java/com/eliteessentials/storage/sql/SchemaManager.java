@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class SchemaManager {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final int CURRENT_SCHEMA_VERSION = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 2;
 
     /**
      * Initialize the database schema. Creates all tables if they don't exist
@@ -88,8 +88,24 @@ public class SchemaManager {
         // Example:
         // case 2: applyV2Migration(conn, tablePrefix); break;
         switch (version) {
+            case 2:
+                // Add activity_log table
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "activity_log ("
+                            + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                            + "type       VARCHAR(32)  NOT NULL,"
+                            + "admin      VARCHAR(64)  NOT NULL,"
+                            + "target     VARCHAR(64)  NOT NULL,"
+                            + "detail     TEXT,"
+                            + "timestamp  BIGINT       NOT NULL"
+                            + ")");
+                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_type ON "
+                            + tablePrefix + "activity_log(type)");
+                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
+                            + tablePrefix + "activity_log(timestamp)");
+                }
+                break;
             default:
-                // No migration logic for version 1 (initial schema created by createTables)
                 break;
         }
     }
@@ -264,6 +280,20 @@ public class SchemaManager {
                     + "version    INT          NOT NULL,"
                     + "applied_at BIGINT       NOT NULL"
                     + ")");
+
+            // Activity log
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "activity_log ("
+                    + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                    + "type       VARCHAR(32)  NOT NULL,"
+                    + "admin      VARCHAR(64)  NOT NULL,"
+                    + "target     VARCHAR(64)  NOT NULL,"
+                    + "detail     TEXT,"
+                    + "timestamp  BIGINT       NOT NULL"
+                    + ")");
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_type ON "
+                    + tablePrefix + "activity_log(type)");
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
+                    + tablePrefix + "activity_log(timestamp)");
         }
     }
 }

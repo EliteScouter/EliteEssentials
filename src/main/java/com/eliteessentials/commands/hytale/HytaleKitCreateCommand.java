@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -70,15 +70,9 @@ public class HytaleKitCreateCommand extends AbstractPlayerCommand {
             return;
         }
 
-        // Get player's inventory
+        // Get player's inventory via ECS components
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
-            context.sendMessage(Message.raw("Could not access your inventory.").color("#FF5555"));
-            return;
-        }
-
-        Inventory inventory = player.getInventory();
-        if (inventory == null) {
             context.sendMessage(Message.raw("Could not access your inventory.").color("#FF5555"));
             return;
         }
@@ -86,11 +80,11 @@ public class HytaleKitCreateCommand extends AbstractPlayerCommand {
         List<KitItem> items = new ArrayList<>();
 
         // Collect items from all inventory sections
-        collectItems(inventory.getHotbar(), "hotbar", items);
-        collectItems(inventory.getStorage(), "storage", items);
-        collectItems(inventory.getArmor(), "armor", items);
-        collectItems(inventory.getUtility(), "utility", items);
-        collectItems(inventory.getTools(), "tools", items);
+        collectFromComponent(store, ref, InventoryComponent.Hotbar.getComponentType(), "hotbar", items);
+        collectFromComponent(store, ref, InventoryComponent.Storage.getComponentType(), "storage", items);
+        collectFromComponent(store, ref, InventoryComponent.Armor.getComponentType(), "armor", items);
+        collectFromComponent(store, ref, InventoryComponent.Utility.getComponentType(), "utility", items);
+        collectFromComponent(store, ref, InventoryComponent.Tool.getComponentType(), "tools", items);
 
         if (items.isEmpty()) {
             context.sendMessage(Message.raw("Your inventory is empty. Add some items before creating a kit.").color("#FF5555"));
@@ -133,6 +127,16 @@ public class HytaleKitCreateCommand extends AbstractPlayerCommand {
         if (seconds < 60) return seconds + "s";
         if (seconds < 3600) return (seconds / 60) + "m";
         return (seconds / 3600) + "h";
+    }
+
+    private <T extends InventoryComponent> void collectFromComponent(
+            Store<EntityStore> store, Ref<EntityStore> ref,
+            com.hypixel.hytale.component.ComponentType<EntityStore, T> type,
+            String section, List<KitItem> items) {
+        T component = store.getComponent(ref, type);
+        if (component != null) {
+            collectItems(component.getInventory(), section, items);
+        }
     }
 
     private void collectItems(@Nonnull ItemContainer container, @Nonnull String section, @Nonnull List<KitItem> items) {

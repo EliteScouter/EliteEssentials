@@ -1,0 +1,129 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Player Lookup
+  Label #LookupLabel {
+    Text: "PLAYER LOOKUP";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+  Group { Anchor: (Height: 4); }
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 38);
+    Background: #1a2332(0.4);
+    Padding: (Left: 10, Right: 10);
+    $C.@TextField #LookupInput { FlexWeight: 1; PlaceholderText: "Enter player name..."; }
+    Group { Anchor: (Width: 8); }
+    TextButton #LookupButton { Text: "LOOKUP"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Player Info Panel
+  Group #PlayerInfoPanel {
+    Background: #1a2332(0.4);
+    Padding: (Full: 10);
+    LayoutMode: Top;
+    Anchor: (Height: 160);
+    Visible: false;
+
+    // Row 1: Name + Status
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Name:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoName { Text: "-"; Anchor: (Width: 180, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+      Label { Text: "Status:"; Anchor: (Width: 60, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoStatus { Text: "-"; Anchor: (Width: 140, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+    }
+    // Row 2: UUID (full width, clickable)
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "UUID:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      TextButton #InfoUuidButton { Text: "-"; Anchor: (Width: 380, Height: 16); Style: (Default: (Background: #00000000, LabelStyle: (FontSize: 10, TextColor: #55aaff, HorizontalAlignment: Start, VerticalAlignment: Center)), Hovered: (Background: #00000000, LabelStyle: (FontSize: 10, TextColor: #77ccff, HorizontalAlignment: Start, VerticalAlignment: Center)), Pressed: (Background: #00000000, LabelStyle: (FontSize: 10, TextColor: #3388dd, HorizontalAlignment: Start, VerticalAlignment: Center))); }
+    }
+    // Row 3: Location (full width)
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Location:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoLocation { Text: "-"; Anchor: (Width: 380, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+    }
+    // Row 4: First Join + Last Seen
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "First Join:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoFirstJoin { Text: "-"; Anchor: (Width: 180, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+      Label { Text: "Last Seen:"; Anchor: (Width: 70, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoLastSeen { Text: "-"; Anchor: (Width: 130, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+    }
+    // Row 5: Play Time + Wallet
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Play Time:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoPlayTime { Text: "-"; Anchor: (Width: 180, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+      Label { Text: "Wallet:"; Anchor: (Width: 70, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoWallet { Text: "-"; Anchor: (Width: 130, Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+    }
+    // Row 6: Homes + Warnings
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Homes:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoHomes { Text: "-"; Anchor: (Width: 180, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+      Label { Text: "Warnings:"; Anchor: (Width: 70, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoWarnings { Text: "-"; Anchor: (Width: 130, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+    }
+    // Row 7: Punishments (full width)
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Punishments:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoPunishments { Text: "-"; Anchor: (Width: 380, Height: 16); Style: (FontSize: 10, TextColor: #e67e22); }
+    }
+    // Row 8: Nickname + Kit Claims
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Nickname:"; Anchor: (Width: 80, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoNickname { Text: "-"; Anchor: (Width: 180, Height: 16); Style: (FontSize: 10, TextColor: #ffaa00); }
+      Label { Text: "Kit Claims:"; Anchor: (Width: 70, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #InfoKitClaims { Text: "-"; Anchor: (Width: 130, Height: 16); Style: (FontSize: 10, TextColor: #ffffff); }
+    }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Player Actions
+  Label #ActionsLabel {
+    Text: "PLAYER ACTIONS";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+  Group { Anchor: (Height: 4); }
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 34);
+    TextButton #TeleportToButton { Text: "TP TO"; Anchor: (Width: 70, Height: 30); Style: $A.@AdminSuccBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #TeleportHereButton { Text: "TP HERE"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminPrimaryBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #HealButton { Text: "HEAL"; Anchor: (Width: 70, Height: 30); Style: $A.@AdminSuccBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #FreezeButton { Text: "FREEZE"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminWarnBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #KickButton { Text: "KICK"; Anchor: (Width: 70, Height: 30); Style: $A.@AdminDangerBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Online Players
+  Label #OnlineLabel {
+    Text: "ONLINE PLAYERS";
+    Anchor: (Height: 18);
+    Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2);
+  }
+  Group { Anchor: (Height: 4); }
+  Group {
+    FlexWeight: 1;
+    Background: #1a2332(0.3);
+    Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #PlayerListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #PlayerStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}

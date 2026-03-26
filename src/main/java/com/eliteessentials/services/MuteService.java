@@ -100,6 +100,16 @@ public class MuteService {
         return mutes.get(playerId.toString());
     }
 
+    /** Get the number of active mutes. */
+    public int getMuteCount() {
+        return mutes.size();
+    }
+
+    /** Get all mute entries (unmodifiable view). */
+    public Map<String, MuteEntry> getAllMutes() {
+        return Collections.unmodifiableMap(mutes);
+    }
+
     public void reload() {
         load();
     }

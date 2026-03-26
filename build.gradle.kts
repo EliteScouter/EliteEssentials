@@ -29,7 +29,8 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    compileOnly("com.hypixel.hytale:Server:2026.02.19-1a311a592")
+    val serverVersion = findProperty("serverVersion") as String? ?: "2026.03.26-89796e57b"
+    compileOnly("com.hypixel.hytale:Server:$serverVersion")
 
     compileOnly("at.helpch:placeholderapi-hytale:1.0.4")
 
@@ -71,7 +72,8 @@ tasks {
         val props = mapOf(
             "group" to project.group,
             "version" to project.version,
-            "description" to project.description
+            "description" to project.description,
+            "serverVersion" to (findProperty("serverVersion") as String? ?: "2026.03.26-89796e57b")
         )
         inputs.properties(props)
         

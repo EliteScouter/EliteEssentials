@@ -1,0 +1,67 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Player lookup
+  Label #PdLookupLabel { Text: "PLAYER DATA LOOKUP"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    $C.@TextField #PdPlayerInput { FlexWeight: 1; PlaceholderText: "Enter player name..."; }
+    Group { Anchor: (Width: 8); }
+    TextButton #PdLookupButton { Text: "LOOKUP"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Player summary (hidden until lookup)
+  Group #PdSummaryPanel {
+    Background: #1a2332(0.4);
+    Padding: (Full: 10);
+    LayoutMode: Top;
+    Anchor: (Height: 36);
+    Visible: false;
+
+    Group { LayoutMode: Left; Anchor: (Height: 16);
+      Label { Text: "Player:"; Anchor: (Width: 60, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #PdName { Text: "-"; Anchor: (Width: 140, Height: 16); Style: (FontSize: 10, TextColor: #ffffff, RenderBold: true); }
+      Label { Text: "Homes:"; Anchor: (Width: 55, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #PdHomeCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
+      Label { Text: "Back:"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #PdBackCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
+      Label { Text: "Kits:"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #PdKitCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
+    }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Homes section
+  Label #PdHomesLabel { Text: "HOMES"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #PdHomeListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Back history section
+  Group { LayoutMode: Left; Anchor: (Height: 18);
+    Label #PdBackLabel { Text: "BACK HISTORY"; FlexWeight: 1; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+    TextButton #PdClearBackButton { Text: "CLEAR"; Anchor: (Width: 70, Height: 18); Style: $A.@AdminDangerBtn; }
+    Group { Anchor: (Width: 6); }
+    TextButton #PdClearKitsButton { Text: "RESET KITS"; Anchor: (Width: 90, Height: 18); Style: $A.@AdminWarnBtn; }
+  }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #PdBackListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #PdStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}

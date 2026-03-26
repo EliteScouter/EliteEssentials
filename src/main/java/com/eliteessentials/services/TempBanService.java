@@ -134,6 +134,16 @@ public class TempBanService {
     /**
      * Get remaining ban time in milliseconds, or 0 if not banned/expired.
      */
+    /** Get the number of active temp bans. */
+    public int getBanCount() {
+        return tempBans.size();
+    }
+
+    /** Get all temp ban entries (unmodifiable view). */
+    public Map<String, TempBanEntry> getAllTempBans() {
+        return Collections.unmodifiableMap(tempBans);
+    }
+
     public long getRemainingTime(UUID playerId) {
         TempBanEntry entry = tempBans.get(playerId.toString());
         if (entry == null) return 0;

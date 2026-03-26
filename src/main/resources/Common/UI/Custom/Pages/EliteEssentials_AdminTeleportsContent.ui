@@ -1,0 +1,34 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Warps section
+  Label #WarpsLabel { Text: "SERVER WARPS"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #WarpListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  // Spawns section
+  Label #SpawnsLabel { Text: "SPAWN POINTS"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #SpawnListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Group { Anchor: (Height: 1); Background: #1a2332; }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 20);
+    Label #TpStatusMsg { Text: ""; FlexWeight: 1; Anchor: (Height: 20); Style: (FontSize: 10, TextColor: #2ecc71, VerticalAlignment: Center); }
+    TextButton #RefreshTpButton { Text: "REFRESH"; Anchor: (Width: 80, Height: 20); Style: $A.@AdminPrimaryBtn; }
+  }
+}

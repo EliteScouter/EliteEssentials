@@ -1,0 +1,61 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  // Row 1: Players & TPS
+  Group { LayoutMode: Left; Anchor: (Height: 75);
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StPlayersLabel { Text: "PLAYERS ONLINE"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StPlayers { Text: "0"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #ccb588, RenderBold: true); }
+      Label #StPlayersMax { Text: "online"; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 8); }
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StTpsLabel { Text: "SERVER TPS"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StTPS { Text: "--"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #2ecc71, RenderBold: true); }
+      Label #StTpsTarget { Text: "/ 30.0 target"; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+  }
+  Group { Anchor: (Height: 8); }
+
+  // Row 2: Memory
+  Group { LayoutMode: Left; Anchor: (Height: 75);
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StMemLabel { Text: "MEMORY USED"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StMemory { Text: "0 MB"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #e67e22, RenderBold: true); }
+      Label #StMemMax { Text: "/ 0 MB allocated"; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 8); }
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StFreeLabel { Text: "FREE MEMORY"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StFreeMem { Text: "0 MB"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #27ae60, RenderBold: true); }
+      Label { Text: "available"; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+  }
+  Group { Anchor: (Height: 8); }
+
+  // Row 3: Uptime & Java
+  Group { LayoutMode: Left; Anchor: (Height: 75);
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StUptimeLabel { Text: "UPTIME"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StUptime { Text: "0h 0m"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #9b59b6, RenderBold: true); }
+      Label { Text: "since restart"; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+    Group { Anchor: (Width: 8); }
+    Group { FlexWeight: 1; Background: #1a2332(0.6); LayoutMode: Top; Padding: (Full: 10);
+      Label #StJavaLabel { Text: "JAVA VERSION"; Anchor: (Height: 14); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 1); }
+      Label #StJava { Text: "--"; Anchor: (Height: 28); Style: (FontSize: 22, TextColor: #ffffff, RenderBold: true); }
+      Label #StOS { Text: ""; Anchor: (Height: 14); Style: (FontSize: 10, TextColor: #4a5568); }
+    }
+  }
+
+  Group { FlexWeight: 1; }
+
+  Group { Anchor: (Height: 1); Background: #1a2332; }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 28);
+    Label #StStatusMsg { Text: "Stats loaded"; FlexWeight: 1; Anchor: (Height: 28); Style: (FontSize: 10, TextColor: #2ecc71, VerticalAlignment: Center); }
+    TextButton #RefreshStatsButton { Text: "REFRESH"; Anchor: (Width: 90, Height: 28); Style: $A.@AdminPrimaryBtn; }
+  }
+}

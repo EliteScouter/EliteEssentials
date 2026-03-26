@@ -37,6 +37,7 @@ import com.eliteessentials.services.IpBanService;
 import com.eliteessentials.services.FlyService;
 import com.eliteessentials.services.FreezeService;
 import com.eliteessentials.services.WarnService;
+import com.eliteessentials.services.TpsTracker;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.services.PlayTimeRewardService;
 import com.eliteessentials.services.RtpService;
@@ -47,6 +48,7 @@ import com.eliteessentials.services.TabListService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
+import com.eliteessentials.services.ActivityLogService;
 import com.eliteessentials.storage.CustomHelpStorage;
 import com.eliteessentials.storage.DiscordStorage;
 import com.eliteessentials.storage.GlobalStorageProvider;
@@ -129,6 +131,7 @@ public class EliteEssentials extends JavaPlugin {
     private IpBanService ipBanService;
     private FreezeService freezeService;
     private WarnService warnService;
+    private ActivityLogService activityLogService;
     private NickService nickService;
     private GreetingStorage greetingStorage;
     private GreetingService greetingService;
@@ -269,6 +272,16 @@ public class EliteEssentials extends JavaPlugin {
         ipBanService = new IpBanService(this.dataFolder);
         freezeService = new FreezeService(this.dataFolder);
         warnService = new WarnService(this.dataFolder);
+
+        // Activity log for admin UI audit trail (persisted to JSON or SQL)
+        if (storageFactory.isSqlActive()) {
+            String tablePrefix = configManager.getConfig().storage.mysql != null
+                    && configManager.getConfig().storage.mysql.tablePrefix != null
+                    ? configManager.getConfig().storage.mysql.tablePrefix : "ee_";
+            activityLogService = new ActivityLogService(this.dataFolder, storageFactory.getDataSource(), tablePrefix);
+        } else {
+            activityLogService = new ActivityLogService(this.dataFolder);
+        }
 
         // Wire mute/ignore services into group chat for filtering
         groupChatService.setMuteService(muteService);
@@ -469,6 +482,9 @@ public class EliteEssentials extends JavaPlugin {
         
         getLogger().at(Level.INFO).log("EliteEssentials started successfully!");
         
+        // Start TPS tracker for Admin UI
+        TpsTracker.get().start();
+        
         // Validate all JSON config files at the END of startup so errors are visible
         validateConfigsOnStartup();
     }
@@ -554,6 +570,8 @@ public class EliteEssentials extends JavaPlugin {
             vaultUnlockedIntegration.shutdown();
         }
         
+        TpsTracker.get().stop();
+        
         getLogger().at(Level.INFO).log("EliteEssentials disabled.");
     }
     
@@ -635,7 +653,8 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleReloadCommand());
         getCommandRegistry().registerCommand(new HytaleAliasCommand());
         getCommandRegistry().registerCommand(new HytaleMigrationCommand());
-        registeredCommands.append("/eliteessentials, /alias, /eemigration, ");
+        getCommandRegistry().registerCommand(new HytaleAdminUICommand());
+        registeredCommands.append("/eliteessentials, /alias, /eemigration, /admin, ");
         
         // God command
         if (config.god.enabled) {
@@ -1012,6 +1031,10 @@ public class EliteEssentials extends JavaPlugin {
         return warnService;
     }
     
+    public ActivityLogService getActivityLogService() {
+        return activityLogService;
+    }
+    
     public NickService getNickService() {
         return nickService;
     }
@@ -1141,6 +1164,11 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (warnService != null) {
             warnService.reload();
+        }
+        
+        // Reload activity log
+        if (activityLogService != null) {
+            activityLogService.reload();
         }
         
         // Restart periodic play time save (interval may have changed)

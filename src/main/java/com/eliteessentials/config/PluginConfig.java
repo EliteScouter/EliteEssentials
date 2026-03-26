@@ -499,6 +499,131 @@ public class PluginConfig {
         messages.put("tpaUseAcceptCommand", "Type /tpaccept to accept the request from {player}");
         messages.put("tpaUseDenyCommand", "Type /tpdeny to deny the request from {player}");
         
+        // ==================== ADMIN UI ====================
+        messages.put("adminui.dashboard.title", "Dashboard");
+        messages.put("adminui.dashboard.welcome", "Welcome, {player}!");
+        messages.put("adminui.dashboard.quickActions", "QUICK ACTIONS");
+        messages.put("adminui.dashboard.serverInfo", "SERVER INFO");
+        messages.put("adminui.dashboard.reload", "Reload");
+        messages.put("adminui.dashboard.ready", "Ready");
+        messages.put("adminui.nav.header", "NAVIGATION");
+        messages.put("adminui.nav.dashboard", "Dashboard");
+        messages.put("adminui.nav.players", "Players");
+        messages.put("adminui.nav.bans", "Bans");
+        messages.put("adminui.nav.mutes", "Mutes");
+        messages.put("adminui.nav.warnings", "Warnings");
+        messages.put("adminui.nav.stats", "Server Stats");
+        messages.put("adminui.stats.online", "ONLINE");
+        messages.put("adminui.stats.tps", "TPS");
+        messages.put("adminui.stats.memory", "MEMORY");
+        messages.put("adminui.stats.uptime", "UPTIME");
+        messages.put("adminui.stats.title", "Server Stats");
+        messages.put("adminui.stats.refresh", "REFRESH");
+        messages.put("adminui.stats.playersOnline", "PLAYERS ONLINE");
+        messages.put("adminui.stats.serverTps", "SERVER TPS");
+        messages.put("adminui.stats.memoryUsed", "MEMORY USED");
+        messages.put("adminui.stats.freeMemory", "FREE MEMORY");
+        messages.put("adminui.stats.javaVersion", "JAVA VERSION");
+        messages.put("adminui.stats.loaded", "Stats loaded");
+        messages.put("adminui.players.title", "Player Management");
+        messages.put("adminui.players.lookup", "PLAYER LOOKUP");
+        messages.put("adminui.players.actions", "PLAYER ACTIONS");
+        messages.put("adminui.players.online", "ONLINE PLAYERS");
+        messages.put("adminui.players.tpTo", "TP TO");
+        messages.put("adminui.players.tpHere", "TP HERE");
+        messages.put("adminui.players.heal", "HEAL");
+        messages.put("adminui.players.freeze", "FREEZE");
+        messages.put("adminui.players.kick", "KICK");
+        messages.put("adminui.players.refresh", "REFRESH");
+        messages.put("adminui.players.select", "SELECT");
+        messages.put("adminui.players.noPlayers", "No players online.");
+        messages.put("adminui.players.selected", "Selected: {player}");
+        messages.put("adminui.players.offline", "Offline");
+        messages.put("adminui.players.tpHereSuccess", "Teleported {player} to you.");
+        messages.put("adminui.players.healed", "Healed {player}.");
+        messages.put("adminui.players.frozen", "Froze {player}.");
+        messages.put("adminui.players.unfrozen", "Unfroze {player}.");
+        messages.put("adminui.players.kicked", "Kicked {player}.");
+        messages.put("adminui.players.kickReason", "Kicked by admin.");
+        messages.put("adminui.bans.title", "Ban Management");
+        messages.put("adminui.bans.banPlayer", "BAN A PLAYER");
+        messages.put("adminui.bans.unbanPlayer", "UNBAN A PLAYER");
+        messages.put("adminui.bans.activeBans", "ACTIVE BANS");
+        messages.put("adminui.bans.ban", "BAN");
+        messages.put("adminui.bans.tempBan", "TEMP BAN");
+        messages.put("adminui.bans.ipBan", "IP BAN");
+        messages.put("adminui.bans.unban", "UNBAN");
+        messages.put("adminui.bans.noBans", "No active bans");
+        messages.put("adminui.bans.enterName", "Enter a player name.");
+        messages.put("adminui.bans.invalidDuration", "Invalid duration. Use e.g. 1d, 7d, 1h.");
+        messages.put("adminui.bans.banned", "Banned {player}.");
+        messages.put("adminui.bans.tempBanned", "Temp banned {player} for {duration}.");
+        messages.put("adminui.bans.ipBanned", "IP banned {player}.");
+        messages.put("adminui.bans.ipFailed", "Could not get player IP.");
+        messages.put("adminui.bans.alreadyBanned", "{player} is already banned.");
+        messages.put("adminui.bans.unbanned", "Unbanned {player}.");
+        messages.put("adminui.bans.notBanned", "{player} is not banned.");
+        messages.put("adminui.bans.banKickMsg", "You have been banned from this server.");
+        messages.put("adminui.mutes.title", "Mute Management");
+        messages.put("adminui.mutes.mutePlayer", "MUTE A PLAYER");
+        messages.put("adminui.mutes.unmutePlayer", "UNMUTE A PLAYER");
+        messages.put("adminui.mutes.activeMutes", "ACTIVE MUTES");
+        messages.put("adminui.mutes.mute", "MUTE");
+        messages.put("adminui.mutes.unmute", "UNMUTE");
+        messages.put("adminui.mutes.noMutes", "No active mutes");
+        messages.put("adminui.mutes.enterName", "Enter a player name.");
+        messages.put("adminui.mutes.muted", "Muted {player}.");
+        messages.put("adminui.mutes.alreadyMuted", "{player} is already muted.");
+        messages.put("adminui.mutes.unmuted", "Unmuted {player}.");
+        messages.put("adminui.mutes.notMuted", "{player} is not muted.");
+        messages.put("adminui.warns.title", "Warning Management");
+        messages.put("adminui.warns.warnPlayer", "WARN A PLAYER");
+        messages.put("adminui.warns.lookupWarnings", "LOOKUP WARNINGS");
+        messages.put("adminui.warns.warn", "WARN");
+        messages.put("adminui.warns.clearWarnings", "CLEAR WARNINGS");
+        messages.put("adminui.warns.lookupBtn", "LOOKUP");
+        messages.put("adminui.warns.noWarnings", "No warnings found");
+        messages.put("adminui.warns.enterName", "Enter a player name.");
+        messages.put("adminui.warns.warned", "Warned {player}. Total: {count}");
+        messages.put("adminui.warns.cleared", "Cleared {count} warnings for {player}.");
+        
+        // ==================== ADMIN UI - ACTIVITY LOG ====================
+        messages.put("adminui.activity.title", "Activity Log");
+        messages.put("adminui.activity.header", "RECENT ACTIVITY");
+        messages.put("adminui.activity.empty", "No activity recorded yet.");
+        messages.put("adminui.activity.emptyFilter", "No matching activity.");
+        
+        // ==================== ADMIN UI - ECONOMY ====================
+        messages.put("adminui.economy.title", "Economy");
+        messages.put("adminui.economy.manage", "MANAGE BALANCE");
+        messages.put("adminui.economy.topBalances", "TOP BALANCES");
+        messages.put("adminui.economy.set", "SET");
+        messages.put("adminui.economy.add", "ADD");
+        messages.put("adminui.economy.remove", "REMOVE");
+        messages.put("adminui.economy.check", "CHECK");
+        messages.put("adminui.economy.enterName", "Enter a player name.");
+        messages.put("adminui.economy.invalidAmount", "Invalid amount.");
+        
+        // ==================== ADMIN UI - TELEPORTS ====================
+        messages.put("adminui.teleports.title", "Teleports");
+        messages.put("adminui.teleports.warps", "SERVER WARPS");
+        messages.put("adminui.teleports.spawns", "SPAWN POINTS");
+        
+        // ==================== ADMIN UI - PLAYER DATA ====================
+        messages.put("adminui.playerdata.title", "Player Data");
+        messages.put("adminui.playerdata.lookup", "PLAYER DATA LOOKUP");
+        messages.put("adminui.playerdata.homes", "HOMES");
+        messages.put("adminui.playerdata.backHistory", "BACK HISTORY");
+        messages.put("adminui.playerdata.clearBack", "CLEAR BACK HISTORY");
+        messages.put("adminui.playerdata.resetKits", "RESET KIT CLAIMS");
+        
+        // ==================== ADMIN UI - NAV (new tabs) ====================
+        messages.put("adminui.nav.activity", "Activity Log");
+        messages.put("adminui.nav.economy", "Economy");
+        messages.put("adminui.nav.teleports", "Teleports");
+        messages.put("adminui.nav.playerdata", "Player Data");
+        messages.put("adminui.nav.tools", "TOOLS");
+        
         // ==================== PLAYTIME REWARDS ====================
         messages.put("playTimeRewardReceived", "&a[Reward] &fYou received: &e{reward}");
         messages.put("playTimeMilestoneBroadcast", "&6[Milestone] &f{player} &7reached &e{reward} &7({time} playtime)!");

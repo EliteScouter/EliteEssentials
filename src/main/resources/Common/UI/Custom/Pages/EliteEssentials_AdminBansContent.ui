@@ -1,0 +1,55 @@
+$C = "../Common.ui";
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Top;
+
+  Label #BanLabel { Text: "BAN A PLAYER"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Player"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #BanPlayerInput { FlexWeight: 1; PlaceholderText: "Player name..."; }
+  }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Duration"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #BanDurationInput { FlexWeight: 1; PlaceholderText: "e.g. 1d, 7d, 30d, perm"; }
+  }
+  Group { Anchor: (Height: 6); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    Label { Text: "Reason"; Anchor: (Width: 60, Height: 38); Style: (FontSize: 11, TextColor: #96a9be, VerticalAlignment: Center); }
+    $C.@TextField #BanReasonInput { FlexWeight: 1; PlaceholderText: "Reason for ban..."; }
+  }
+  Group { Anchor: (Height: 8); }
+  Group { LayoutMode: Left; Anchor: (Height: 34);
+    TextButton #BanButton { Text: "BAN"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminDangerBtn; }
+    Group { Anchor: (Width: 8); }
+    TextButton #TempBanButton { Text: "TEMP BAN"; Anchor: (Width: 100, Height: 30); Style: $A.@AdminWarnBtn; }
+    Group { Anchor: (Width: 8); }
+    TextButton #IpBanButton { Text: "IP BAN"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminDangerBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  Label #UnbanLabel { Text: "UNBAN A PLAYER"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { LayoutMode: Left; Anchor: (Height: 38); Background: #1a2332(0.4); Padding: (Left: 10, Right: 10);
+    $C.@TextField #UnbanPlayerInput { FlexWeight: 1; PlaceholderText: "Player name to unban..."; }
+    Group { Anchor: (Width: 8); }
+    TextButton #UnbanButton { Text: "UNBAN"; Anchor: (Width: 80, Height: 30); Style: $A.@AdminPrimaryBtn; }
+  }
+
+  Group { Anchor: (Height: 10); }
+
+  Label #ActiveLabel { Text: "ACTIVE BANS"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  // Scrollable ban list - fixed height to fill remaining space
+  Group { Anchor: (Height: 190); Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Label #BanList { Text: "No active bans"; Style: (FontSize: 11, TextColor: #6e7da1); }
+  }
+
+  Group { Anchor: (Height: 6); }
+  Label #BanStatusMsg { Text: ""; Anchor: (Height: 16); Style: (FontSize: 10, TextColor: #2ecc71); }
+}
