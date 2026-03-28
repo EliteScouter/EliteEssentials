@@ -1363,7 +1363,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
 
     /**
      * Check if the admin has a specific permission in advanced mode.
-     * In simple mode, all admins have full access (they already passed the /admin gate).
+     * In simple mode, all admins have full access (they already passed the /eeadmin gate).
      * In advanced mode, checks the granular permission node.
      */
     private boolean hasAdminPermission(String permission) {

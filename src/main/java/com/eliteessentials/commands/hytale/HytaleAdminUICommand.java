@@ -18,13 +18,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 /**
- * Command: /admin
+ * Command: /eeadmin
  * Opens the Admin UI dashboard panel.
  * Admin-only command.
  */
 public class HytaleAdminUICommand extends AbstractPlayerCommand {
 
-    private static final String COMMAND_NAME = "admin";
+    private static final String COMMAND_NAME = "eeadmin";
 
     public HytaleAdminUICommand() {
         super(COMMAND_NAME, "Open the Admin UI panel");

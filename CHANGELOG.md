@@ -1,8 +1,18 @@
 # Changelog
 
+## 2.0.1 - 2026-03-28
+
+### Changed
+* **Renamed `/admin` to `/eeadmin`** — avoids conflicts with other mods that register their own `/admin` command
+
+### Fixed
+* **Default join/leave messages leaking through** — the vanilla "player has joined default" and "player left the server" messages were showing alongside custom EliteEssentials messages, even with `suppressDefaultMessages: true`. Root cause: the event-based suppression (`AddPlayerToWorldEvent.setBroadcastJoinMessage(false)`) was no longer reliably preventing the server from sending the vanilla join message in the latest Hytale API update.
+  * Replaced the old `LeaveMessagePacketFilter` (which only caught leave messages via reflection) with a new `DefaultMessagePacketFilter` that intercepts both join and leave `ServerMessage` packets at the network level. Since `ServerMessage.message` and `FormattedMessage.messageId` are now public fields in the updated API, reflection is no longer needed
+  * Added `RemovedPlayerFromWorldEvent` handler with `setBroadcastLeaveMessage(false)` — the new API now provides a proper event-based method to suppress leave messages (previously only join messages had this via `AddPlayerToWorldEvent`)
+
 ## 2.0.0 - 2026-03-26
 
-Thank you all for using EliteEssentials -- we're really proud of how far this addon has come, and that's thanks to every one of you and the suggestions you've sent in. This release brings H2/SQL storage support; fresh installs will default to H2, and existing users can migrate from JSON to H2 or MySQL using `/eemigration`. There's also a brand new `/admin` UI -- the Hytale UI system is not exactly my strong suit, so please go easy on me. If you have any feedback or suggestions, drop them in Discord or GitHub.
+Thank you all for using EliteEssentials -- we're really proud of how far this addon has come, and that's thanks to every one of you and the suggestions you've sent in. This release brings H2/SQL storage support; fresh installs will default to H2, and existing users can migrate from JSON to H2 or MySQL using `/eemigration`. There's also a brand new `/eeadmin` UI -- the Hytale UI system is not exactly my strong suit, so please go easy on me. If you have any feedback or suggestions, drop them in Discord or GitHub.
 
 Huge thanks again to everyone using EliteEssentials!
 

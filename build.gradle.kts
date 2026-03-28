@@ -5,7 +5,7 @@ plugins {
 }
 
 group = findProperty("pluginGroup") as String? ?: "com.eliteessentials"
-version = findProperty("pluginVersion") as String? ?: "2.0.0"
+version = findProperty("pluginVersion") as String? ?: "2.0.1"
 description = findProperty("pluginDescription") as String? ?: "Essential commands for Hytale servers"
 
 repositories {
@@ -88,6 +88,7 @@ tasks {
         
         relocate("com.google.gson", "com.eliteessentials.libs.gson")
         relocate("com.zaxxer.hikari", "com.eliteessentials.libs.hikari")
+        relocate("org.slf4j", "com.eliteessentials.libs.slf4j")
         // Note: H2 is NOT relocated because its internal engine uses class name lookups
         // and service loaders that break when packages are renamed
         relocate("com.mysql", "com.eliteessentials.libs.mysql")

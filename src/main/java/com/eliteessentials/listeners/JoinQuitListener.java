@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.DrainPlayerFromWorldEvent;
+import com.hypixel.hytale.server.core.event.events.player.RemovedPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -157,11 +158,20 @@ public class JoinQuitListener {
         eventRegistry.registerGlobal(AddPlayerToWorldEvent.class, event -> {
             onPlayerAddToWorld(event);
         });
+
+        // Suppress default leave messages using the proper API event
+        // RemovedPlayerFromWorldEvent.setBroadcastLeaveMessage(false) prevents
+        // the built-in "player left the server" message
+        eventRegistry.registerGlobal(RemovedPlayerFromWorldEvent.class, event -> {
+            onPlayerRemovedFromWorld(event);
+        });
         
-        // Register packet filter to suppress default leave messages
-        // This prevents the "player has left world" message from being sent to clients
+        // Register packet filter to suppress default join AND leave messages
+        // This is the most reliable approach - intercepts the packets before
+        // they reach clients, regardless of event timing
         if (config.joinMsg.suppressDefaultMessages) {
-            LeaveMessagePacketFilter.register();
+            DefaultMessagePacketFilter.setDebugEnabled(configManager.isDebugEnabled());
+            DefaultMessagePacketFilter.register();
         }
     }
 
@@ -284,6 +294,18 @@ public class JoinQuitListener {
             if (greetingService != null) {
                 greetingService.evaluate(playerRef, "world_enter", worldName, false, null);
             }
+        }
+    }
+
+    /**
+     * Handle player removed from world event.
+     * Suppresses the default Hytale leave message ("player left the server")
+     * using the proper API method added in the latest server update.
+     */
+    private void onPlayerRemovedFromWorld(RemovedPlayerFromWorldEvent event) {
+        PluginConfig config = configManager.getConfig();
+        if (config.joinMsg.suppressDefaultMessages) {
+            event.setBroadcastLeaveMessage(false);
         }
     }
 
@@ -756,12 +778,11 @@ public class JoinQuitListener {
         PluginConfig config = configManager.getConfig();
         
         try {
+            DefaultMessagePacketFilter.setDebugEnabled(configManager.isDebugEnabled());
             if (config.joinMsg.suppressDefaultMessages) {
-                // Register the global filter
-                LeaveMessagePacketFilter.register();
+                DefaultMessagePacketFilter.register();
             } else {
-                // Deregister the filter if it was previously registered
-                LeaveMessagePacketFilter.deregister();
+                DefaultMessagePacketFilter.deregister();
             }
         } catch (Exception e) {
             logger.warning("Failed to update packet filters: " + e.getMessage());

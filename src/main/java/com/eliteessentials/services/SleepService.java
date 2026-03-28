@@ -47,10 +47,12 @@ public class SleepService {
     private static class WorldSleepState {
         volatile boolean slumberTriggered = false;
         volatile int lastSleepingCount = -1;
+        volatile int lastAfkCount = -1;
         
         void reset() {
             slumberTriggered = false;
             lastSleepingCount = -1;
+            lastAfkCount = -1;
         }
     }
 
@@ -129,9 +131,10 @@ public class SleepService {
                             afkCount++;
                         }
                     }
-                    if (afkCount > 0 && configManager.isDebugEnabled()) {
+                    if (afkCount > 0 && configManager.isDebugEnabled() && afkCount != sleepState.lastAfkCount) {
                         logger.info("[Sleep] Excluding " + afkCount + " AFK player(s) from sleep percentage");
                     }
+                    sleepState.lastAfkCount = afkCount;
                 }
                 
                 int totalPlayers = players.size() - afkCount;
@@ -250,23 +253,34 @@ public class SleepService {
         Instant currentTime = timeResource.getGameTime();
         Instant wakeUpTime = computeWakeupInstant(currentTime, wakeUpHour);
         
-        // Set the game time to morning
-        timeResource.setGameTime(wakeUpTime, world, store);
+        // Compute IRL duration for the slumber animation (matches engine's StartSlumberSystem logic)
+        long gameHours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(
+                java.time.Duration.between(currentTime, wakeUpTime).toMillis());
+        float irlSeconds = (float) Math.ceil(Math.max(3.0, gameHours / 6.0));
         
-        // Transition all sleeping players to MorningWakeUp state
+        // Let the engine handle the time transition via WorldSlumber state.
+        // The engine's UpdateWorldSlumberSystem will progressively advance time and
+        // transition players to MorningWakeUp when complete. Calling setGameTime
+        // directly conflicts with the engine's systems and can crash the world.
+        worldSomnolence.setState(new WorldSlumber(currentTime, wakeUpTime, irlSeconds));
+        worldSomnolence.resetNotificationCooldown();
+        
+        // Transition sleeping players to Slumber state so the engine recognizes them
+        // during the UpdateWorldSlumberSystem tick (uses the factory method like the engine does)
         for (PlayerRef player : players) {
             Ref<EntityStore> ref = player.getReference();
-            if (ref == null) continue;
+            if (ref == null || !ref.isValid()) continue;
             
             PlayerSomnolence somnolence = store.getComponent(ref, PlayerSomnolence.getComponentType());
             if (somnolence == null) continue;
             
             PlayerSleep state = somnolence.getSleepState();
             
-            // Only transition players who are actually sleeping (NoddingOff or Slumber)
-            if (state instanceof PlayerSleep.NoddingOff || state instanceof PlayerSleep.Slumber) {
-                PlayerSomnolence newSomnolence = new PlayerSomnolence(new PlayerSleep.MorningWakeUp(wakeUpTime));
-                store.putComponent(ref, PlayerSomnolence.getComponentType(), newSomnolence);
+            // Ensure NoddingOff players are promoted to Slumber so the engine's
+            // UpdateWorldSlumberSystem will properly transition them to MorningWakeUp
+            if (state instanceof PlayerSleep.NoddingOff) {
+                store.putComponent(ref, PlayerSomnolence.getComponentType(),
+                        PlayerSleep.Slumber.createComponent(timeResource));
             }
         }
         

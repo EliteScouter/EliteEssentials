@@ -654,7 +654,7 @@ public class EliteEssentials extends JavaPlugin {
         getCommandRegistry().registerCommand(new HytaleAliasCommand());
         getCommandRegistry().registerCommand(new HytaleMigrationCommand());
         getCommandRegistry().registerCommand(new HytaleAdminUICommand());
-        registeredCommands.append("/eliteessentials, /alias, /eemigration, /admin, ");
+        registeredCommands.append("/eliteessentials, /alias, /eemigration, /eeadmin, ");
         
         // God command
         if (config.god.enabled) {
