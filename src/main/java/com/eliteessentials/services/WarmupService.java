@@ -30,6 +30,10 @@ public class WarmupService {
     
     // Poll interval in milliseconds - frequent polling catches movement reliably
     private static final long POLL_INTERVAL_MS = 100;
+    
+    // Maximum warmup lifetime in nanos - safety net to clear stuck entries
+    // (e.g. world.execute() silently dropped the task, world was destroyed, etc.)
+    private static final long MAX_WARMUP_LIFETIME_NANOS = TimeUnit.SECONDS.toNanos(60);
 
     private final ScheduledExecutorService poller;
     private final Map<UUID, PendingWarmup> pending = new ConcurrentHashMap<>();
@@ -118,7 +122,10 @@ public class WarmupService {
     }
     
     private void ensurePollerRunning() {
-        if (pollTask != null && !pollTask.isCancelled()) {
+        // Check isDone() as well as isCancelled(): if the poller task threw an
+        // uncaught exception, ScheduledExecutorService silently kills it.
+        // isDone() returns true but isCancelled() returns false in that case.
+        if (pollTask != null && !pollTask.isCancelled() && !pollTask.isDone()) {
             return;
         }
         pollTask = poller.scheduleAtFixedRate(
@@ -128,30 +135,61 @@ public class WarmupService {
     }
     
     private void pollWarmups() {
-        if (pending.isEmpty()) {
-            return;
-        }
-        
-        for (PendingWarmup warmup : pending.values()) {
-            if (warmup.cancelled) {
-                pending.remove(warmup.playerUuid);
-                continue;
+        // CRITICAL: This method runs inside ScheduledExecutorService.scheduleAtFixedRate().
+        // If ANY uncaught exception escapes, the executor permanently and silently kills
+        // the recurring task. The entire warmup system goes dead — no player can teleport.
+        // Every code path must be wrapped in try/catch.
+        try {
+            if (pending.isEmpty()) {
+                return;
             }
             
-            World world = warmup.world;
-            if (world == null) {
-                pending.remove(warmup.playerUuid);
-                continue;
+            long now = System.nanoTime();
+            
+            for (PendingWarmup warmup : pending.values()) {
+                try {
+                    if (warmup.cancelled) {
+                        pending.remove(warmup.playerUuid);
+                        continue;
+                    }
+                    
+                    // Safety net: clear warmups that have been pending far too long.
+                    // This catches cases where world.execute() silently drops the task,
+                    // the world was destroyed but the reference is non-null, etc.
+                    if ((now - warmup.createdAtNanos) > MAX_WARMUP_LIFETIME_NANOS) {
+                        logger.warning("[Warmup] Clearing stale warmup for " + warmup.playerUuid 
+                            + " (" + warmup.commandName + ") - exceeded max lifetime");
+                        pending.remove(warmup.playerUuid);
+                        continue;
+                    }
+                    
+                    World world = warmup.world;
+                    if (world == null) {
+                        pending.remove(warmup.playerUuid);
+                        continue;
+                    }
+                    
+                    // Execute the tick on the game thread
+                    world.execute(() -> tickWarmup(warmup));
+                } catch (Exception e) {
+                    // Per-warmup catch: one bad warmup must never kill processing for others.
+                    // This typically fires when world.execute() throws because the world
+                    // was destroyed between the null check and the execute call.
+                    logger.warning("[Warmup] Error polling warmup for " + warmup.playerUuid 
+                        + " (" + warmup.commandName + "): " + e.getMessage() + " - removing");
+                    pending.remove(warmup.playerUuid);
+                }
             }
             
-            // Execute the tick on the game thread
-            world.execute(() -> tickWarmup(warmup));
-        }
-        
-        // Stop poller if no more pending warmups
-        if (pending.isEmpty() && pollTask != null) {
-            pollTask.cancel(false);
-            pollTask = null;
+            // Stop poller if no more pending warmups
+            if (pending.isEmpty() && pollTask != null) {
+                pollTask.cancel(false);
+                pollTask = null;
+            }
+        } catch (Exception e) {
+            // Outer catch: absolute last resort. If we somehow get here, log it
+            // but do NOT let the exception propagate or the poller dies permanently.
+            logger.severe("[Warmup] Unexpected error in pollWarmups: " + e.getMessage());
         }
     }
 
@@ -287,6 +325,7 @@ public class WarmupService {
         final Ref<EntityStore> playerRef;
         final Vector3d startPos;
         final long endTimeNanos;
+        final long createdAtNanos;
         final Runnable onComplete;
         final String commandName;
         final World world;
@@ -302,6 +341,7 @@ public class WarmupService {
             this.playerRef = playerRef;
             this.startPos = startPos;
             this.endTimeNanos = endTimeNanos;
+            this.createdAtNanos = System.nanoTime();
             this.onComplete = onComplete;
             this.commandName = commandName;
             this.world = world;
