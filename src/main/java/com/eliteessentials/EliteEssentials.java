@@ -388,6 +388,11 @@ public class EliteEssentials extends JavaPlugin {
         connectListener.registerEvents(getEventRegistry());
         getLogger().at(Level.INFO).log("Connect listener registered (ban/freeze enforcement).");
         
+        // Start freeze enforcement loop (continuously re-applies freeze to prevent engine resets)
+        if (configManager.getConfig().freeze.enabled) {
+            freezeService.start();
+        }
+        
         // Register the death tracking ECS system (hooks into Hytale's death events)
         if (configManager.isBackOnDeathEnabled() || configManager.getConfig().deathMessages.enabled) {
             try {
@@ -553,6 +558,9 @@ public class EliteEssentials extends JavaPlugin {
         }
         if (flyService != null) {
             flyService.shutdown();
+        }
+        if (freezeService != null) {
+            freezeService.shutdown();
         }
         if (greetingService != null) {
             greetingService.shutdown();

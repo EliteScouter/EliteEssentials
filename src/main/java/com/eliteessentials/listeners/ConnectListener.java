@@ -9,8 +9,6 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.MovementSettings;
-import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupConnectEvent;
@@ -128,16 +126,8 @@ public class ConnectListener {
 
                 if (!freezeService.isFrozen(pRef.getUuid())) return;
 
-                MovementManager movementManager = store.getComponent(ref, MovementManager.getComponentType());
-                if (movementManager == null) return;
-
-                // Re-apply freeze: zero out all movement
-                MovementSettings settings = movementManager.getSettings();
-                settings.baseSpeed = 0f;
-                settings.jumpForce = 0f;
-                settings.horizontalFlySpeed = 0f;
-                settings.verticalFlySpeed = 0f;
-                movementManager.update(pRef.getPacketHandler());
+                // Re-apply freeze via centralized helper
+                FreezeService.applyFreeze(store, ref, pRef);
 
                 pRef.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("freezeStillFrozen"), "#FF5555"));

@@ -454,12 +454,27 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         if (target == null || !target.isValid()) { setStatus("#PlayerStatusMsg", configManager.getMessage("playerNotFound", "player", selectedPlayer)); return; }
         FreezeService fs = EliteEssentials.getInstance().getFreezeService();
         if (fs == null) return;
+
+        Ref<EntityStore> tRef = target.getReference();
+        if (tRef == null || !tRef.isValid()) return;
+        Store<EntityStore> tStore = tRef.getStore();
+        EntityStore entityStore = tStore.getExternalData();
+        World targetWorld = entityStore != null ? entityStore.getWorld() : null;
+
         if (fs.isFrozen(target.getUuid())) {
             fs.unfreeze(target.getUuid());
+            if (targetWorld != null) {
+                final PlayerRef ft = target;
+                targetWorld.execute(() -> FreezeService.removeFreeze(tStore, tRef, ft));
+            }
             setStatus("#PlayerStatusMsg", configManager.getMessage("adminui.players.unfrozen", "player", target.getUsername()));
             logActivity("UNFREEZE", playerRef.getUsername(), target.getUsername(), "");
         } else {
             fs.freeze(target.getUuid(), target.getUsername(), playerRef.getUsername());
+            if (targetWorld != null) {
+                final PlayerRef ft = target;
+                targetWorld.execute(() -> FreezeService.applyFreeze(tStore, tRef, ft));
+            }
             setStatus("#PlayerStatusMsg", configManager.getMessage("adminui.players.frozen", "player", target.getUsername()));
             logActivity("FREEZE", playerRef.getUsername(), target.getUsername(), "");
         }

@@ -141,33 +141,27 @@ public class SleepService {
                 if (totalPlayers <= 0) return; // All players are AFK
                 int sleepingPlayers = 0;
                 
-                // Get current game time for checking NoddingOff/MorningWakeUp states
+                // Check if it's nighttime using game time. Hytale's getGameTime() returns
+                // an Instant whose UTC hour maps directly to the in-game hour.
                 WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
                 if (timeResource == null) return;
                 
                 Instant gameTime = timeResource.getGameTime();
-                
-                // Check if it's nighttime based on config settings
-                // Default: Sleep is allowed from 9 PM (21:00) to 5 AM (05:00)
                 LocalDateTime currentDateTime = LocalDateTime.ofInstant(gameTime, ZoneOffset.UTC);
                 double currentFractionalHour = currentDateTime.getHour() + currentDateTime.getMinute() / 60.0;
                 
                 double nightStart = configManager.getConfig().sleep.nightStartHour;
                 double morningHour = configManager.getConfig().sleep.morningHour;
                 
-                // Nighttime check depends on whether night spans midnight
-                // If nightStart > morningHour (e.g., 21 to 5), night spans midnight
                 boolean isNighttime;
                 if (nightStart > morningHour) {
-                    // Night spans midnight: hour >= nightStart OR hour < morningHour
+                    // Night spans midnight (e.g., 19.5 to 5.5)
                     isNighttime = currentFractionalHour >= nightStart || currentFractionalHour < morningHour;
                 } else {
-                    // Night doesn't span midnight (unusual but supported)
                     isNighttime = currentFractionalHour >= nightStart && currentFractionalHour < morningHour;
                 }
                 
                 if (!isNighttime) {
-                    // Reset flags during daytime
                     sleepState.reset();
                     return;
                 }
@@ -199,6 +193,12 @@ public class SleepService {
                     sleepState.reset();
                     return;
                 }
+                
+                if (configManager.isDebugEnabled() && sleepingPlayers != sleepState.lastSleepingCount) {
+                    logger.info("[Sleep] " + worldName + ": " + sleepingPlayers + "/" + totalPlayers 
+                            + " players sleeping (need " + requiredPercent + "%)");
+                }
+                
                 // Calculate percentage and check threshold
                 int currentPercent = (sleepingPlayers * 100) / totalPlayers;
                 int playersNeeded = Math.max(1, (int) Math.ceil(totalPlayers * requiredPercent / 100.0));
@@ -234,8 +234,17 @@ public class SleepService {
     }
     
     /**
-     * Triggers the slumber state - sets time to morning and transitions sleeping players to MorningWakeUp.
-     * This is the key method that the vanilla game uses to properly complete the sleep cycle.
+     * Triggers night skip by directly setting the game time to morning.
+     * 
+     * Previous approaches tried using WorldSlumber state to let the engine handle the
+     * transition, but the engine's UpdateWorldSlumberSystem has additional validation
+     * (e.g. checking all players are in beds) that silently cancels the slumber when
+     * only a percentage of players are sleeping. Direct time set is the only reliable
+     * way to skip night with partial sleep.
+     * 
+     * Note: The 2.0.2 crash was caused by combining setGameTime() with manual
+     * PlayerSomnolence/MorningWakeUp state manipulation. We now only set the time
+     * and let the engine handle all player state transitions naturally.
      */
     private void triggerSlumber(Store<EntityStore> store, World world, WorldSomnolence worldSomnolence, 
                                  List<PlayerRef> players, int sleeping, int needed) {
@@ -246,43 +255,21 @@ public class SleepService {
         
         WorldTimeResource timeResource = store.getResource(WorldTimeResource.getResourceType());
         
-        // Use configured morning hour instead of game default (supports decimal for minutes)
         double configuredMorningHour = configManager.getConfig().sleep.morningHour;
         float wakeUpHour = (float) configuredMorningHour;
         
         Instant currentTime = timeResource.getGameTime();
         Instant wakeUpTime = computeWakeupInstant(currentTime, wakeUpHour);
         
-        // Compute IRL duration for the slumber animation (matches engine's StartSlumberSystem logic)
-        long gameHours = java.util.concurrent.TimeUnit.MILLISECONDS.toHours(
-                java.time.Duration.between(currentTime, wakeUpTime).toMillis());
-        float irlSeconds = (float) Math.ceil(Math.max(3.0, gameHours / 6.0));
-        
-        // Let the engine handle the time transition via WorldSlumber state.
-        // The engine's UpdateWorldSlumberSystem will progressively advance time and
-        // transition players to MorningWakeUp when complete. Calling setGameTime
-        // directly conflicts with the engine's systems and can crash the world.
-        worldSomnolence.setState(new WorldSlumber(currentTime, wakeUpTime, irlSeconds));
-        worldSomnolence.resetNotificationCooldown();
-        
-        // Transition sleeping players to Slumber state so the engine recognizes them
-        // during the UpdateWorldSlumberSystem tick (uses the factory method like the engine does)
-        for (PlayerRef player : players) {
-            Ref<EntityStore> ref = player.getReference();
-            if (ref == null || !ref.isValid()) continue;
-            
-            PlayerSomnolence somnolence = store.getComponent(ref, PlayerSomnolence.getComponentType());
-            if (somnolence == null) continue;
-            
-            PlayerSleep state = somnolence.getSleepState();
-            
-            // Ensure NoddingOff players are promoted to Slumber so the engine's
-            // UpdateWorldSlumberSystem will properly transition them to MorningWakeUp
-            if (state instanceof PlayerSleep.NoddingOff) {
-                store.putComponent(ref, PlayerSomnolence.getComponentType(),
-                        PlayerSleep.Slumber.createComponent(timeResource));
-            }
+        if (configManager.isDebugEnabled()) {
+            logger.info("[Sleep] Triggered skip: " + sleeping + "/" + needed 
+                    + " sleeping, advancing time from " + currentTime + " to " + wakeUpTime);
         }
+        
+        // Skip directly to morning. Do NOT manipulate PlayerSomnolence or WorldSlumber
+        // state manually - the engine will handle waking players up naturally when it
+        // detects the time is now daytime.
+        timeResource.setGameTime(wakeUpTime, world, store);
         
         // Send success message
         String message = configManager.getMessage("sleepSkipping", "sleeping", String.valueOf(sleeping), "needed", String.valueOf(needed));

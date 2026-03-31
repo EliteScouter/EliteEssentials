@@ -9,12 +9,9 @@ import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementConfig;
-import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -97,23 +94,10 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
         final PlayerRef finalTarget = target;
         targetWorld.execute(() -> {
             try {
-                MovementManager movementManager = tStore.getComponent(tRef, MovementManager.getComponentType());
-                if (movementManager == null) {
-                    ctx.sendMessage(MessageFormatter.formatWithFallback(
-                        configManager.getMessage("freezeError"), "#FF5555"));
-                    return;
-                }
-
-                MovementSettings settings = movementManager.getSettings();
-
                 if (freezeService.isFrozen(finalTarget.getUuid())) {
                     // Unfreeze
                     freezeService.unfreeze(finalTarget.getUuid());
-                    settings.baseSpeed = MovementConfig.DEFAULT_MOVEMENT.getBaseSpeed();
-                    settings.jumpForce = MovementConfig.DEFAULT_MOVEMENT.getJumpForce();
-                    settings.horizontalFlySpeed = MovementConfig.DEFAULT_MOVEMENT.getHorizontalFlySpeed();
-                    settings.verticalFlySpeed = MovementConfig.DEFAULT_MOVEMENT.getVerticalFlySpeed();
-                    movementManager.update(finalTarget.getPacketHandler());
+                    FreezeService.removeFreeze(tStore, tRef, finalTarget);
 
                     ctx.sendMessage(MessageFormatter.formatWithFallback(
                         configManager.getMessage("unfreezeSuccess", "player", finalTarget.getUsername()), "#55FF55"));
@@ -122,11 +106,7 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
                 } else {
                     // Freeze
                     freezeService.freeze(finalTarget.getUuid(), finalTarget.getUsername(), player.getUsername());
-                    settings.baseSpeed = 0f;
-                    settings.jumpForce = 0f;
-                    settings.horizontalFlySpeed = 0f;
-                    settings.verticalFlySpeed = 0f;
-                    movementManager.update(finalTarget.getPacketHandler());
+                    FreezeService.applyFreeze(tStore, tRef, finalTarget);
 
                     ctx.sendMessage(MessageFormatter.formatWithFallback(
                         configManager.getMessage("freezeSuccess", "player", finalTarget.getUsername()), "#55FF55"));
