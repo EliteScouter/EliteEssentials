@@ -417,6 +417,49 @@ public class PermissionService {
     // ==================== GENERIC COMMAND COOLDOWN ====================
 
     /**
+     * Get the effective cooldown for a kit based on permissions.
+     * Allows per-rank kit cooldowns via: eliteessentials.command.kit.cooldown.<kitname>.<seconds>
+     * 
+     * Priority:
+     * 1. Bypass permission eliteessentials.command.kit.bypass.cooldown (returns 0)
+     * 2. LuckPerms/HyperPerms permission-based cooldown for this kit
+     * 3. Kit's default cooldown from kits.json
+     * 
+     * @param playerId Player UUID
+     * @param kitId Kit ID (case-insensitive)
+     * @param defaultCooldown Default cooldown from the kit definition
+     * @return Effective cooldown in seconds (0 = no cooldown)
+     */
+    public int getKitCooldown(UUID playerId, String kitId, int defaultCooldown) {
+        // Check for bypass permission first
+        if (hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN)) {
+            return 0;
+        }
+        
+        // Permission prefix: eliteessentials.command.kit.cooldown.<kitname>.<seconds>
+        String cooldownPrefix = Permissions.kitCooldownPrefix(kitId);
+        
+        // Try to get custom cooldown from LuckPerms
+        if (LuckPermsIntegration.isAvailable()) {
+            int lpCooldown = LuckPermsIntegration.getInheritedPermissionValue(playerId, cooldownPrefix);
+            if (lpCooldown >= 0) {
+                return lpCooldown;
+            }
+        }
+        
+        // Try HyperPerms as fallback
+        if (HyperPermsIntegration.isAvailable()) {
+            int hpCooldown = HyperPermsIntegration.getInheritedPermissionValue(playerId, cooldownPrefix);
+            if (hpCooldown >= 0) {
+                return hpCooldown;
+            }
+        }
+        
+        // No specific cooldown permission found, return kit's default
+        return defaultCooldown;
+    }
+
+    /**
      * Get the cooldown for a command based on permissions.
      * Supports: god, fly, repair, clearinv, top
      * 

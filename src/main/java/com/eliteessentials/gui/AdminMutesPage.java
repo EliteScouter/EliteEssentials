@@ -7,6 +7,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.MuteService;
 import com.eliteessentials.storage.PlayerStorageProvider;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -179,7 +180,7 @@ public class AdminMutesPage extends InteractiveCustomUIPage<AdminMutesPage.MuteE
 
     private void setStatus(String message) {
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#MuteStatusMsg.Text", message);
+        cmd.set("#MuteStatusMsg.Text", MessageFormatter.stripColorCodes(message));
         sendUpdate(cmd, null, false);
     }
 

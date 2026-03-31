@@ -48,6 +48,7 @@ import com.eliteessentials.services.TabListService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.services.WarpService;
+import com.eliteessentials.services.PlayerWarpService;
 import com.eliteessentials.services.ActivityLogService;
 import com.eliteessentials.storage.CustomHelpStorage;
 import com.eliteessentials.storage.DiscordStorage;
@@ -56,6 +57,7 @@ import com.eliteessentials.storage.GreetingStorage;
 import com.eliteessentials.storage.MotdStorage;
 import com.eliteessentials.storage.PlayerFileStorage;
 import com.eliteessentials.storage.PlayerStorageProvider;
+import com.eliteessentials.storage.PlayerWarpStorageProvider;
 import com.eliteessentials.storage.PlayTimeRewardStorage;
 import com.eliteessentials.storage.RulesStorage;
 import com.eliteessentials.storage.SpawnStorage;
@@ -90,6 +92,7 @@ public class EliteEssentials extends JavaPlugin {
     private StorageFactory storageFactory;
     private PlayerStorageProvider playerStorageProvider;
     private GlobalStorageProvider globalStorageProvider;
+    private PlayerWarpStorageProvider playerWarpStorageProvider;
     private PlayerFileStorage playerFileStorage;
     private WarpStorage warpStorage;
     private SpawnStorage spawnStorage;
@@ -106,6 +109,7 @@ public class EliteEssentials extends JavaPlugin {
     private WarmupService warmupService;
     private CooldownService cooldownService;
     private WarpService warpService;
+    private PlayerWarpService playerWarpService;
     private DamageTrackingService damageTrackingService;
     private DeathTrackingService deathTrackingService;
     private GodService godService;
@@ -238,6 +242,13 @@ public class EliteEssentials extends JavaPlugin {
         backService = new BackService(configManager, playerStorageProvider);
         warpService = new WarpService(globalStorageProvider);
         warpService.setConfigManager(configManager);
+        
+        // Initialize player warp storage and service
+        playerWarpStorageProvider = storageFactory.createPlayerWarpStorage(storageConfig, this.dataFolder);
+        playerWarpStorageProvider.load();
+        playerWarpService = new PlayerWarpService(playerWarpStorageProvider);
+        playerWarpService.setConfigManager(configManager);
+        
         damageTrackingService = new DamageTrackingService();
         deathTrackingService = new DeathTrackingService(backService, configManager);
         tpaService = new TpaService(configManager);
@@ -651,6 +662,16 @@ public class EliteEssentials extends JavaPlugin {
             }
         }
         
+        // Player warp commands
+        if (config.playerWarps.enabled) {
+            try {
+                getCommandRegistry().registerCommand(new HytalePlayerWarpCommand(playerWarpService, backService));
+                registeredCommands.append("/pwarp, ");
+            } catch (Exception e) {
+                getLogger().at(Level.SEVERE).log("Failed to register player warp commands: " + e.getMessage());
+            }
+        }
+        
         // Sleep command
         if (config.sleep.enabled) {
             getCommandRegistry().registerCommand(new HytaleSleepPercentCommand(configManager));
@@ -914,6 +935,10 @@ public class EliteEssentials extends JavaPlugin {
         return warpService;
     }
     
+    public PlayerWarpService getPlayerWarpService() {
+        return playerWarpService;
+    }
+    
     public DeathTrackingService getDeathTrackingService() {
         return deathTrackingService;
     }
@@ -1095,6 +1120,11 @@ public class EliteEssentials extends JavaPlugin {
         discordStorage.load();
         globalStorageProvider.load();
         spawnStorage.load();
+        
+        // Reload player warp storage
+        if (playerWarpService != null) {
+            playerWarpService.reload();
+        }
         
         // Reload custom help entries (allows admins to edit custom_help.json)
         if (customHelpStorage != null) {

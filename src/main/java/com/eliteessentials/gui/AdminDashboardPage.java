@@ -32,6 +32,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.eliteessentials.model.Home;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.model.PlayerFile;
+import com.eliteessentials.model.PlayerWarp;
 import com.eliteessentials.model.Warp;
 import com.eliteessentials.storage.SpawnStorage;
 
@@ -530,7 +531,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             cmd.set("#BanPlayerInput.Value", selectedPlayer);
         }
 
-        populateBanList(cmd);
+        populateBanList(cmd, events);
 
         events.addEventBinding(CustomUIEventBindingType.Activating, "#BanButton",
             new EventData().append("Action", "ban").append("@BanPlayerInput", "#BanPlayerInput.Value").append("@BanReasonInput", "#BanReasonInput.Value"), false);
@@ -542,23 +543,51 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             new EventData().append("Action", "unban").append("@UnbanPlayerInput", "#UnbanPlayerInput.Value"), false);
     }
 
-    private void populateBanList(UICommandBuilder cmd) {
+    private void populateBanList(UICommandBuilder cmd, UIEventBuilder events) {
         EliteEssentials plugin = EliteEssentials.getInstance();
-        StringBuilder banText = new StringBuilder();
+        boolean hasEvents = events != null;
+
+        cmd.clear("#BanEntries");
+        int entryIndex = 0;
+
+        // Permanent bans
         if (plugin.getBanService() != null) {
             for (Map.Entry<String, BanService.BanEntry> e : plugin.getBanService().getAllBans().entrySet()) {
                 String name = e.getValue().playerName != null ? e.getValue().playerName : e.getKey();
-                banText.append(name).append(" (perm) - ").append(e.getValue().reason != null ? e.getValue().reason : "No reason").append("\n");
+                String text = name + " (perm) - " + (e.getValue().reason != null ? e.getValue().reason : "No reason");
+                String selector = "#BanEntries[" + entryIndex + "]";
+                cmd.append("#BanEntries", "Pages/EliteEssentials_AdminBanEntry.ui");
+                cmd.set(selector + " #BanEntryText.Text", text);
+                if (hasEvents) {
+                    events.addEventBinding(CustomUIEventBindingType.Activating, selector + " #BanRemoveBtn",
+                        new EventData().append("Action", "quickunban").append("Target", name), false);
+                }
+                entryIndex++;
             }
         }
+
+        // Temp bans
         if (plugin.getTempBanService() != null) {
             for (Map.Entry<String, TempBanService.TempBanEntry> e : plugin.getTempBanService().getAllTempBans().entrySet()) {
                 String name = e.getValue().playerName != null ? e.getValue().playerName : e.getKey();
                 long remaining = e.getValue().getRemainingTime();
-                banText.append(name).append(" (").append(formatDuration(remaining)).append(") - ").append(e.getValue().reason != null ? e.getValue().reason : "No reason").append("\n");
+                String text = name + " (" + formatDuration(remaining) + ") - " + (e.getValue().reason != null ? e.getValue().reason : "No reason");
+                String selector = "#BanEntries[" + entryIndex + "]";
+                cmd.append("#BanEntries", "Pages/EliteEssentials_AdminBanEntry.ui");
+                cmd.set(selector + " #BanEntryText.Text", text);
+                if (hasEvents) {
+                    events.addEventBinding(CustomUIEventBindingType.Activating, selector + " #BanRemoveBtn",
+                        new EventData().append("Action", "quickunban").append("Target", name), false);
+                }
+                entryIndex++;
             }
         }
-        cmd.set("#BanList.Text", banText.length() > 0 ? banText.toString().trim() : configManager.getMessage("adminui.bans.noBans"));
+
+        if (entryIndex == 0) {
+            cmd.set("#BanListEmpty.Text", configManager.getMessage("adminui.bans.noBans"));
+        } else {
+            cmd.set("#BanListEmpty.Text", "");
+        }
     }
 
     private void handleBansAction(AdminEventData data) {
@@ -572,14 +601,22 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             case "ban": {
                 if (data.banPlayer == null || data.banPlayer.isEmpty()) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.enterName")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.banPlayer);
+                UUID targetId; String resolvedName;
                 if (target != null && target.isValid()) {
-                    boolean ok = plugin.getBanService().ban(target.getUuid(), target.getUsername(), adminName, data.banReason != null ? data.banReason : "Banned via Admin UI");
-                    if (ok) {
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                } else {
+                    java.util.Optional<UUID> offlineId = plugin.getPlayerStorageProvider().getUuidByName(data.banPlayer);
+                    if (!offlineId.isPresent()) { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); refreshBanList(); break; }
+                    targetId = offlineId.get(); resolvedName = data.banPlayer;
+                }
+                boolean ok = plugin.getBanService().ban(targetId, resolvedName, adminName, data.banReason != null ? data.banReason : "Banned via Admin UI");
+                if (ok) {
+                    if (target != null && target.isValid()) {
                         try { target.getPacketHandler().disconnect(com.hypixel.hytale.server.core.Message.raw(MessageFormatter.stripColorCodes(configManager.getMessage("adminui.bans.banKickMsg")))); } catch (Exception ignored) {}
-                        setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.banned", "player", target.getUsername()));
-                        logActivity("BAN", adminName, target.getUsername(), data.banReason != null ? data.banReason : "No reason");
-                    } else { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.alreadyBanned", "player", target.getUsername())); }
-                } else { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); }
+                    }
+                    setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.banned", "player", resolvedName));
+                    logActivity("BAN", adminName, resolvedName, data.banReason != null ? data.banReason : "No reason");
+                } else { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.alreadyBanned", "player", resolvedName)); }
                 refreshBanList();
                 break;
             }
@@ -588,31 +625,53 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 long durationMs = parseDuration(data.banDuration);
                 if (durationMs <= 0) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.invalidDuration")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.banPlayer);
+                UUID targetId; String resolvedName;
                 if (target != null && target.isValid()) {
-                    boolean ok = plugin.getTempBanService().tempBan(target.getUuid(), target.getUsername(), adminName, data.banReason != null ? data.banReason : "Temp banned via Admin UI", durationMs);
-                    if (ok) {
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                } else {
+                    java.util.Optional<UUID> offlineId = plugin.getPlayerStorageProvider().getUuidByName(data.banPlayer);
+                    if (!offlineId.isPresent()) { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); refreshBanList(); break; }
+                    targetId = offlineId.get(); resolvedName = data.banPlayer;
+                }
+                boolean ok = plugin.getTempBanService().tempBan(targetId, resolvedName, adminName, data.banReason != null ? data.banReason : "Temp banned via Admin UI", durationMs);
+                if (ok) {
+                    if (target != null && target.isValid()) {
                         try { target.getPacketHandler().disconnect(com.hypixel.hytale.server.core.Message.raw(MessageFormatter.stripColorCodes(configManager.getMessage("adminui.bans.banKickMsg")))); } catch (Exception ignored) {}
-                        setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.tempBanned", "player", target.getUsername(), "duration", data.banDuration));
-                        logActivity("TEMPBAN", adminName, target.getUsername(), data.banDuration + (data.banReason != null ? " - " + data.banReason : ""));
-                    } else { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.alreadyBanned", "player", target.getUsername())); }
-                } else { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); }
+                    }
+                    setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.tempBanned", "player", resolvedName, "duration", data.banDuration));
+                    logActivity("TEMPBAN", adminName, resolvedName, data.banDuration + (data.banReason != null ? " - " + data.banReason : ""));
+                } else { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.alreadyBanned", "player", resolvedName)); }
                 refreshBanList();
                 break;
             }
             case "ipban": {
                 if (data.banPlayer == null || data.banPlayer.isEmpty()) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.enterName")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.banPlayer);
+                String ip = null; UUID targetId; String resolvedName;
                 if (target != null && target.isValid()) {
-                    try {
-                        String ip = IpBanService.getIpFromPacketHandler(target.getPacketHandler());
-                        if (ip != null) {
-                            plugin.getIpBanService().banIp(ip, target.getUuid(), target.getUsername(), adminName, data.banReason != null ? data.banReason : "IP banned via Admin UI");
-                            try { target.getPacketHandler().disconnect(com.hypixel.hytale.server.core.Message.raw(MessageFormatter.stripColorCodes(configManager.getMessage("adminui.bans.banKickMsg")))); } catch (Exception ignored) {}
-                            setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipBanned", "player", target.getUsername()));
-                            logActivity("IPBAN", adminName, target.getUsername(), data.banReason != null ? data.banReason : "No reason");
-                        } else { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipFailed")); }
-                    } catch (Exception e) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipFailed")); }
-                } else { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); }
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                    ip = IpBanService.getIpFromPacketHandler(target.getPacketHandler());
+                } else {
+                    java.util.Optional<UUID> offlineId = plugin.getPlayerStorageProvider().getUuidByName(data.banPlayer);
+                    if (!offlineId.isPresent()) { setStatus("#BanStatusMsg", configManager.getMessage("playerNotFound", "player", data.banPlayer)); refreshBanList(); break; }
+                    targetId = offlineId.get(); resolvedName = data.banPlayer;
+                    com.eliteessentials.model.PlayerFile playerFile = plugin.getPlayerStorageProvider().getPlayer(targetId);
+                    if (playerFile != null) {
+                        java.util.List<com.eliteessentials.model.PlayerFile.IpHistoryEntry> history = playerFile.getIpHistory();
+                        if (history != null && !history.isEmpty()) {
+                            ip = history.stream().max((a, b) -> Long.compare(a.lastUsed, b.lastUsed)).map(e -> e.ip).orElse(null);
+                        }
+                    }
+                }
+                if (ip == null) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipFailed")); refreshBanList(); break; }
+                try {
+                    plugin.getIpBanService().banIp(ip, targetId, resolvedName, adminName, data.banReason != null ? data.banReason : "IP banned via Admin UI");
+                    if (target != null && target.isValid()) {
+                        try { target.getPacketHandler().disconnect(com.hypixel.hytale.server.core.Message.raw(MessageFormatter.stripColorCodes(configManager.getMessage("adminui.bans.banKickMsg")))); } catch (Exception ignored) {}
+                    }
+                    setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipBanned", "player", resolvedName));
+                    logActivity("IPBAN", adminName, resolvedName, data.banReason != null ? data.banReason : "No reason");
+                } catch (Exception e) { setStatus("#BanStatusMsg", configManager.getMessage("adminui.bans.ipFailed")); }
                 refreshBanList();
                 break;
             }
@@ -627,13 +686,25 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 refreshBanList();
                 break;
             }
+            case "quickunban": {
+                if (data.target == null || data.target.isEmpty()) return;
+                UUID unbanned = plugin.getBanService().unbanByName(data.target);
+                if (unbanned == null) unbanned = plugin.getTempBanService().unbanByName(data.target);
+                if (unbanned != null) logActivity("UNBAN", adminName, data.target, "via UI button");
+                setStatus("#BanStatusMsg", unbanned != null
+                    ? configManager.getMessage("adminui.bans.unbanned", "player", data.target)
+                    : configManager.getMessage("adminui.bans.notBanned", "player", data.target));
+                refreshBanList();
+                break;
+            }
         }
     }
 
     private void refreshBanList() {
         UICommandBuilder cmd = new UICommandBuilder();
-        populateBanList(cmd);
-        sendUpdate(cmd, null, false);
+        UIEventBuilder events = new UIEventBuilder();
+        populateBanList(cmd, events);
+        sendUpdate(cmd, events, false);
     }
 
     // ==================== MUTES VIEW ====================
@@ -651,7 +722,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             cmd.set("#MutePlayerInput.Value", selectedPlayer);
         }
 
-        populateMuteList(cmd);
+        populateMuteList(cmd, events);
 
         events.addEventBinding(CustomUIEventBindingType.Activating, "#MuteButton",
             new EventData().append("Action", "mute").append("@MutePlayerInput", "#MutePlayerInput.Value").append("@MuteReasonInput", "#MuteReasonInput.Value"), false);
@@ -659,18 +730,32 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             new EventData().append("Action", "unmute").append("@UnmutePlayerInput", "#UnmutePlayerInput.Value"), false);
     }
 
-    private void populateMuteList(UICommandBuilder cmd) {
+    private void populateMuteList(UICommandBuilder cmd, UIEventBuilder events) {
         MuteService ms = EliteEssentials.getInstance().getMuteService();
+        boolean hasEvents = events != null;
+
+        cmd.clear("#MuteEntries");
+
         if (ms == null || ms.getAllMutes().isEmpty()) {
-            cmd.set("#MuteList.Text", configManager.getMessage("adminui.mutes.noMutes"));
+            cmd.set("#MuteListEmpty.Text", configManager.getMessage("adminui.mutes.noMutes"));
             return;
         }
-        StringBuilder sb = new StringBuilder();
+
+        int entryIndex = 0;
         for (Map.Entry<String, MuteService.MuteEntry> e : ms.getAllMutes().entrySet()) {
             String name = e.getValue().playerName != null ? e.getValue().playerName : e.getKey();
-            sb.append(name).append(" - ").append(e.getValue().reason != null ? e.getValue().reason : "No reason").append("\n");
+            String text = name + " - " + (e.getValue().reason != null ? e.getValue().reason : "No reason");
+            String selector = "#MuteEntries[" + entryIndex + "]";
+            cmd.append("#MuteEntries", "Pages/EliteEssentials_AdminMuteEntry.ui");
+            cmd.set(selector + " #MuteEntryText.Text", text);
+            if (hasEvents) {
+                events.addEventBinding(CustomUIEventBindingType.Activating, selector + " #MuteRemoveBtn",
+                    new EventData().append("Action", "quickunmute").append("Target", name), false);
+            }
+            entryIndex++;
         }
-        cmd.set("#MuteList.Text", sb.toString().trim());
+
+        cmd.set("#MuteListEmpty.Text", "");
     }
 
     private void handleMutesAction(AdminEventData data) {
@@ -684,12 +769,18 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             case "mute": {
                 if (data.mutePlayer == null || data.mutePlayer.isEmpty()) { setStatus("#MuteStatusMsg", configManager.getMessage("adminui.mutes.enterName")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.mutePlayer);
+                UUID targetId; String resolvedName;
                 if (target != null && target.isValid()) {
-                    boolean ok = ms.mute(target.getUuid(), target.getUsername(), playerRef.getUsername(), data.muteReason != null ? data.muteReason : "Muted via Admin UI");
-                    setStatus("#MuteStatusMsg", ok ? configManager.getMessage("adminui.mutes.muted", "player", target.getUsername()) : configManager.getMessage("adminui.mutes.alreadyMuted", "player", target.getUsername()));
-                    if (ok) logActivity("MUTE", playerRef.getUsername(), target.getUsername(), data.muteReason != null ? data.muteReason : "No reason");
-                } else { setStatus("#MuteStatusMsg", configManager.getMessage("playerNotFound", "player", data.mutePlayer)); }
-                UICommandBuilder cmd = new UICommandBuilder(); populateMuteList(cmd); sendUpdate(cmd, null, false);
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                } else {
+                    java.util.Optional<UUID> offlineId = EliteEssentials.getInstance().getPlayerStorageProvider().getUuidByName(data.mutePlayer);
+                    if (!offlineId.isPresent()) { setStatus("#MuteStatusMsg", configManager.getMessage("playerNotFound", "player", data.mutePlayer)); refreshMuteList(); return; }
+                    targetId = offlineId.get(); resolvedName = data.mutePlayer;
+                }
+                boolean ok = ms.mute(targetId, resolvedName, playerRef.getUsername(), data.muteReason != null ? data.muteReason : "Muted via Admin UI");
+                setStatus("#MuteStatusMsg", ok ? configManager.getMessage("adminui.mutes.muted", "player", resolvedName) : configManager.getMessage("adminui.mutes.alreadyMuted", "player", resolvedName));
+                if (ok) logActivity("MUTE", playerRef.getUsername(), resolvedName, data.muteReason != null ? data.muteReason : "No reason");
+                refreshMuteList();
                 break;
             }
             case "unmute": {
@@ -697,10 +788,25 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 UUID unmuted = ms.unmuteByName(data.unmutePlayer);
                 if (unmuted != null) logActivity("UNMUTE", playerRef.getUsername(), data.unmutePlayer, "");
                 setStatus("#MuteStatusMsg", unmuted != null ? configManager.getMessage("adminui.mutes.unmuted", "player", data.unmutePlayer) : configManager.getMessage("adminui.mutes.notMuted", "player", data.unmutePlayer));
-                UICommandBuilder cmd = new UICommandBuilder(); populateMuteList(cmd); sendUpdate(cmd, null, false);
+                refreshMuteList();
+                break;
+            }
+            case "quickunmute": {
+                if (data.target == null || data.target.isEmpty()) return;
+                UUID unmuted = ms.unmuteByName(data.target);
+                if (unmuted != null) logActivity("UNMUTE", playerRef.getUsername(), data.target, "via UI button");
+                setStatus("#MuteStatusMsg", unmuted != null ? configManager.getMessage("adminui.mutes.unmuted", "player", data.target) : configManager.getMessage("adminui.mutes.notMuted", "player", data.target));
+                refreshMuteList();
                 break;
             }
         }
+    }
+
+    private void refreshMuteList() {
+        UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
+        populateMuteList(cmd, events);
+        sendUpdate(cmd, events, false);
     }
 
     // ==================== WARNS VIEW ====================
@@ -712,7 +818,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         cmd.set("#WarnButton.Text", configManager.getMessage("adminui.warns.warn"));
         cmd.set("#ClearWarningsButton.Text", configManager.getMessage("adminui.warns.clearWarnings"));
         cmd.set("#WarnLookupButton.Text", configManager.getMessage("adminui.warns.lookupBtn"));
-        cmd.set("#WarnList.Text", configManager.getMessage("adminui.warns.noWarnings"));
+        cmd.set("#WarnListEmpty.Text", configManager.getMessage("adminui.warns.noWarnings"));
 
         // Pre-fill player name if one was selected on the Players page
         if (selectedPlayer != null) {
@@ -738,25 +844,37 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             case "warn": {
                 if (data.warnPlayer == null || data.warnPlayer.isEmpty()) { setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.enterName")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.warnPlayer);
+                UUID targetId; String resolvedName;
                 if (target != null && target.isValid()) {
-                    int count = ws.warn(target.getUuid(), target.getUsername(), playerRef.getUsername(), data.warnReason != null ? data.warnReason : "Warned via Admin UI");
-                    setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.warned", "player", target.getUsername(), "count", String.valueOf(count)));
-                    logActivity("WARN", playerRef.getUsername(), target.getUsername(), data.warnReason != null ? data.warnReason : "No reason");
-                    warnLookupTarget = data.warnPlayer;
-                    refreshWarnList(target.getUuid());
-                } else { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", data.warnPlayer)); }
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                } else {
+                    java.util.Optional<UUID> offlineId = EliteEssentials.getInstance().getPlayerStorageProvider().getUuidByName(data.warnPlayer);
+                    if (!offlineId.isPresent()) { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", data.warnPlayer)); break; }
+                    targetId = offlineId.get(); resolvedName = data.warnPlayer;
+                }
+                int count = ws.warn(targetId, resolvedName, playerRef.getUsername(), data.warnReason != null ? data.warnReason : "Warned via Admin UI");
+                setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.warned", "player", resolvedName, "count", String.valueOf(count)));
+                logActivity("WARN", playerRef.getUsername(), resolvedName, data.warnReason != null ? data.warnReason : "No reason");
+                warnLookupTarget = data.warnPlayer;
+                refreshWarnList(targetId);
                 break;
             }
             case "clearwarns": {
                 String name = (data.warnPlayer != null && !data.warnPlayer.isEmpty()) ? data.warnPlayer : warnLookupTarget;
                 if (name == null || name.isEmpty()) { setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.enterName")); return; }
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(name);
+                UUID targetId; String resolvedName;
                 if (target != null) {
-                    int cleared = ws.clearWarnings(target.getUuid());
-                    setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.cleared", "player", target.getUsername(), "count", String.valueOf(cleared)));
-                    if (cleared > 0) logActivity("CLEARWARNS", playerRef.getUsername(), target.getUsername(), cleared + " warnings cleared");
-                    refreshWarnList(target.getUuid());
-                } else { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", name)); }
+                    targetId = target.getUuid(); resolvedName = target.getUsername();
+                } else {
+                    java.util.Optional<UUID> offlineId = EliteEssentials.getInstance().getPlayerStorageProvider().getUuidByName(name);
+                    if (!offlineId.isPresent()) { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", name)); break; }
+                    targetId = offlineId.get(); resolvedName = name;
+                }
+                int cleared = ws.clearWarnings(targetId);
+                setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.cleared", "player", resolvedName, "count", String.valueOf(cleared)));
+                if (cleared > 0) logActivity("CLEARWARNS", playerRef.getUsername(), resolvedName, cleared + " warnings cleared");
+                refreshWarnList(targetId);
                 break;
             }
             case "warnlookup": {
@@ -764,7 +882,28 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 warnLookupTarget = data.lookupPlayer;
                 PlayerRef target = PlayerSuggestionProvider.findPlayer(data.lookupPlayer);
                 if (target != null) { refreshWarnList(target.getUuid()); }
-                else { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", data.lookupPlayer)); }
+                else {
+                    java.util.Optional<UUID> offlineId = EliteEssentials.getInstance().getPlayerStorageProvider().getUuidByName(data.lookupPlayer);
+                    if (offlineId.isPresent()) { refreshWarnList(offlineId.get()); }
+                    else { setStatus("#WarnStatusMsg", configManager.getMessage("playerNotFound", "player", data.lookupPlayer)); }
+                }
+                break;
+            }
+            case "removewarn": {
+                // Target contains the UUID, Index contains the 0-based warning index
+                if (data.target == null || data.index == null) return;
+                try {
+                    UUID targetId = UUID.fromString(data.target);
+                    int warnIndex = Integer.parseInt(data.index);
+                    boolean removed = ws.removeWarning(targetId, warnIndex);
+                    if (removed) {
+                        setStatus("#WarnStatusMsg", configManager.getMessage("adminui.warns.warnRemoved"));
+                        logActivity("REMOVEWARN", playerRef.getUsername(), data.target, "Warning #" + (warnIndex + 1) + " removed");
+                    }
+                    refreshWarnList(targetId);
+                } catch (IllegalArgumentException e) {
+                    logger.severe("Invalid UUID or index in removewarn action: " + e.getMessage());
+                }
                 break;
             }
         }
@@ -774,19 +913,26 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         WarnService ws = EliteEssentials.getInstance().getWarnService();
         if (ws == null) return;
         UICommandBuilder cmd = new UICommandBuilder();
+        UIEventBuilder events = new UIEventBuilder();
         List<WarnService.WarnEntry> warnings = ws.getWarnings(playerId);
+
+        cmd.clear("#WarnEntries");
+
         if (warnings.isEmpty()) {
-            cmd.set("#WarnList.Text", configManager.getMessage("adminui.warns.noWarnings"));
+            cmd.set("#WarnListEmpty.Text", configManager.getMessage("adminui.warns.noWarnings"));
         } else {
-            StringBuilder sb = new StringBuilder();
-            int i = 1;
-            for (WarnService.WarnEntry w : warnings) {
-                sb.append("#").append(i).append(" [").append(DATE_FORMAT.format(new Date(w.warnedAt))).append("] by ").append(w.warnedBy).append(": ").append(w.reason).append("\n");
-                i++;
+            cmd.set("#WarnListEmpty.Text", "");
+            for (int i = 0; i < warnings.size(); i++) {
+                WarnService.WarnEntry w = warnings.get(i);
+                String text = "#" + (i + 1) + " [" + DATE_FORMAT.format(new Date(w.warnedAt)) + "] by " + w.warnedBy + ": " + w.reason;
+                String selector = "#WarnEntries[" + i + "]";
+                cmd.append("#WarnEntries", "Pages/EliteEssentials_AdminWarnEntry.ui");
+                cmd.set(selector + " #WarnEntryText.Text", text);
+                events.addEventBinding(CustomUIEventBindingType.Activating, selector + " #WarnRemoveBtn",
+                    new EventData().append("Action", "removewarn").append("Target", playerId.toString()).append("Index", String.valueOf(i)), false);
             }
-            cmd.set("#WarnList.Text", sb.toString().trim());
         }
-        sendUpdate(cmd, null, false);
+        sendUpdate(cmd, events, false);
     }
 
     // ==================== STATS VIEW ====================
@@ -1199,6 +1345,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         cmd.append("#ContentArea", "Pages/EliteEssentials_AdminPlayerDataContent.ui");
         cmd.set("#PdLookupLabel.Text", configManager.getMessage("adminui.playerdata.lookup"));
         cmd.set("#PdHomesLabel.Text", configManager.getMessage("adminui.playerdata.homes"));
+        cmd.set("#PdWarpsLabel.Text", configManager.getMessage("adminui.playerdata.warps"));
         cmd.set("#PdBackLabel.Text", configManager.getMessage("adminui.playerdata.backHistory"));
         cmd.set("#PdLookupButton.Text", configManager.getMessage("adminui.players.lookup"));
         cmd.set("#PdClearBackButton.Text", configManager.getMessage("adminui.playerdata.clearBack"));
@@ -1295,6 +1442,28 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 }
                 break;
             }
+            case "pdtpwarp": {
+                if (data.player == null) return;
+                Optional<PlayerWarp> pwOpt = plugin.getPlayerWarpService().getWarp(data.player);
+                if (pwOpt.isPresent()) {
+                    teleportToLocation(pwOpt.get().getLocation());
+                } else {
+                    setStatus("#PdStatusMsg", "Player warp not found");
+                }
+                break;
+            }
+            case "pddelwarp": {
+                if (data.player == null) return;
+                PlayerWarpService.Result result = plugin.getPlayerWarpService().deleteWarp(data.player, playerRef.getUuid(), true);
+                if (result == PlayerWarpService.Result.SUCCESS) {
+                    logActivity("DELPWARP", adminName, pdTarget, "deleted player warp '" + data.player + "'");
+                    setStatus("#PdStatusMsg", "Deleted player warp '" + data.player + "' for " + pdTarget);
+                } else {
+                    setStatus("#PdStatusMsg", "Player warp not found");
+                }
+                refreshPlayerData();
+                break;
+            }
         }
     }
 
@@ -1314,6 +1483,11 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         cmd.set("#PdBackCount.Text", String.valueOf(pf.getBackHistorySize()));
         Set<String> kitClaims = pf.getKitClaims();
         cmd.set("#PdKitCount.Text", String.valueOf(kitClaims != null ? kitClaims.size() : 0));
+
+        // Count warps created by this player
+        List<PlayerWarp> playerWarps = plugin.getPlayerWarpService().getWarpsByOwner(pdTargetUuid);
+        playerWarps.sort(Comparator.comparing(PlayerWarp::getName));
+        cmd.set("#PdWarpCount.Text", String.valueOf(playerWarps.size()));
 
         // Homes list
         cmd.clear("#PdHomeListCards");
@@ -1337,6 +1511,32 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 events.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PdHomeDeleteButton",
                     new EventData().append("Action", "pddelhome").append("Player", entry.getKey()), false);
                 idx++;
+            }
+        }
+
+        // Player warps list
+        cmd.clear("#PdWarpListCards");
+        if (playerWarps.isEmpty()) {
+            cmd.append("#PdWarpListCards", "Pages/EliteEssentials_AdminPdWarpEntry.ui");
+            cmd.set("#PdWarpListCards[0] #PdWarpName.Text", "No warps");
+            cmd.set("#PdWarpListCards[0] #PdWarpPerm.Text", "");
+            cmd.set("#PdWarpListCards[0] #PdWarpCoords.Text", "");
+            cmd.set("#PdWarpListCards[0] #PdWarpGoButton.Visible", false);
+            cmd.set("#PdWarpListCards[0] #PdWarpDeleteButton.Visible", false);
+        } else {
+            int wIdx = 0;
+            for (PlayerWarp pw : playerWarps) {
+                String sel = "#PdWarpListCards[" + wIdx + "]";
+                cmd.append("#PdWarpListCards", "Pages/EliteEssentials_AdminPdWarpEntry.ui");
+                cmd.set(sel + " #PdWarpName.Text", pw.getName());
+                cmd.set(sel + " #PdWarpPerm.Text", pw.isPublic() ? "[Public]" : "[Private]");
+                Location wLoc = pw.getLocation();
+                cmd.set(sel + " #PdWarpCoords.Text", wLoc != null ? String.format("%.0f, %.0f, %.0f (%s)", wLoc.getX(), wLoc.getY(), wLoc.getZ(), wLoc.getWorld()) : "?");
+                events.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PdWarpGoButton",
+                    new EventData().append("Action", "pdtpwarp").append("Player", pw.getName()), false);
+                events.addEventBinding(CustomUIEventBindingType.Activating, sel + " #PdWarpDeleteButton",
+                    new EventData().append("Action", "pddelwarp").append("Player", pw.getName()), false);
+                wIdx++;
             }
         }
 
@@ -1392,7 +1592,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
 
     private void setStatus(String selector, String message) {
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set(selector + ".Text", message);
+        cmd.set(selector + ".Text", MessageFormatter.stripColorCodes(message));
         sendUpdate(cmd, null, false);
     }
 
@@ -1440,6 +1640,8 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             .append(new KeyedCodec<>("Nav", Codec.STRING), (d, s) -> d.nav = s, d -> d.nav).add()
             .append(new KeyedCodec<>("Action", Codec.STRING), (d, s) -> d.action = s, d -> d.action).add()
             .append(new KeyedCodec<>("Player", Codec.STRING), (d, s) -> d.player = s, d -> d.player).add()
+            .append(new KeyedCodec<>("Target", Codec.STRING), (d, s) -> d.target = s, d -> d.target).add()
+            .append(new KeyedCodec<>("Index", Codec.STRING), (d, s) -> d.index = s, d -> d.index).add()
             .append(new KeyedCodec<>("@LookupInput", Codec.STRING), (d, s) -> d.lookupInput = s, d -> d.lookupInput).add()
             .append(new KeyedCodec<>("@BanPlayerInput", Codec.STRING), (d, s) -> d.banPlayer = s, d -> d.banPlayer).add()
             .append(new KeyedCodec<>("@BanDurationInput", Codec.STRING), (d, s) -> d.banDuration = s, d -> d.banDuration).add()
@@ -1456,7 +1658,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             .append(new KeyedCodec<>("@PdPlayerInput", Codec.STRING), (d, s) -> d.pdPlayer = s, d -> d.pdPlayer).add()
             .build();
 
-        String nav, action, player, lookupInput;
+        String nav, action, player, target, index, lookupInput;
         String banPlayer, banDuration, banReason, unbanPlayer;
         String mutePlayer, muteReason, unmutePlayer;
         String warnPlayer, warnReason, lookupPlayer;

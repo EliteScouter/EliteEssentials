@@ -4,6 +4,7 @@ import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.storage.sql.SchemaManager;
 import com.eliteessentials.storage.sql.SqlGlobalStorage;
 import com.eliteessentials.storage.sql.SqlPlayerStorage;
+import com.eliteessentials.storage.sql.SqlPlayerWarpStorage;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -76,6 +77,34 @@ public class StorageFactory {
 
             default:
                 return new WarpStorage(dataFolder);
+        }
+    }
+
+    /**
+     * Create a PlayerWarpStorageProvider based on the configured storage type.
+     */
+    public PlayerWarpStorageProvider createPlayerWarpStorage(PluginConfig.StorageConfig config, File dataFolder) {
+        String type = normalizeType(config);
+
+        switch (type) {
+            case "h2":
+            case "mysql":
+                if (dataSource == null) {
+                    logger.severe("No active connection pool for player warp storage, falling back to JSON.");
+                    return new PlayerWarpStorage(dataFolder);
+                }
+                try {
+                    return new SqlPlayerWarpStorage(dataSource, getTablePrefix(config), "mysql".equals(type));
+                } catch (Exception e) {
+                    logger.severe("Failed to initialize SQL player warp storage: " + e.getMessage());
+                    return new PlayerWarpStorage(dataFolder);
+                }
+
+            case "json":
+                return new PlayerWarpStorage(dataFolder);
+
+            default:
+                return new PlayerWarpStorage(dataFolder);
         }
     }
 

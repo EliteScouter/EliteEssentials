@@ -47,7 +47,8 @@ Group {
   Group { Anchor: (Height: 190); Background: #1a2332(0.3); Padding: (Full: 8);
     LayoutMode: TopScrolling;
     ScrollbarStyle: $C.@DefaultScrollbarStyle;
-    Label #BanList { Text: "No active bans"; Style: (FontSize: 11, TextColor: #6e7da1); }
+    Label #BanListEmpty { Text: "No active bans"; Style: (FontSize: 11, TextColor: #6e7da1); }
+    Group #BanEntries { LayoutMode: Top; }
   }
 
   Group { Anchor: (Height: 6); }

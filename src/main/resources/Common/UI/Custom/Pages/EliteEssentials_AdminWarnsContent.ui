@@ -38,7 +38,8 @@ Group {
   Group { Anchor: (Height: 270); Background: #1a2332(0.3); Padding: (Full: 8);
     LayoutMode: TopScrolling;
     ScrollbarStyle: $C.@DefaultScrollbarStyle;
-    Label #WarnList { Text: "No warnings found"; Style: (FontSize: 11, TextColor: #6e7da1); }
+    Label #WarnListEmpty { Text: "No warnings found"; Style: (FontSize: 11, TextColor: #6e7da1); }
+    Group #WarnEntries { LayoutMode: Top; }
   }
 
   Group { Anchor: (Height: 6); }

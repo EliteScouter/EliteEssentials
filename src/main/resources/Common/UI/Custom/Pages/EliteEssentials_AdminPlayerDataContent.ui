@@ -32,6 +32,8 @@ Group {
       Label #PdBackCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
       Label { Text: "Kits:"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
       Label #PdKitCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
+      Label { Text: "Warps:"; Anchor: (Width: 50, Height: 16); Style: (FontSize: 10, TextColor: #4a5568); }
+      Label #PdWarpCount { Text: "0"; Anchor: (Width: 40, Height: 16); Style: (FontSize: 10, TextColor: #ccb588); }
     }
   }
 
@@ -44,6 +46,17 @@ Group {
     LayoutMode: TopScrolling;
     ScrollbarStyle: $C.@DefaultScrollbarStyle;
     Group #PdHomeListCards { LayoutMode: Top; }
+  }
+
+  Group { Anchor: (Height: 8); }
+
+  // Player warps section
+  Label #PdWarpsLabel { Text: "PLAYER WARPS"; Anchor: (Height: 18); Style: (FontSize: 9, TextColor: #4a5568, LetterSpacing: 2); }
+  Group { Anchor: (Height: 4); }
+  Group { FlexWeight: 1; Background: #1a2332(0.3); Padding: (Full: 8);
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    Group #PdWarpListCards { LayoutMode: Top; }
   }
 
   Group { Anchor: (Height: 8); }

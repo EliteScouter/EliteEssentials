@@ -93,6 +93,24 @@ public class WarnService {
     }
 
     /**
+     * Remove a single warning by index (0-based).
+     * @return true if the warning was removed
+     */
+    public boolean removeWarning(UUID playerId, int index) {
+        String key = playerId.toString();
+        List<WarnEntry> list = warns.get(key);
+        if (list == null || index < 0 || index >= list.size()) {
+            return false;
+        }
+        list.remove(index);
+        if (list.isEmpty()) {
+            warns.remove(key);
+        }
+        save();
+        return true;
+    }
+
+    /**
      * Clear all warnings for a player.
      * @return the number of warnings that were cleared
      */

@@ -168,7 +168,6 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         }
 
         // Check bypass permissions
-        boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
         boolean canBypassOnetime = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_ONETIME);
 
         // Check one-time kit (unless player has bypass)
@@ -180,14 +179,13 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
             return;
         }
 
-        // Check cooldown (can be bypassed)
-        if (!canBypassCooldown) {
-            long remaining = kitService.getRemainingCooldown(playerId, kit.getId());
-            if (remaining > 0) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(
-                    configManager.getMessage("kitOnCooldown", "time", formatCooldown(remaining)), "#FF5555"));
-                return;
-            }
+        // Check cooldown using permission-based effective cooldown (per-rank via LuckPerms)
+        // getRemainingCooldown already factors in bypass and per-rank overrides
+        long remaining = kitService.getRemainingCooldown(playerId, kit.getId());
+        if (remaining > 0) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("kitOnCooldown", "time", formatCooldown(remaining)), "#FF5555"));
+            return;
         }
 
         // Get player component and inventory
@@ -201,6 +199,13 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
 
         if (playerComponent == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
+            return;
+        }
+
+        // Check inventory space (skip for replace-inventory kits since they clear first)
+        if (!kit.isReplaceInventory() && !hasInventorySpace(kit, store, ref)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("kitInventoryFull"), "#FF5555"));
             return;
         }
 
@@ -224,12 +229,67 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
                 logger.info("Marking kit '" + kit.getId() + "' as claimed for player " + playerId);
             }
             kitService.setOnetimeClaimed(playerId, kit.getId());
-        } else if (kit.getCooldown() > 0) {
-            kitService.setKitUsed(playerId, kit.getId());
+        } else {
+            // Use effective cooldown (permission-based per-rank, or kit default)
+            int effectiveCooldown = kitService.getEffectiveCooldown(playerId, kit.getId());
+            if (effectiveCooldown > 0) {
+                kitService.setKitUsed(playerId, kit.getId());
+            }
         }
 
         ctx.sendMessage(MessageFormatter.formatWithFallback(
             configManager.getMessage("kitClaimed", "kit", kit.getDisplayName()), "#55FF55"));
+    }
+
+    /**
+     * Check if the player has enough inventory space for a kit's items.
+     * Counts items that can't fit in their target slot and checks if hotbar+storage
+     * has enough empty slots for the overflow.
+     */
+    private static boolean hasInventorySpace(Kit kit, Store<EntityStore> store, Ref<EntityStore> ref) {
+        int slotsNeeded = 0;
+        
+        for (KitItem kitItem : kit.getItems()) {
+            ItemContainer container = getContainer(store, ref, kitItem.section());
+            String section = kitItem.section().toLowerCase();
+            
+            if (container != null) {
+                short slot = (short) kitItem.slot();
+                if (slot >= 0 && slot < container.getCapacity()) {
+                    ItemStack existing = container.getItemStack(slot);
+                    if (existing == null || existing.isEmpty()) {
+                        // Target slot is free for hotbar/storage items
+                        if (section.equals("hotbar") || section.equals("storage")) {
+                            continue;
+                        }
+                        // Armor/utility/tools target slot is free
+                        continue;
+                    }
+                }
+                // Target slot occupied; armor/utility/tools overflow to hotbar/storage
+                // hotbar/storage items also try addItemStack which needs a free slot
+            }
+            // Item needs a general inventory slot
+            slotsNeeded++;
+        }
+        
+        if (slotsNeeded == 0) return true;
+        
+        // Count empty slots in hotbar + storage
+        int emptySlots = 0;
+        for (String section : new String[]{"hotbar", "storage"}) {
+            ItemContainer container = getContainer(store, ref, section);
+            if (container != null) {
+                for (short slot = 0; slot < container.getCapacity(); slot++) {
+                    ItemStack existing = container.getItemStack(slot);
+                    if (existing == null || existing.isEmpty()) {
+                        emptySlots++;
+                    }
+                }
+            }
+        }
+        
+        return emptySlots >= slotsNeeded;
     }
 
     /**

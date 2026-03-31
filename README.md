@@ -29,6 +29,19 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - Permission levels: `all` (everyone) or `op` (admins only); per-warp permissions in advanced mode
 - Persisted to `warps.json`
 
+### Player Warps
+- **`/pwarp gui`** - Open the player warps GUI with pagination and filter buttons
+- **`/pwarp create <public|private> <name> [description]`** - Create a warp at your location
+- **`/pwarp <name>`** - Teleport to a player warp
+- **`/pwarp delete <name>`** - Delete your warp (admins can delete any)
+- **`/pwarp toggle <name>`** - Switch between public and private visibility
+- **`/pwarp list`** - List your warps with count and limit
+- **`/pwarp info <name>`** - View warp details
+- **`/pwarp setdesc <name> <desc>`** / **`/pwarp setloc <name>`** - Update description or location
+- Public warps visible to everyone; private warps visible only to the owner
+- Per-group warp limits, cooldowns, warmups, and costs via LuckPerms/HyperPerms
+- Disabled by default; enable with `playerWarps.enabled: true`
+
 ### Back Command
 - **`/back`** - Return to your previous location
 - Remembers multiple locations (configurable history)
@@ -339,6 +352,10 @@ Config file is automatically created on first server start with sensible default
 | `/warp list` | List warps | Everyone |
 | `/warpadmin` | Warp admin panel | Admin |
 | `/warpsetperm` / `/warpsetdesc` | Set warp perm/description | Admin |
+| `/pwarp gui` | Player warps GUI | Everyone |
+| `/pwarp <name>` | Teleport to player warp | Everyone |
+| `/pwarp create <vis> <name> [desc]` | Create player warp | Everyone |
+| `/pwarp delete <name>` | Delete your player warp | Everyone |
 | `/kit` / `/kit <name>` | Kit GUI or claim kit | Everyone |
 | `/kit create <name> [cooldown] [onetime]` | Create kit | Admin |
 | `/kit delete <name>` | Delete kit | Admin |
@@ -416,6 +433,7 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Home | `command.home.home`, `command.home.sethome`, `command.home.limit.5`, `command.home.bypass.cooldown` |
 | Teleport | `command.tp.tpa`, `command.tp.back`, `command.tp.back.ondeath`, `command.tp.bypass.warmup.rtp` |
 | Warp | `command.warp.use`, `command.warp.list`, `command.warp.<warpname>`, `command.warp.bypass.cooldown` |
+| Player Warp | `command.pwarp.use`, `command.pwarp.create`, `command.pwarp.delete`, `command.pwarp.limit.5`, `command.pwarp.bypass.cooldown` |
 | Spawn | `command.spawn.use`, `command.spawn.set`, `command.spawn.delete`, `command.spawn.list`, `command.spawn.setfirstjoin`, `command.spawn.delfirstjoin`, `command.spawn.protection.bypass` |
 | Kit | `command.kit.use`, `command.kit.gui`, `command.kit.<kitname>`, `command.kit.bypass.cooldown`, `command.kit.bypass.onetime` |
 | Misc | `command.misc.msg`, `command.misc.heal`, `command.misc.heal.others`, `command.misc.repair`, `command.misc.repair.all`, `command.misc.ignore`, `command.misc.invsee`, `command.misc.groupchat`, `command.misc.groupchat.spy` |

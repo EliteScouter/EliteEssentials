@@ -250,7 +250,19 @@ public class PlayerFileStorage implements PlayerStorageProvider {
      * Get a player's UUID by name (case-insensitive).
      */
     public Optional<UUID> getUuidByName(String name) {
-        return Optional.ofNullable(nameIndex.get(name.toLowerCase()));
+        String lower = name.toLowerCase();
+        // Exact match first
+        UUID exact = nameIndex.get(lower);
+        if (exact != null) {
+            return Optional.of(exact);
+        }
+        // Fallback: starts-with partial match (matches online NameMatching.DEFAULT behavior)
+        for (Map.Entry<String, UUID> entry : nameIndex.entrySet()) {
+            if (entry.getKey().startsWith(lower)) {
+                return Optional.of(entry.getValue());
+            }
+        }
+        return Optional.empty();
     }
     
     /**
@@ -258,7 +270,7 @@ public class PlayerFileStorage implements PlayerStorageProvider {
      * Returns null if player doesn't exist.
      */
     public PlayerFile getPlayerByName(String name) {
-        UUID uuid = nameIndex.get(name.toLowerCase());
+        UUID uuid = getUuidByName(name).orElse(null);
         if (uuid == null) {
             return null;
         }

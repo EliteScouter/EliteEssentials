@@ -121,21 +121,27 @@ public class SqlPlayerStorage implements PlayerStorageProvider {
 
     @Override
     public PlayerFile getPlayerByName(String name) {
-        UUID uuid = nameIndex.get(name.toLowerCase());
-        if (uuid == null) {
-            // Try DB lookup by name
-            uuid = lookupUuidByName(name);
-            if (uuid == null) return null;
-        }
+        UUID uuid = getUuidByName(name).orElse(null);
+        if (uuid == null) return null;
         return getPlayer(uuid);
     }
 
     @Override
     public Optional<UUID> getUuidByName(String name) {
-        UUID uuid = nameIndex.get(name.toLowerCase());
+        String lower = name.toLowerCase();
+        // Exact match first (in-memory index)
+        UUID uuid = nameIndex.get(lower);
         if (uuid != null) return Optional.of(uuid);
+        // Exact match from DB
         uuid = lookupUuidByName(name);
-        return Optional.ofNullable(uuid);
+        if (uuid != null) return Optional.of(uuid);
+        // Fallback: starts-with partial match (matches online NameMatching.DEFAULT behavior)
+        for (Map.Entry<String, UUID> entry : nameIndex.entrySet()) {
+            if (entry.getKey().startsWith(lower)) {
+                return Optional.of(entry.getValue());
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

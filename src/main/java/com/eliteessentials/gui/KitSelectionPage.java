@@ -107,7 +107,6 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
         }
 
         // Check bypass permissions
-        boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
         boolean canBypassOnetime = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_ONETIME);
         
         // Check one-time kit (unless player has bypass)
@@ -120,21 +119,27 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
             return;
         }
         
-        // Check cooldown (can be bypassed)
-        if (!canBypassCooldown) {
-            long remaining = kitService.getRemainingCooldown(playerId, kit.getId());
-            if (remaining > 0) {
-                sendMessage(configManager.getMessage("kitOnCooldown", 
-                    "time", formatCooldown(remaining)), "#FF5555");
-                this.close();
-                return;
-            }
+        // Check cooldown using permission-based effective cooldown (per-rank via LuckPerms)
+        // getRemainingCooldown already factors in bypass and per-rank overrides
+        long remaining = kitService.getRemainingCooldown(playerId, kit.getId());
+        if (remaining > 0) {
+            sendMessage(configManager.getMessage("kitOnCooldown", 
+                "time", formatCooldown(remaining)), "#FF5555");
+            this.close();
+            return;
         }
 
         // Get player component
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             sendMessage(configManager.getMessage("kitClaimFailed"), "#FF5555");
+            this.close();
+            return;
+        }
+
+        // Check inventory space (skip for replace-inventory kits since they clear first)
+        if (!kit.isReplaceInventory() && !hasInventorySpace(kit, store, ref)) {
+            sendMessage(configManager.getMessage("kitInventoryFull"), "#FF5555");
             this.close();
             return;
         }
@@ -159,13 +164,56 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
                 logger.info("Marking kit '" + kit.getId() + "' as claimed for player " + playerId);
             }
             kitService.setOnetimeClaimed(playerId, kit.getId());
-        } else if (kit.getCooldown() > 0) {
-            kitService.setKitUsed(playerId, kit.getId());
+        } else {
+            // Use effective cooldown (permission-based per-rank, or kit default)
+            int effectiveCooldown = kitService.getEffectiveCooldown(playerId, kit.getId());
+            if (effectiveCooldown > 0) {
+                kitService.setKitUsed(playerId, kit.getId());
+            }
         }
 
         sendMessage(configManager.getMessage("kitClaimed", 
             "kit", kit.getDisplayName()), "#55FF55");
         this.close();
+    }
+
+    /**
+     * Check if the player has enough inventory space for a kit's items.
+     */
+    private boolean hasInventorySpace(Kit kit, Store<EntityStore> store, Ref<EntityStore> ref) {
+        int slotsNeeded = 0;
+        
+        for (KitItem kitItem : kit.getItems()) {
+            ItemContainer container = getContainer(store, ref, kitItem.section());
+            
+            if (container != null) {
+                short slot = (short) kitItem.slot();
+                if (slot >= 0 && slot < container.getCapacity()) {
+                    ItemStack existing = container.getItemStack(slot);
+                    if (existing == null || existing.isEmpty()) {
+                        continue; // Target slot is free
+                    }
+                }
+            }
+            slotsNeeded++;
+        }
+        
+        if (slotsNeeded == 0) return true;
+        
+        int emptySlots = 0;
+        for (String section : new String[]{"hotbar", "storage"}) {
+            ItemContainer container = getContainer(store, ref, section);
+            if (container != null) {
+                for (short slot = 0; slot < container.getCapacity(); slot++) {
+                    ItemStack existing = container.getItemStack(slot);
+                    if (existing == null || existing.isEmpty()) {
+                        emptySlots++;
+                    }
+                }
+            }
+        }
+        
+        return emptySlots >= slotsNeeded;
     }
 
     /**
@@ -295,7 +343,6 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
             String kitPermission = Permissions.kitAccess(kit.getId());
             boolean hasPermission = PermissionService.get().canUseEveryoneCommand(playerId, kitPermission, true) ||
                                    PermissionService.get().isAdmin(playerId);
-            boolean canBypassCooldown = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_COOLDOWN);
             boolean canBypassOnetime = PermissionService.get().hasPermission(playerId, Permissions.KIT_BYPASS_ONETIME);
 
             String statusText;
@@ -308,12 +355,11 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
                 statusText = configManager.getMessage("gui.KitStatusClaimed");
                 canClaim = false;
             } else {
+                // getRemainingCooldown uses permission-based effective cooldown (per-rank)
                 long remainingCooldown = kitService.getRemainingCooldown(playerId, kit.getId());
                 if (remainingCooldown > 0) {
                     statusText = formatCooldown(remainingCooldown);
-                    if (!canBypassCooldown) {
-                        canClaim = false;
-                    }
+                    canClaim = false;
                 } else {
                     statusText = configManager.getMessage("gui.KitStatusReady");
                 }

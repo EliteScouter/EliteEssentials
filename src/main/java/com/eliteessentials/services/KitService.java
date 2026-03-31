@@ -2,6 +2,7 @@ package com.eliteessentials.services;
 
 import com.eliteessentials.model.Kit;
 import com.eliteessentials.model.PlayerFile;
+import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.storage.PlayerStorageProvider;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -133,12 +134,20 @@ public class KitService {
     }
 
     /**
-     * Get remaining cooldown for a player's kit usage
+     * Get remaining cooldown for a player's kit usage.
+     * Uses permission-based cooldown if available (per-rank), otherwise kit's default.
      * @return Remaining seconds, or 0 if not on cooldown
      */
     public long getRemainingCooldown(UUID playerId, String kitId) {
         Kit kit = getKit(kitId);
         if (kit == null || kit.getCooldown() <= 0) {
+            // Even if kit default is 0, check if a permission-based cooldown applies
+            if (kit == null) return 0;
+        }
+
+        // Get effective cooldown (permission-based or kit default)
+        int effectiveCooldown = getEffectiveCooldown(playerId, kitId);
+        if (effectiveCooldown <= 0) {
             return 0;
         }
 
@@ -157,8 +166,19 @@ public class KitService {
         }
 
         long elapsed = (System.currentTimeMillis() - lastUsed) / 1000;
-        long remaining = kit.getCooldown() - elapsed;
+        long remaining = effectiveCooldown - elapsed;
         return Math.max(0, remaining);
+    }
+
+    /**
+     * Get the effective cooldown for a player claiming a kit.
+     * Checks permission-based cooldown first (per-rank via LuckPerms), falls back to kit default.
+     * @return Cooldown in seconds (0 = no cooldown)
+     */
+    public int getEffectiveCooldown(UUID playerId, String kitId) {
+        Kit kit = getKit(kitId);
+        if (kit == null) return 0;
+        return PermissionService.get().getKitCooldown(playerId, kit.getId(), kit.getCooldown());
     }
 
     /**

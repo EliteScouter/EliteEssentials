@@ -1,0 +1,38 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Left: 0, Right: 0, Bottom: 3, Height: 28);
+  Background: #1a2332(0.5);
+  Padding: (Left: 8, Right: 8);
+
+  Label #PdWarpName {
+    Style: (FontSize: 11, TextColor: #bfe3ff, RenderBold: true, VerticalAlignment: Center);
+    Anchor: (Width: 80, Height: 28);
+  }
+
+  Label #PdWarpPerm {
+    Style: (FontSize: 9, TextColor: #4a5568, VerticalAlignment: Center);
+    Anchor: (Width: 45, Height: 28);
+  }
+
+  Label #PdWarpCoords {
+    Style: (FontSize: 10, TextColor: #4a5568, VerticalAlignment: Center);
+    FlexWeight: 1;
+    Anchor: (Height: 28);
+  }
+
+  TextButton #PdWarpGoButton {
+    Text: "TP";
+    Anchor: (Width: 40, Height: 22);
+    Style: $A.@AdminSuccBtn;
+  }
+
+  Group { Anchor: (Width: 4); }
+
+  TextButton #PdWarpDeleteButton {
+    Text: "DEL";
+    Anchor: (Width: 45, Height: 22);
+    Style: $A.@AdminDangerBtn;
+  }
+}

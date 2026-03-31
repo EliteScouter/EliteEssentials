@@ -1,0 +1,18 @@
+$A = "EliteEssentials_AdminShared.ui";
+
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 26);
+  Padding: (Left: 4, Right: 4);
+
+  Label #BanEntryText {
+    FlexWeight: 1;
+    Style: (FontSize: 11, TextColor: #6e7da1, VerticalAlignment: Center);
+  }
+
+  TextButton #BanRemoveBtn {
+    Text: "X";
+    Anchor: (Width: 26, Height: 22);
+    Style: $A.@AdminDangerBtn;
+  }
+}

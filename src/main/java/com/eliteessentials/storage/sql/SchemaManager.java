@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 public class SchemaManager {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
-    private static final int CURRENT_SCHEMA_VERSION = 2;
+    private static final int CURRENT_SCHEMA_VERSION = 3;
 
     /**
      * Initialize the database schema. Creates all tables if they don't exist
@@ -103,6 +103,29 @@ public class SchemaManager {
                             + tablePrefix + "activity_log(type)");
                     stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
                             + tablePrefix + "activity_log(timestamp)");
+                }
+                break;
+            case 3:
+                // Add player_warps table
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "player_warps ("
+                            + "name        VARCHAR(64)  PRIMARY KEY,"
+                            + "world       VARCHAR(128) NOT NULL,"
+                            + "x           DOUBLE       NOT NULL,"
+                            + "y           DOUBLE       NOT NULL,"
+                            + "z           DOUBLE       NOT NULL,"
+                            + "yaw         FLOAT        NOT NULL DEFAULT 0,"
+                            + "pitch       FLOAT        NOT NULL DEFAULT 0,"
+                            + "owner_uuid  VARCHAR(36)  NOT NULL,"
+                            + "owner_name  VARCHAR(64)  NOT NULL,"
+                            + "visibility  VARCHAR(16)  NOT NULL DEFAULT 'PUBLIC',"
+                            + "description TEXT,"
+                            + "created_at  BIGINT       NOT NULL DEFAULT 0"
+                            + ")");
+                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_owner ON "
+                            + tablePrefix + "player_warps(owner_uuid)");
+                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_vis ON "
+                            + tablePrefix + "player_warps(visibility)");
                 }
                 break;
             default:
@@ -294,6 +317,26 @@ public class SchemaManager {
                     + tablePrefix + "activity_log(type)");
             stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
                     + tablePrefix + "activity_log(timestamp)");
+
+            // Player warps
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "player_warps ("
+                    + "name        VARCHAR(64)  PRIMARY KEY,"
+                    + "world       VARCHAR(128) NOT NULL,"
+                    + "x           DOUBLE       NOT NULL,"
+                    + "y           DOUBLE       NOT NULL,"
+                    + "z           DOUBLE       NOT NULL,"
+                    + "yaw         FLOAT        NOT NULL DEFAULT 0,"
+                    + "pitch       FLOAT        NOT NULL DEFAULT 0,"
+                    + "owner_uuid  VARCHAR(36)  NOT NULL,"
+                    + "owner_name  VARCHAR(64)  NOT NULL,"
+                    + "visibility  VARCHAR(16)  NOT NULL DEFAULT 'PUBLIC',"
+                    + "description TEXT,"
+                    + "created_at  BIGINT       NOT NULL DEFAULT 0"
+                    + ")");
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_owner ON "
+                    + tablePrefix + "player_warps(owner_uuid)");
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_vis ON "
+                    + tablePrefix + "player_warps(visibility)");
         }
     }
 }

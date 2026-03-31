@@ -97,6 +97,36 @@ public final class Permissions {
     // Warp warmup overrides: eliteessentials.command.warp.warmup.<seconds>
     public static final String WARP_WARMUP_PREFIX = WARP_CATEGORY + ".warmup.";
 
+    // ==================== PLAYER WARP CATEGORY ====================
+    // eliteessentials.command.pwarp.*
+    public static final String PWARP_CATEGORY = COMMAND_BASE + ".pwarp";
+    
+    // Commands
+    public static final String PWARP = PWARP_CATEGORY + ".use";
+    public static final String PWARP_CREATE = PWARP_CATEGORY + ".create";
+    public static final String PWARP_DELETE = PWARP_CATEGORY + ".delete";
+    public static final String PWARP_LIST = PWARP_CATEGORY + ".list";
+    public static final String PWARP_GUI = PWARP_CATEGORY + ".gui";
+    public static final String PWARP_SETDESC = PWARP_CATEGORY + ".setdesc";
+    public static final String PWARP_SETLOC = PWARP_CATEGORY + ".setloc";
+    public static final String PWARP_TOGGLE = PWARP_CATEGORY + ".toggle";
+    
+    // Admin: can delete any player warp
+    public static final String PWARP_ADMIN_DELETE = PWARP_CATEGORY + ".admin.delete";
+    
+    // Player warp limits: eliteessentials.command.pwarp.limit.<number>
+    public static final String PWARP_LIMIT_PREFIX = PWARP_CATEGORY + ".limit.";
+    public static final String PWARP_LIMIT_UNLIMITED = PWARP_CATEGORY + ".limit.unlimited";
+    
+    // Player warp bypass: eliteessentials.command.pwarp.bypass.*
+    public static final String PWARP_BYPASS = PWARP_CATEGORY + ".bypass";
+    public static final String PWARP_BYPASS_COOLDOWN = PWARP_BYPASS + ".cooldown";
+    public static final String PWARP_BYPASS_WARMUP = PWARP_BYPASS + ".warmup";
+    // Player warp cooldown overrides: eliteessentials.command.pwarp.cooldown.<seconds>
+    public static final String PWARP_COOLDOWN_PREFIX = PWARP_CATEGORY + ".cooldown.";
+    // Player warp warmup overrides: eliteessentials.command.pwarp.warmup.<seconds>
+    public static final String PWARP_WARMUP_PREFIX = PWARP_CATEGORY + ".warmup.";
+
     // ==================== SPAWN CATEGORY ====================
     // eliteessentials.command.spawn.*
     public static final String SPAWN_CATEGORY = COMMAND_BASE + ".spawn";
@@ -210,6 +240,9 @@ public final class Permissions {
     public static final String KIT_BYPASS_COOLDOWN = KIT_CATEGORY + ".bypass.cooldown";
     public static final String KIT_BYPASS_ONETIME = KIT_CATEGORY + ".bypass.onetime";
     
+    // Kit cooldown overrides: eliteessentials.command.kit.cooldown.<kitname>.<seconds>
+    public static final String KIT_COOLDOWN_PREFIX = KIT_CATEGORY + ".cooldown.";
+    
     // Kit access: eliteessentials.command.kit.<kitname>
     // (handled by kitAccess() method)
 
@@ -316,6 +349,16 @@ public final class Permissions {
      */
     public static String kitAccess(String kitId) {
         return KIT_CATEGORY + "." + kitId.toLowerCase();
+    }
+    
+    /**
+     * Get kit cooldown permission prefix for a specific kit.
+     * Players with eliteessentials.command.kit.cooldown.<kitname>.<seconds> get that cooldown instead of the default.
+     * @param kitId Kit ID
+     * @return eliteessentials.command.kit.cooldown.<kitId>.
+     */
+    public static String kitCooldownPrefix(String kitId) {
+        return KIT_COOLDOWN_PREFIX + kitId.toLowerCase() + ".";
     }
     
     /**
@@ -504,6 +547,7 @@ public final class Permissions {
         return switch (command) {
             case "home", "sethome", "delhome", "homes" -> HOME_BYPASS_COOLDOWN;
             case "warp", "warps" -> WARP_BYPASS_COOLDOWN;
+            case "pwarp" -> PWARP_BYPASS_COOLDOWN;
             case "spawn" -> SPAWN_BYPASS_COOLDOWN;
             case "heal" -> HEAL_BYPASS_COOLDOWN;
             case "god" -> GOD_BYPASS_COOLDOWN;
@@ -524,6 +568,7 @@ public final class Permissions {
         return switch (command) {
             case "home", "sethome", "delhome", "homes" -> HOME_BYPASS_WARMUP;
             case "warp", "warps" -> WARP_BYPASS_WARMUP;
+            case "pwarp" -> PWARP_BYPASS + ".warmup";
             case "spawn" -> SPAWN_BYPASS_WARMUP;
             default -> TP_BYPASS_WARMUP_PREFIX + command;
         };

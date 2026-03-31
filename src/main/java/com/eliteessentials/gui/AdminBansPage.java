@@ -8,6 +8,7 @@ import com.eliteessentials.services.BanService;
 import com.eliteessentials.services.IpBanService;
 import com.eliteessentials.services.TempBanService;
 import com.eliteessentials.storage.PlayerStorageProvider;
+import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.codec.Codec;
@@ -339,7 +340,7 @@ public class AdminBansPage extends InteractiveCustomUIPage<AdminBansPage.BanEven
 
     private void setStatus(String message) {
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#BanStatusMsg.Text", message);
+        cmd.set("#BanStatusMsg.Text", MessageFormatter.stripColorCodes(message));
         sendUpdate(cmd, null, false);
     }
 

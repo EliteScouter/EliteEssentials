@@ -45,6 +45,7 @@ public class PluginConfig {
     public HomesConfig homes = new HomesConfig();
     public SpawnConfig spawn = new SpawnConfig();
     public WarpsConfig warps = new WarpsConfig();
+    public PlayerWarpsConfig playerWarps = new PlayerWarpsConfig();
     public SleepConfig sleep = new SleepConfig();
     public DeathMessagesConfig deathMessages = new DeathMessagesConfig();
     public GodConfig god = new GodConfig();
@@ -198,6 +199,40 @@ public class PluginConfig {
         messages.put("warpAdminPermissionUpdated", "&aWarp &e'{name}' &apermission updated to &7{permission}&a.");
         messages.put("warpAdminDescriptionUpdated", "&aWarp &e'{name}' &adescription updated to: &7{description}");
         
+        // ==================== PLAYER WARPS ====================
+        messages.put("pwarpNoWarps", "&cNo player warps available.");
+        messages.put("pwarpNotFound", "&cPlayer warp &e'{name}' &cnot found.");
+        messages.put("pwarpTeleported", "&aTeleported to player warp &e'{name}' &aby &7{owner}&a.");
+        messages.put("pwarpWarmup", "&eTeleporting to player warp &a'{name}' &ein &a{seconds} &eseconds... Stand still!");
+        messages.put("pwarpCreated", "&aCreated player warp &e'{name}' &a[{visibility}].");
+        messages.put("pwarpDeleted", "&aDeleted player warp &e'{name}'&a.");
+        messages.put("pwarpDeleteFailed", "&cFailed to delete player warp.");
+        messages.put("pwarpNotOwner", "&cYou don't own this player warp.");
+        messages.put("pwarpNameTaken", "&cA player warp named &e'{name}' &calready exists.");
+        messages.put("pwarpLimitReached", "&cYou've reached your player warp limit ({limit}).");
+        messages.put("pwarpInvalidName", "&cInvalid warp name. Use letters, numbers, underscores, or dashes (max 32 chars).");
+        messages.put("pwarpDescriptionTooLong", "&cDescription is too long (max 100 characters).");
+        messages.put("pwarpVisibilityChanged", "&aPlayer warp &e'{name}' &ais now &7{visibility}&a.");
+        messages.put("pwarpDescriptionUpdated", "&aPlayer warp &e'{name}' &adescription updated.");
+        messages.put("pwarpLocationUpdated", "&aPlayer warp &e'{name}' &alocation updated to your current position.");
+        messages.put("pwarpCreateCostMessage", "&7Creating this warp costs &a{cost}&7.");
+        messages.put("pwarpInfo", "&b--- Player Warp: &e{name} &b---");
+        messages.put("pwarpInfoOwner", "&7Owner: &f{owner}");
+        messages.put("pwarpInfoVisibility", "&7Visibility: &f{visibility}");
+        messages.put("pwarpInfoDescription", "&7Description: &f{description}");
+        messages.put("pwarpInfoLocation", "&7Location: &f{world} ({x}, {y}, {z})");
+        
+        // Player Warp GUI messages
+        messages.put("gui.PlayerWarpsTitle", "PLAYER WARPS");
+        messages.put("gui.PlayerWarpButton", "TP");
+        messages.put("gui.PlayerWarpDeleteButton", "X");
+        messages.put("gui.PlayerWarpDeleteConfirmButton", "!!");
+        messages.put("gui.PlayerWarpPublicButton", "Public");
+        messages.put("gui.PlayerWarpPrivateButton", "Private");
+        messages.put("gui.PlayerWarpAllButton", "All Warps");
+        messages.put("gui.PlayerWarpPublicTag", "[Public]");
+        messages.put("gui.PlayerWarpPrivateTag", "[Private]");
+        
         // ==================== BACK ====================
         messages.put("backNoLocation", "&cNo previous location to go back to.");
         messages.put("backTeleported", "&aTeleported to your previous location.");
@@ -320,6 +355,7 @@ public class PluginConfig {
         messages.put("kitAlreadyClaimed", "&cYou have already claimed this one-time kit.");
         messages.put("kitClaimed", "&aYou received the &e{kit} &akit!");
         messages.put("kitClaimFailed", "&cCould not claim kit.");
+        messages.put("kitInventoryFull", "&cYou don't have enough inventory space for this kit.");
         messages.put("kitOpenFailed", "&cCould not open kit menu.");
         
         // ==================== MOTD ====================
@@ -586,6 +622,7 @@ public class PluginConfig {
         messages.put("adminui.warns.enterName", "Enter a player name.");
         messages.put("adminui.warns.warned", "Warned {player}. Total: {count}");
         messages.put("adminui.warns.cleared", "Cleared {count} warnings for {player}.");
+        messages.put("adminui.warns.warnRemoved", "Warning removed.");
         
         // ==================== ADMIN UI - ACTIVITY LOG ====================
         messages.put("adminui.activity.title", "Activity Log");
@@ -616,6 +653,7 @@ public class PluginConfig {
         messages.put("adminui.playerdata.backHistory", "BACK HISTORY");
         messages.put("adminui.playerdata.clearBack", "CLEAR BACK HISTORY");
         messages.put("adminui.playerdata.resetKits", "RESET KIT CLAIMS");
+        messages.put("adminui.playerdata.warps", "PLAYER WARPS");
         
         // ==================== ADMIN UI - NAV (new tabs) ====================
         messages.put("adminui.nav.activity", "Activity Log");
@@ -880,6 +918,9 @@ public class PluginConfig {
         
         /** Number of entries shown per page in the Kits GUI */
         public int kitsPerPage = 6;
+        
+        /** Number of entries shown per page in the Player Warps GUI */
+        public int playerWarpsPerPage = 6;
     }
     
     /**
@@ -1110,6 +1151,55 @@ public class PluginConfig {
             limits.put("Moderator", 20);
             limits.put("VIP", 10);
             limits.put("Default", 5);
+            return limits;
+        }
+    }
+
+    // ==================== PLAYER WARPS ====================
+    
+    public static class PlayerWarpsConfig {
+        /** Enable/disable player warp commands (/pwarp). */
+        public boolean enabled = true;
+        
+        /**
+         * Worlds where /pwarp cannot be used (creation or teleportation).
+         * Supports wildcard patterns using * (e.g. "arena*").
+         */
+        public java.util.List<String> blacklistedWorlds = new java.util.ArrayList<>();
+        
+        /** Cooldown in seconds between /pwarp teleport uses (0 = no cooldown) */
+        public int cooldownSeconds = 0;
+        
+        /** Warmup in seconds - player must stand still (0 = instant) */
+        public int warmupSeconds = 3;
+        
+        /**
+         * Maximum player warps each player can create.
+         * Set to -1 for unlimited.
+         * In advanced permissions mode, use eliteessentials.command.pwarp.limit.<number> to override per-group.
+         */
+        public int maxWarps = 3;
+        
+        /**
+         * Player warp limits per group (for advanced permissions mode).
+         * Key = group name (case-insensitive), Value = max warps for that group.
+         * Use -1 for unlimited. Players get the highest limit from their groups.
+         */
+        public Map<String, Integer> groupLimits = createDefaultPwarpLimits();
+        
+        /** Cost to use /pwarp <name> to teleport (0 = free, requires economy enabled) */
+        public double cost = 0.0;
+        
+        /** Cost to create a player warp (0 = free, requires economy enabled) */
+        public double createCost = 0.0;
+        
+        private static Map<String, Integer> createDefaultPwarpLimits() {
+            Map<String, Integer> limits = new HashMap<>();
+            limits.put("Admin", -1);      // Unlimited
+            limits.put("Owner", -1);      // Unlimited
+            limits.put("Moderator", 10);
+            limits.put("VIP", 5);
+            limits.put("Default", 3);
             return limits;
         }
     }

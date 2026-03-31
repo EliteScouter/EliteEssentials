@@ -6,6 +6,7 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.FreezeService;
 import com.eliteessentials.util.PlayerSuggestionProvider;
+import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.codec.Codec;
@@ -266,7 +267,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.P
 
     private void setStatus(String message) {
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#PlayerStatusMsg.Text", message);
+        cmd.set("#PlayerStatusMsg.Text", MessageFormatter.stripColorCodes(message));
         sendUpdate(cmd, null, false);
     }
 

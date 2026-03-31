@@ -6,6 +6,7 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.WarnService;
 import com.eliteessentials.storage.PlayerStorageProvider;
+import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -224,7 +225,7 @@ public class AdminWarnsPage extends InteractiveCustomUIPage<AdminWarnsPage.WarnE
 
     private void setStatus(String message) {
         UICommandBuilder cmd = new UICommandBuilder();
-        cmd.set("#WarnStatusMsg.Text", message);
+        cmd.set("#WarnStatusMsg.Text", MessageFormatter.stripColorCodes(message));
         sendUpdate(cmd, null, false);
     }
 
