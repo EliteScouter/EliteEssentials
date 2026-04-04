@@ -292,6 +292,37 @@ public class VanishService {
      */
     public boolean onPlayerLeave(UUID playerId) {
         boolean wasVanished = vanishedPlayers.remove(playerId);
+        
+        PluginConfig config = configManager.getConfig();
+        
+        // CRITICAL: ALWAYS un-hide from all other players' HiddenPlayersManagers,
+        // even if the player is not currently vanished. Toggling vanish on/off
+        // (especially with cross-world teleports while vanished) can leave residual
+        // hidden state in other players' HiddenPlayersManagers. If the entity remains
+        // "hidden" during the engine's disconnect cleanup, EntityStore's UUID registry
+        // may not be fully cleaned, leaving a ghost entity in RAM. On reconnect, the
+        // UUID collision causes an "Invalid entity reference" crash loop that only a
+        // restart can fix. showPlayer() is a no-op if not hidden, so this is safe.
+        updateVisibilityForAll(playerId, false);
+        
+        if (wasVanished) {
+            // Remove Invulnerable component so entity is in a clean state
+            // for the engine's removal pipeline
+            if (config.vanish.mobImmunity) {
+                PlayerStoreRef psr = playerStoreRefs.get(playerId);
+                if (psr != null && psr.ref != null && psr.ref.isValid()) {
+                    try {
+                        GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
+                        if (godService == null || !godService.isGodMode(playerId)) {
+                            psr.store.removeComponent(psr.ref, Invulnerable.getComponentType());
+                        }
+                    } catch (Exception e) {
+                        // Component may not exist or entity partially removed; safe to ignore
+                    }
+                }
+            }
+        }
+        
         // Clean up stored ref
         playerStoreRefs.remove(playerId);
         // Note: We don't clear the vanished flag in PlayerFile here
