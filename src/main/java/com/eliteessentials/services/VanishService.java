@@ -50,6 +50,12 @@ public class VanishService {
     // Track player store/ref pairs for map filter updates
     private final Map<UUID, PlayerStoreRef> playerStoreRefs = new ConcurrentHashMap<>();
     
+    // Guard against concurrent vanish toggles for the same player.
+    // Rapid /v /v from ForkJoinPool threads can overlap, causing concurrent
+    // putComponent/removeComponent on the entity's Invulnerable component,
+    // which corrupts the ECS archetype and nulls the Player component.
+    private final Set<UUID> toggleInProgress = ConcurrentHashMap.newKeySet();
+    
     /**
      * Helper class to store player's store and ref for map filter updates.
      */
@@ -83,10 +89,9 @@ public class VanishService {
     }
     
     /**
-     * Set a player's vanish state with optional store/ref for synchronous component updates.
-     * When store and ref are provided and valid, Invulnerable is applied immediately on the
-     * current thread (avoids world.execute() stale-ref leading to IndexOutOfBoundsException).
-     * Call from command handlers that run on the world thread.
+     * Set a player's vanish state with optional store/ref for component updates.
+     * When store and ref are provided, they are passed to world.execute() as the
+     * freshest available refs for deferred component mutation on the world thread.
      */
     public void setVanished(UUID playerId, String playerName, boolean vanished,
                             Store<EntityStore> store, Ref<EntityStore> ref) {
@@ -153,9 +158,19 @@ public class VanishService {
      */
     public boolean toggleVanish(UUID playerId, String playerName,
                                Store<EntityStore> store, Ref<EntityStore> ref) {
-        boolean nowVanished = !isVanished(playerId);
-        setVanished(playerId, playerName, nowVanished, store, ref);
-        return nowVanished;
+        // Prevent concurrent toggles — rapid /v /v can overlap on ForkJoinPool threads,
+        // causing concurrent ECS archetype mutations that corrupt the entity
+        if (!toggleInProgress.add(playerId)) {
+            logger.fine("[Vanish] Toggle already in progress for " + playerName + ", ignoring");
+            return isVanished(playerId);
+        }
+        try {
+            boolean nowVanished = !isVanished(playerId);
+            setVanished(playerId, playerName, nowVanished, store, ref);
+            return nowVanished;
+        } finally {
+            toggleInProgress.remove(playerId);
+        }
     }
     
     /**
@@ -292,6 +307,37 @@ public class VanishService {
      */
     public boolean onPlayerLeave(UUID playerId) {
         boolean wasVanished = vanishedPlayers.remove(playerId);
+        
+        PluginConfig config = configManager.getConfig();
+        
+        // CRITICAL: ALWAYS un-hide from all other players' HiddenPlayersManagers,
+        // even if the player is not currently vanished. Toggling vanish on/off
+        // (especially with cross-world teleports while vanished) can leave residual
+        // hidden state in other players' HiddenPlayersManagers. If the entity remains
+        // "hidden" during the engine's disconnect cleanup, EntityStore's UUID registry
+        // may not be fully cleaned, leaving a ghost entity in RAM. On reconnect, the
+        // UUID collision causes an "Invalid entity reference" crash loop that only a
+        // restart can fix. showPlayer() is a no-op if not hidden, so this is safe.
+        updateVisibilityForAll(playerId, false);
+        
+        if (wasVanished) {
+            // Remove Invulnerable component so entity is in a clean state
+            // for the engine's removal pipeline
+            if (config.vanish.mobImmunity) {
+                PlayerStoreRef psr = playerStoreRefs.get(playerId);
+                if (psr != null && psr.ref != null && psr.ref.isValid()) {
+                    try {
+                        GodService godService = com.eliteessentials.EliteEssentials.getInstance().getGodService();
+                        if (godService == null || !godService.isGodMode(playerId)) {
+                            psr.store.removeComponent(psr.ref, Invulnerable.getComponentType());
+                        }
+                    } catch (Exception e) {
+                        // Component may not exist or entity partially removed; safe to ignore
+                    }
+                }
+            }
+        }
+        
         // Clean up stored ref
         playerStoreRefs.remove(playerId);
         // Note: We don't clear the vanished flag in PlayerFile here
@@ -516,36 +562,42 @@ public class VanishService {
     
     /**
      * Update invulnerability for a vanished player.
-     * When store and ref are provided and valid (caller on world thread), applies the
-     * component synchronously to avoid world.execute() stale-ref causing IndexOutOfBoundsException.
+     * ALWAYS defers to the world thread via world.execute() — command handlers run on
+     * ForkJoinPool threads, and mutating ECS components (putComponent/removeComponent)
+     * from a non-world thread causes archetype migration races that can null the Player
+     * component on the live entity.
+     * 
+     * When callerStore/callerRef are provided (from a command context), they are used
+     * as the freshest available refs. Otherwise falls back to cached playerStoreRefs.
      */
     private void updateMobImmunity(UUID playerId, boolean vanished,
                                    Store<EntityStore> callerStore, Ref<EntityStore> callerRef) {
         try {
-            // Prefer synchronous path when caller provided fresh store/ref (command context)
-            if (callerStore != null && callerRef != null && callerRef.isValid()) {
-                applyMobImmunitySync(callerStore, callerRef, playerId, vanished);
-                return;
+            // Use caller-provided refs if available (freshest), otherwise cached
+            Store<EntityStore> store = callerStore;
+            Ref<EntityStore> ref = callerRef;
+            
+            if (store == null || ref == null || !ref.isValid()) {
+                PlayerStoreRef psr = playerStoreRefs.get(playerId);
+                if (psr == null || psr.ref == null || !psr.ref.isValid()) return;
+                store = psr.store;
+                ref = psr.ref;
             }
             
-            // Fallback: deferred via world.execute (e.g. non-command call path)
-            PlayerStoreRef psr = playerStoreRefs.get(playerId);
-            if (psr == null || psr.ref == null || !psr.ref.isValid()) return;
-            
-            EntityStore entityStore = psr.store.getExternalData();
+            EntityStore entityStore = store.getExternalData();
             if (entityStore == null) return;
             
             World world = entityStore.getWorld();
             if (world == null) return;
             
-            final Ref<EntityStore> storedRef = psr.ref;
+            final Store<EntityStore> fStore = store;
+            final Ref<EntityStore> fRef = ref;
             
+            // ALWAYS execute on the world thread — never mutate components cross-thread
             world.execute(() -> {
                 try {
-                    if (!storedRef.isValid()) return;
-                    
-                    Store<EntityStore> currentStore = storedRef.getStore();
-                    applyMobImmunitySync(currentStore, storedRef, playerId, vanished);
+                    if (!fRef.isValid()) return;
+                    applyMobImmunitySync(fStore, fRef, playerId, vanished);
                 } catch (Exception e) {
                     logger.warning("[Vanish] Failed to update invulnerability: " + e.getMessage());
                 }
