@@ -81,7 +81,19 @@ Commands are either available to Everyone or Admin only:
 | `/gcset [chat]` | Set default group chat | Everyone |
 | `/chats` | List available chat channels | Everyone |
 | `/gcspy` | Spy on all group chats | Admin |
+| `/pwarp` | Player warps help menu | Everyone |
+| `/pwarp gui` | Open player warps GUI | Everyone |
+| `/pwarp create` | Create a player warp | Everyone |
+| `/pwarp delete` | Delete your player warp | Everyone |
+| `/pwarp toggle` | Toggle public/private visibility | Everyone |
+| `/pwarp list` | List your player warps | Everyone |
+| `/pwarp info` | View player warp details | Everyone |
+| `/pwarp setdesc` | Update warp description | Everyone |
+| `/pwarp setloc` | Move warp to current location | Everyone |
 | `/eemigration <source>` | Migrate data from other plugins | Admin |
+| `/eemigration sql [force]` | Migrate JSON data to SQL database | Admin |
+| `/eemigration cleanup` | Move old JSON files to backup/ | Admin |
+| `/eeadmin` | Open the Admin UI panel | Admin |
 | `/eliteessentials reload` | Reload config | Admin |
 | `/ee groupsync lp-to-ee` | Sync LuckPerms groups into config.json | Admin |
 | `/ee groupsync hp-to-ee` | Sync HyperPerms groups into config.json | Admin |
@@ -329,6 +341,27 @@ eliteessentials
 | `eliteessentials.command.kit.delete` | Delete kits (Admin) |
 | `eliteessentials.command.kit.bypass.cooldown` | Bypass kit cooldowns |
 | `eliteessentials.command.kit.bypass.onetime` | Bypass one-time kit restrictions (claim repeatedly) |
+| `eliteessentials.command.kit.cooldown.<kitname>.<seconds>` | Per-rank kit cooldown override (e.g., `.cooldown.daily.3600`) |
+
+### Player Warp Commands
+
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.pwarp.use` | Teleport to player warps |
+| `eliteessentials.command.pwarp.create` | Create player warps |
+| `eliteessentials.command.pwarp.delete` | Delete own player warps |
+| `eliteessentials.command.pwarp.gui` | Open player warps GUI |
+| `eliteessentials.command.pwarp.list` | List own warps |
+| `eliteessentials.command.pwarp.setdesc` | Update warp description |
+| `eliteessentials.command.pwarp.setloc` | Update warp location |
+| `eliteessentials.command.pwarp.toggle` | Toggle public/private visibility |
+| `eliteessentials.command.pwarp.admin.delete` | Delete any player's warp (Admin) |
+| `eliteessentials.command.pwarp.limit.<n>` | Max player warps (e.g., `.limit.5`) |
+| `eliteessentials.command.pwarp.limit.unlimited` | Unlimited player warps |
+| `eliteessentials.command.pwarp.bypass.cooldown` | Bypass player warp cooldown |
+| `eliteessentials.command.pwarp.bypass.warmup` | Bypass player warp warmup |
+| `eliteessentials.command.pwarp.cooldown.<seconds>` | Custom cooldown (any number) |
+| `eliteessentials.command.pwarp.warmup.<seconds>` | Custom warmup (any number) |
 
 ### Utility Commands
 
@@ -391,6 +424,7 @@ eliteessentials
 | `eliteessentials.admin.reload` | Reload configuration |
 | `eliteessentials.admin.alias` | Manage command aliases |
 | `eliteessentials.admin.greetings` | Manage greeting rules |
+| `eliteessentials.admin.groupsync` | /ee groupsync (sync LP/HP groups with EE config) |
 | `eliteessentials.admin.sendmessage` | /sendmessage command |
 | `eliteessentials.admin.rtp` | /rtp &lt;player&gt; [world] (admin/console) |
 | `eliteessentials.admin.mute` | /mute command |
@@ -403,6 +437,12 @@ eliteessentials
 | `eliteessentials.admin.freeze` | /freeze command |
 | `eliteessentials.admin.warn` | /warn and /warnings commands |
 | `eliteessentials.admin.clearwarnings` | /clearwarnings command |
+| `eliteessentials.admin.adminui` | /eeadmin command (open Admin UI panel) |
+| `eliteessentials.admin.kick` | Kick player (Admin UI) |
+| `eliteessentials.admin.heal` | Heal player (Admin UI) |
+| `eliteessentials.admin.economy` | Economy management (Admin UI) |
+| `eliteessentials.admin.teleport` | Teleport actions (Admin UI) |
+| `eliteessentials.admin.playerdata` | Player data management (Admin UI) |
 
 ### Cost Bypass Permissions
 
@@ -422,6 +462,8 @@ eliteessentials
 | `eliteessentials.bypass.cost.repair` | Bypass /repair cost |
 | `eliteessentials.bypass.cost.repair.all` | Bypass /repair all cost |
 | `eliteessentials.bypass.cost.top` | Bypass top cost |
+| `eliteessentials.bypass.cost.pwarp` | Bypass player warp teleport cost |
+| `eliteessentials.bypass.cost.pwarp.create` | Bypass player warp creation cost |
 
 ## Wildcard Support
 
@@ -436,6 +478,7 @@ eliteessentials
 | `eliteessentials.command.warp.*` | All warp commands + bypass |
 | `eliteessentials.command.spawn.*` | All spawn commands + bypass |
 | `eliteessentials.command.kit.*` | All kit commands + bypass |
+| `eliteessentials.command.pwarp.*` | All player warp commands + bypass |
 | `eliteessentials.command.misc.*` | All utility commands |
 | `eliteessentials.command.economy.*` | All economy commands |
 | `eliteessentials.bypass.cost.*` | Bypass all command costs |

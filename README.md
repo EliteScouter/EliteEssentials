@@ -74,6 +74,7 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - **`/setfirstjoinspawn`** - Set where new players spawn (Admin)
 - **`/delfirstjoinspawn`** - Remove first-join spawn (Admin)
 - **Per-world or global spawn**: `spawn.perWorld: false` (default) = main world spawn; `true` = current world's spawn. Use `spawn.mainWorld` to set the main world.
+- **Multi-spawn behavior**: When per-world is enabled with multiple named spawns, choose nearest (`multiNearbySpawn`) or random (`multiRandomSpawn`) spawn selection for `/spawn` and death respawn.
 - **Spawn on login**: `spawn.teleportOnEveryLogin` rewrites player save on disconnect so they load directly at spawn (no teleport flash).
 
 ### Kit System
@@ -82,6 +83,8 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - **`/kit delete <name>`** - Delete a kit (Admin)
 - **One-time kits** - Kits that can only be claimed once per player
 - **Cooldown kits** - Configurable cooldown between claims
+- **Per-rank kit cooldowns** - Override kit cooldowns per group via LuckPerms/HyperPerms (`kit.cooldown.<kitname>.<seconds>`)
+- **Inventory space check** - Kits are blocked when inventory is full (replace-inventory kits are exempt)
 - **Starter Kit** - Automatically given to new players on first join
 - **Kit Commands** - Kits can execute server commands on claim (e.g., grant permissions, give currency, run any plugin command)
 - Fully configurable items, cooldowns, and permissions per kit
@@ -92,6 +95,7 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - **`/fly`** - Toggle creative flight (Admin); optional cost-per-minute for limited paid flight
 - **`/flyspeed <1-100|reset>`** - Set fly speed multiplier (Admin)
 - **`/top`** - Teleport to the highest block at your current position (Admin)
+- **Console support** - `/repair`, `/heal`, `/god`, `/fly`, `/flyspeed`, and `/clearinv` can target specific players from console or NPCs
 - **`/msg <player> <message>`** - Send a private message
 - **`/reply`** - Reply to the last private message (aliases: /r)
 - **`/clearinv [player]`** - Clear own or target's inventory (Admin, aliases: /clearinventory, /ci)
@@ -249,7 +253,8 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - AFK players show `[AFK]` prefix in tab list and `/list`
 - Optional chat broadcast when players go AFK or return
 - PlayTime Rewards integration - admins can exclude AFK players from earning rewards
-- Configurable: timeout, broadcast, tab list display, reward exclusion
+- AFK players excluded from sleep percentage count (configurable)
+- Configurable: timeout, broadcast, tab list display, reward exclusion, sleep exclusion
 
 ### Sleep Percentage (Admin)
 - **`/sleeppercent <0-100>`** - Set percentage of players needed to skip the night
@@ -317,6 +322,7 @@ All settings are fully configurable via `mods/EliteEssentials/config.json`:
 - **Enable/disable any command** - Disabled commands become OP-only
 - **Cooldowns** - Prevent command spam
 - **Warmups** - Require players to stand still before teleporting (with movement detection)
+- **World blacklists** - Restrict commands from being used in specific worlds (supports `*` wildcards)
 - **RTP range** - Set min/max teleport distance
 - **Home limits** - Max homes per player
 - **Back history** - How many locations to remember
@@ -414,6 +420,8 @@ Config file is automatically created on first server start with sensible default
 | `/eliteessentials reload` | Reload config | Admin |
 | `/eemigrate` | Migrate JSON data to SQL | Admin |
 | `/eemigration <source>` | Migrate from other plugins | Admin |
+| `/eeadmin` | Open Admin UI panel | Admin |
+| `/ee groupsync` | Sync groups between LP/HP and EE | Admin |
 
 *Self = Everyone when enabled; others = Admin. In simple mode (default), "Admin" requires OP.*
 
@@ -433,6 +441,7 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Home | `command.home.home`, `command.home.sethome`, `command.home.limit.5`, `command.home.bypass.cooldown` |
 | Teleport | `command.tp.tpa`, `command.tp.back`, `command.tp.back.ondeath`, `command.tp.bypass.warmup.rtp` |
 | Warp | `command.warp.use`, `command.warp.list`, `command.warp.<warpname>`, `command.warp.bypass.cooldown` |
+| Player Warp | `command.pwarp.use`, `command.pwarp.create`, `command.pwarp.delete`, `command.pwarp.limit.5`, `command.pwarp.bypass.cooldown` |
 | Player Warp | `command.pwarp.use`, `command.pwarp.create`, `command.pwarp.delete`, `command.pwarp.limit.5`, `command.pwarp.bypass.cooldown` |
 | Spawn | `command.spawn.use`, `command.spawn.set`, `command.spawn.delete`, `command.spawn.list`, `command.spawn.setfirstjoin`, `command.spawn.delfirstjoin`, `command.spawn.protection.bypass` |
 | Kit | `command.kit.use`, `command.kit.gui`, `command.kit.<kitname>`, `command.kit.bypass.cooldown`, `command.kit.bypass.onetime` |
