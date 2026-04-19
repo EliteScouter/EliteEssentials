@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /nick [player] [nickname|off]
@@ -63,6 +64,7 @@ public class HytaleNickCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                            @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player,
                            @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
 
         if (!configManager.getConfig().nick.enabled) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(

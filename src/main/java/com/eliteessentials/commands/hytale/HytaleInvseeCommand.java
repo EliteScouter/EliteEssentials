@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /invsee <player> - View another player's inventory.
@@ -52,6 +53,7 @@ public class HytaleInvseeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         // Permission check - admin only
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, playerRef, Permissions.INVSEE, true)) {
             return;

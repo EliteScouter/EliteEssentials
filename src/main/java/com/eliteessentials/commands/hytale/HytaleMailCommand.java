@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /mail [send|read|list|clear|delete] [args...]
@@ -64,6 +65,7 @@ public class HytaleMailCommand extends AbstractPlayerCommand {
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, 
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, 
                           @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         UUID playerId = player.getUuid();
         
         // Check permission

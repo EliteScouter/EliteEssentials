@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /flyspeed <speed> [player]
@@ -51,6 +52,7 @@ public class HytaleFlySpeedCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         String rawInput = ctx.getInputString().trim();
         String[] parts = rawInput.split("\\s+");
 

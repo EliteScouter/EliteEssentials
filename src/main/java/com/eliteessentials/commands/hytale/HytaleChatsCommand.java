@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Lists all chat channels the player has access to.
@@ -42,6 +43,7 @@ public class HytaleChatsCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         
         // Permission check
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.CHATS_LIST, 

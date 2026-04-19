@@ -1,5 +1,6 @@
 package com.eliteessentials.integration;
 
+import com.eliteessentials.api.EconomyAPI;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.services.PlayerService;
 import net.milkbowl.vault2.economy.AccountPermission;
@@ -64,8 +65,7 @@ public class EliteEssentialsEconomy implements Economy {
     @NotNull
     @Override
     public String format(@NotNull String pluginName, @NotNull BigDecimal amount) {
-        String symbol = configManager.getConfig().economy.currencySymbol;
-        return String.format("%s%.2f", symbol, amount.doubleValue());
+        return EconomyAPI.format(amount.doubleValue());
     }
     
     @NotNull

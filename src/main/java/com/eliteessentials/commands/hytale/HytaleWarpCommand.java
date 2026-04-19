@@ -40,6 +40,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /warp [name|list]
@@ -71,6 +72,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
         
@@ -136,6 +138,7 @@ public class HytaleWarpCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             PluginConfig config = configManager.getConfig();
             

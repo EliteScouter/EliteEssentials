@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /sethome [name]
@@ -59,6 +60,7 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.SETHOME, enabled)) {
             return;
@@ -158,6 +160,7 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             String homeName = ctx.get(nameArg);
             HytaleSetHomeCommand.setHome(ctx, store, ref, player, world, homeName, homeService);
         }

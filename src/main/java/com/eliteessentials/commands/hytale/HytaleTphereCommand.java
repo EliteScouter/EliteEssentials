@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /tphere <player>
@@ -62,6 +63,7 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         // Permission check - admin only
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.TPHERE, true)) {
             return;

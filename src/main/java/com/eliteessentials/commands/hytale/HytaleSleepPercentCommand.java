@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /sleeppercent <percentage>
@@ -47,6 +48,7 @@ public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         // Check admin permission
         boolean enabled = configManager.getConfig().sleep.enabled;
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.SLEEPPERCENT, enabled)) {
@@ -86,6 +88,7 @@ public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             // Check admin permission
             boolean enabled = configManager.getConfig().sleep.enabled;
             if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.SLEEPPERCENT, enabled)) {

@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /back
@@ -61,6 +62,7 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
 
         if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.back.blacklistedWorlds)) {

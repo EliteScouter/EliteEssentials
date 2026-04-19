@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /trash [size] - Open a disposal window to trash unwanted items.
@@ -66,6 +67,7 @@ public class HytaleTrashCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig config = configManager.getConfig();
         PluginConfig.TrashConfig trashConfig = config.trash;
         UUID playerId = playerRef.getUuid();

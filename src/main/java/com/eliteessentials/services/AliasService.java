@@ -8,6 +8,7 @@ import com.eliteessentials.model.Location;
 import com.eliteessentials.storage.AliasStorage;
 import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.permissions.PermissionService;
+import com.eliteessentials.util.CommandSpyUtil;
 import com.eliteessentials.util.MessageFormatter;
 
 import com.eliteessentials.util.TeleportUtil;
@@ -263,6 +264,7 @@ public class AliasService {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                               @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+            CommandSpyUtil.notify(ctx);
             AliasData data = EliteEssentials.getInstance().getAliasService().getStorage().getAlias(aliasName);
             if (data == null) { ctx.sendMessage(Message.raw("Alias no longer exists.").color("#FF5555")); return; }
 

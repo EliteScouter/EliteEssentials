@@ -275,20 +275,28 @@ public final class EconomyAPI {
         if (plugin == null) return String.format("$%.2f", amount);
         
         String symbol = plugin.getConfigManager().getConfig().economy.currencySymbol;
+        boolean after = "after".equalsIgnoreCase(plugin.getConfigManager().getConfig().economy.currencyFormat);
+        if (after) {
+            return String.format("%.2f%s", amount, symbol);
+        }
         return String.format("%s%.2f", symbol, amount);
     }
 
     /**
      * Format an amount with the currency name.
      * @param amount Amount to format
-     * @return Formatted string (e.g., "100.00 coins")
+     * @return Formatted string (e.g., "100.00 coins" or "coins 100.00")
      */
     public static String formatWithName(double amount) {
         EliteEssentials plugin = EliteEssentials.getInstance();
         if (plugin == null) return String.format("%.2f coins", amount);
         
         String name = amount == 1.0 ? getCurrencyName() : getCurrencyNamePlural();
-        return String.format("%.2f %s", amount, name);
+        boolean after = "after".equalsIgnoreCase(plugin.getConfigManager().getConfig().economy.currencyFormat);
+        if (after) {
+            return String.format("%.2f %s", amount, name);
+        }
+        return String.format("%s %.2f", name, amount);
     }
 
     /**

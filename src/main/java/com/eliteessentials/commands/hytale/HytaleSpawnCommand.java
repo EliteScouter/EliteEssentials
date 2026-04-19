@@ -31,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /spawn [name]
@@ -66,6 +67,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         doSpawn(ctx, store, ref, player, world, null, backService);
     }
     
@@ -232,6 +234,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             String name = ctx.get(nameArg);
             HytaleSpawnCommand.doSpawn(ctx, store, ref, player, world, name, backService);
         }

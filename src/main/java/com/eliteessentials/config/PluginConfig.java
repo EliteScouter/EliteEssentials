@@ -1763,6 +1763,13 @@ public class PluginConfig {
         /** Currency symbol for display */
         public String currencySymbol = "$";
         
+        /** 
+         * Currency format order.
+         * "before" = symbol before amount (e.g., $100.00)
+         * "after" = symbol after amount (e.g., 100.00$)
+         */
+        public String currencyFormat = "before";
+        
         /** Starting balance for new players */
         public double startingBalance = 0.0;
         

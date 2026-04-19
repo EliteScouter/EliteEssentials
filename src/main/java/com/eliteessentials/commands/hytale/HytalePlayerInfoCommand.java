@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /playerinfo [player]
@@ -77,6 +78,7 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         String rawInput = ctx.getInputString().trim();
         String[] parts = rawInput.split("\\s+", 3);
 

@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /eehelp - Shows EliteEssentials commands the player has permission to use.
@@ -40,6 +41,7 @@ public class HytaleHelpCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
         PermissionService perms = PermissionService.get();

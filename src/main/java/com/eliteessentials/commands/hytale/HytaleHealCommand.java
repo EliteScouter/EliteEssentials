@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /heal [player]
@@ -61,6 +62,7 @@ public class HytaleHealCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.HealConfig healConfig = configManager.getConfig().heal;
         boolean enabled = healConfig.enabled;
 

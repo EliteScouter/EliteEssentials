@@ -28,6 +28,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /repair [all] [player]
@@ -74,6 +75,7 @@ public class HytaleRepairCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig config = configManager.getConfig();
 
         // Parse arguments: /repair [all] [player] or /repair [player] [all]

@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /discord - Display the server's discord information.
@@ -45,6 +46,7 @@ public class HytaleDiscordCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, 
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         // Permission check - everyone can use
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.DISCORD, 
                 configManager.getConfig().discord.enabled)) {

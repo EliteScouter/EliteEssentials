@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /clearinv [player] - Clear all items from player's inventory.
@@ -64,6 +65,7 @@ public class HytaleClearInvCommand extends CommandBase {
     
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.ClearInvConfig clearInvConfig = configManager.getConfig().clearInv;
 
         String rawInput = ctx.getInputString().trim();

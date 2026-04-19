@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /warpadmin [subcommand] [args...]
@@ -74,6 +75,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         
         if (!PermissionService.get().canUseAdminCommand(ctx.sender(), Permissions.WARPADMIN, true)) {
@@ -142,6 +144,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             
             if (!PermissionService.get().canUseAdminCommand(ctx.sender(), Permissions.WARPADMIN, true)) {
@@ -195,6 +198,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
             
             if (!PermissionService.get().canUseAdminCommand(ctx.sender(), Permissions.WARPADMIN, true)) {

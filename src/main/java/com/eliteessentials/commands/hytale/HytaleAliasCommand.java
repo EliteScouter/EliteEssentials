@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /alias
@@ -38,6 +39,7 @@ public class HytaleAliasCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         
         if (!PermissionService.get().canUseAdminCommand(ctx.sender(), Permissions.ADMIN_ALIAS, true)) {

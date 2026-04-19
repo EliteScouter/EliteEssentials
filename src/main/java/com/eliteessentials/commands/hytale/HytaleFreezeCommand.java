@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Toggle freeze on a player. Frozen players cannot move, jump, or fly.
@@ -49,6 +50,7 @@ public class HytaleFreezeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
             @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.ADMIN_FREEZE,
                 configManager.getConfig().freeze.enabled)) {
             return;

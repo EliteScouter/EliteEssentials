@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /eemigration <source> [force]
@@ -55,6 +56,7 @@ public class HytaleMigrationCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         // Check admin permission
         PermissionService perms = PermissionService.get();
         if (!perms.canUseAdminCommand(ctx.sender(), Permissions.ADMIN_RELOAD, true)) {

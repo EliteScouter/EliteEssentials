@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /clearwarnings <player>
@@ -46,6 +47,7 @@ public class HytaleClearWarningsCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
             @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.ADMIN_CLEARWARNINGS,
                 configManager.getConfig().warn.enabled)) {
             return;

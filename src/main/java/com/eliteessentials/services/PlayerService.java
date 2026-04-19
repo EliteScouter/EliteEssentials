@@ -1,5 +1,6 @@
 package com.eliteessentials.services;
 
+import com.eliteessentials.api.EconomyAPI;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.PlayerFile;
 import com.eliteessentials.storage.PlayerStorageProvider;
@@ -474,13 +475,12 @@ public class PlayerService {
         
         String playerName = playerData.getName();
         String currencyName = configManager.getConfig().economy.currencyNamePlural;
-        String currencySymbol = configManager.getConfig().economy.currencySymbol;
         
-        // Format amounts
-        String oldFormatted = String.format("%s%.2f", currencySymbol, oldBalance);
-        String newFormatted = String.format("%s%.2f", currencySymbol, newBalance);
+        // Format amounts using centralized formatter (respects currencyFormat setting)
+        String oldFormatted = EconomyAPI.format(oldBalance);
+        String newFormatted = EconomyAPI.format(newBalance);
         double diff = newBalance - oldBalance;
-        String diffFormatted = String.format("%s%.2f", currencySymbol, Math.abs(diff));
+        String diffFormatted = EconomyAPI.format(Math.abs(diff));
         
         // Determine change type
         String changeType = diff > 0 ? "added" : "removed";

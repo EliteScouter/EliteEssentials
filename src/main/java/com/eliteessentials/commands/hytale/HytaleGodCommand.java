@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /god [player]
@@ -70,6 +71,7 @@ public class HytaleGodCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.GodConfig godConfig = configManager.getConfig().god;
 
         String rawInput = ctx.getInputString().trim();

@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /list
@@ -48,6 +49,7 @@ public class HytaleListCommand extends CommandBase {
     
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         // Permission check - everyone can use
         PermissionService perms = PermissionService.get();
         if (!perms.canUseEveryoneCommand(ctx.sender(), Permissions.LIST, 

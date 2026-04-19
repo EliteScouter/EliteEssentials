@@ -3,6 +3,8 @@
 ## 2.0.6 - 2026-04-13
 
 ### Added
+* **Currency format position option** - new `currencyFormat` config option in the economy section. Set to `"before"` (default, e.g. `$100.00`) or `"after"` (e.g. `100.00$`) to control whether the currency symbol appears before or after the amount. Useful for locales that place the currency identifier after the number
+* Centralized all economy formatting through `EconomyAPI.format()` so the setting is respected everywhere (balance notifications, admin dashboard, VaultUnlocked integration, etc.)
 * **Unified `/spy` command** - new `/spy` command that consolidates all staff monitoring into one place with three independently toggleable modes:
   * `/spy gchat` - toggle group chat spy (see messages from channels you don't belong to). Replaces the old `/gcspy` command
   * `/spy dm` - toggle DM spy (see all `/msg` and `/reply` private messages between players)
@@ -17,7 +19,7 @@
 
 ## 2.0.5 - 2026-04-13
 
-### Fixed
+### Fixed 
 * **Vanish rapid toggle still corrupting ECS archetype** - the PR #59 `toggleInProgress` guard released in a `finally` block before the deferred `world.execute()` Invulnerable mutation ran, so two `/v` commands fired within one second could both return and then race on the world thread, corrupting the ECS archetype and nulling the Player component. Confirmed in production: a player executed `/v` twice in 1 second and caused a cascade of 3,414 NullPointerExceptions in `GamePacketHandler` over 90 seconds on the world tick thread. The toggle guard is now held for the full lifetime of the toggle including the deferred `world.execute()` mutation, using a `guardRelease` callback threaded through to the lambda's `finally` block with `AtomicBoolean` for exactly-once release. A 500ms per-player cooldown also rejects back-to-back toggles before they reach the guard as defense in depth. `onPlayerLeave` now clears both the toggle guard and cooldown for the disconnecting player so leaked state cannot poison future reconnects. Thanks to [Dimotai](https://github.com/Dimotai) for identifying and fixing this (PR #60)
 
 ## 2.0.4 - 2026-04-05

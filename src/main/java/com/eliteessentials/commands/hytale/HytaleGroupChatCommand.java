@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Group chat command - allows players to chat in private channels.
@@ -62,6 +63,7 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         
         // Permission check
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.GROUP_CHAT, 

@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /eco <action> <player> [amount]
@@ -61,6 +62,7 @@ public class HytaleEcoCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.EconomyConfig economyConfig = configManager.getConfig().economy;
         
         if (!economyConfig.enabled) {
@@ -221,6 +223,7 @@ public class HytaleEcoCommand extends CommandBase {
         
         @Override
         protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
             PluginConfig.EconomyConfig economyConfig = configManager.getConfig().economy;
             
             if (!economyConfig.enabled) {

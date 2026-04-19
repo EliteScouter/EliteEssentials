@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.eliteessentials.util.CommandSpyUtil;
 
 public class HytaleIgnoreCommand extends AbstractPlayerCommand {
 
@@ -43,6 +44,7 @@ public class HytaleIgnoreCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
             @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         UUID playerId = player.getUuid();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.IGNORE,
                 configManager.getConfig().ignore.enabled)) {

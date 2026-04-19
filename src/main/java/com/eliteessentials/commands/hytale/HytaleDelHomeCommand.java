@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /delhome [name]
@@ -53,6 +54,7 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.DELHOME, enabled)) {
             return;
@@ -101,6 +103,7 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             String homeName = ctx.get(nameArg);
             HytaleDelHomeCommand.deleteHome(ctx, player, homeName, homeService);
         }

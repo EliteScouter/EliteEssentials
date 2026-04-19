@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /realname <nickname>
@@ -45,6 +46,7 @@ public class HytaleRealNameCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         // Resolve player sender
         Ref<EntityStore> ref = ctx.senderAsPlayerRef();
         if (ref == null || !ref.isValid()) {

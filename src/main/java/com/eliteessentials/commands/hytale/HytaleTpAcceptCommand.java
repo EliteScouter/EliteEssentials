@@ -31,6 +31,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /tpaccept
@@ -65,6 +66,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         PluginConfig config = configManager.getConfig();
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.TPACCEPT, config.tpa.enabled)) {

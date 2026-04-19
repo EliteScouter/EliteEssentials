@@ -40,6 +40,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /fly [player]
@@ -83,6 +84,7 @@ public class HytaleFlyCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.FlyConfig flyConfig = configManager.getConfig().fly;
 
         String rawInput = ctx.getInputString().trim();

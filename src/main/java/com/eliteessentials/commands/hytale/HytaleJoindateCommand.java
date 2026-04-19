@@ -21,6 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /joindate [player]
@@ -54,6 +55,7 @@ public class HytaleJoindateCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.JOINDATE, configManager.getConfig().joindate.enabled)) {
             return;
         }
@@ -99,6 +101,7 @@ public class HytaleJoindateCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.JOINDATE_OTHERS, configManager.getConfig().joindate.enabled)) {
                 return;
             }

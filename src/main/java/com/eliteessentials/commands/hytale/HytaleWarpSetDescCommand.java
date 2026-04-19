@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /warpsetdesc <name> <description...>
@@ -37,6 +38,7 @@ public class HytaleWarpSetDescCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
         
         if (!PermissionService.get().canUseAdminCommand(ctx.sender(), Permissions.WARPADMIN, true)) {

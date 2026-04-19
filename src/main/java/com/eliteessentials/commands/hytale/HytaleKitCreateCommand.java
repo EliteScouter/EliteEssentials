@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Subcommand to create a kit from the player's current inventory.
@@ -50,6 +51,7 @@ public class HytaleKitCreateCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store,
                            @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
+        CommandSpyUtil.notify(context);
         String kitName = context.get(nameArg);
 
         // Validate kit name

@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /reply <message> or /r <message>
@@ -52,6 +53,7 @@ public class HytaleReplyCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         UUID senderId = player.getUuid();
         
         // Check permission (uses same permission as /msg)

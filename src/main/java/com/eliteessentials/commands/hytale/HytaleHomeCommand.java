@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /home [name]
@@ -72,6 +73,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig config = EliteEssentials.getInstance().getConfigManager().getConfig();
 
         if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), config.homes.blacklistedWorlds)) {
@@ -249,6 +251,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             String homeName = ctx.get(nameArg);
             HytaleHomeCommand.goHome(ctx, store, ref, player, world, homeName, homeService, backService);
         }

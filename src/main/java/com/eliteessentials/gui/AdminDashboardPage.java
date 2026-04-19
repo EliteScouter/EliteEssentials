@@ -1,6 +1,7 @@
 package com.eliteessentials.gui;
 
 import com.eliteessentials.EliteEssentials;
+import com.eliteessentials.api.EconomyAPI;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.permissions.PermissionService;
@@ -1096,9 +1097,8 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             total += pf.getWallet();
             count++;
         }
-        String currency = plugin.getConfigManager().getConfig().economy.currencySymbol;
-        cmd.set("#EcoTotal.Text", String.format("%.2f %s", total, currency));
-        cmd.set("#EcoAverage.Text", count > 0 ? String.format("%.2f %s", total / count, currency) : "0.00");
+        cmd.set("#EcoTotal.Text", EconomyAPI.format(total));
+        cmd.set("#EcoAverage.Text", count > 0 ? EconomyAPI.format(total / count) : "0.00");
         cmd.set("#EcoPlayerCount.Text", String.valueOf(count));
     }
 
@@ -1108,12 +1108,11 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         if (ps == null) { cmd.set("#EcoTopList.Text", "Economy disabled"); return; }
         List<PlayerFile> top = ps.getTopByBalance(10);
         if (top.isEmpty()) { cmd.set("#EcoTopList.Text", "No balance data"); return; }
-        String currency = plugin.getConfigManager().getConfig().economy.currencySymbol;
         StringBuilder sb = new StringBuilder();
         int rank = 1;
         for (PlayerFile pf : top) {
             sb.append("#").append(rank).append("  ").append(pf.getName())
-              .append("  -  ").append(String.format("%.2f %s", pf.getWallet(), currency)).append("\n");
+              .append("  -  ").append(EconomyAPI.format(pf.getWallet())).append("\n");
             rank++;
         }
         cmd.set("#EcoTopList.Text", sb.toString().trim());
@@ -1134,8 +1133,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 if (data.ecoPlayer == null || data.ecoPlayer.isEmpty()) { setStatus("#EcoStatusMsg", configManager.getMessage("adminui.economy.enterName")); return; }
                 Optional<PlayerFile> pf = ps.getPlayerByName(data.ecoPlayer);
                 if (pf.isPresent()) {
-                    String currency = plugin.getConfigManager().getConfig().economy.currencySymbol;
-                    setStatus("#EcoStatusMsg", pf.get().getName() + ": " + String.format("%.2f %s", pf.get().getWallet(), currency));
+                    setStatus("#EcoStatusMsg", pf.get().getName() + ": " + EconomyAPI.format(pf.get().getWallet()));
                 } else { setStatus("#EcoStatusMsg", configManager.getMessage("playerNotFound", "player", data.ecoPlayer)); }
                 break;
             }
@@ -1149,21 +1147,20 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 if (pf.isEmpty()) { setStatus("#EcoStatusMsg", configManager.getMessage("playerNotFound", "player", data.ecoPlayer)); return; }
                 UUID targetId = pf.get().getUuid();
                 String targetName = pf.get().getName();
-                String currency = plugin.getConfigManager().getConfig().economy.currencySymbol;
 
                 boolean ok;
                 String msg;
                 if ("ecoset".equals(data.action)) {
                     ok = ps.setBalance(targetId, amount);
-                    msg = "Set " + targetName + " balance to " + String.format("%.2f %s", amount, currency);
+                    msg = "Set " + targetName + " balance to " + EconomyAPI.format(amount);
                     logActivity("ECONOMY", adminName, targetName, "set to " + String.format("%.2f", amount));
                 } else if ("ecoadd".equals(data.action)) {
                     ok = ps.addMoney(targetId, amount);
-                    msg = "Added " + String.format("%.2f %s", amount, currency) + " to " + targetName;
+                    msg = "Added " + EconomyAPI.format(amount) + " to " + targetName;
                     logActivity("ECONOMY", adminName, targetName, "added " + String.format("%.2f", amount));
                 } else {
                     ok = ps.removeMoney(targetId, amount);
-                    msg = ok ? "Removed " + String.format("%.2f %s", amount, currency) + " from " + targetName : "Insufficient funds";
+                    msg = ok ? "Removed " + EconomyAPI.format(amount) + " from " + targetName : "Insufficient funds";
                     if (ok) logActivity("ECONOMY", adminName, targetName, "removed " + String.format("%.2f", amount));
                 }
                 setStatus("#EcoStatusMsg", ok ? msg : "Operation failed");

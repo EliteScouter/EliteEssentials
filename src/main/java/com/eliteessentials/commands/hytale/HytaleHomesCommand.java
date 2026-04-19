@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /homes
@@ -48,6 +49,7 @@ public class HytaleHomesCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         boolean enabled = EliteEssentials.getInstance().getConfigManager().getConfig().homes.enabled;
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.HOMES, enabled)) {
             return;

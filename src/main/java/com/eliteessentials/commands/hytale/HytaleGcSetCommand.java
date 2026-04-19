@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Set default group chat command - allows players to set their preferred chat channel.
@@ -48,6 +49,7 @@ public class HytaleGcSetCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
                           @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         
         // Permission check
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.GROUP_CHAT, 

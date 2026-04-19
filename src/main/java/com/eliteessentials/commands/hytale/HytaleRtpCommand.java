@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /rtp [player] [world]
@@ -84,6 +85,7 @@ public class HytaleRtpCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         PluginConfig.RtpConfig rtpConfig = configManager.getConfig().rtp;
         
         // Always log that we reached this point (helps diagnose if Hytale is intercepting)

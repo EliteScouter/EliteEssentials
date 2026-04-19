@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * /sendmessage (alias: /sm) - Send a formatted message to a player, group, or all players.
@@ -57,6 +58,7 @@ public class HytaleSendMessageCommand extends CommandBase {
     
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         // Permission check - admin only (but allow console)
         PermissionService perms = PermissionService.get();
         if (!perms.canUseAdminCommand(ctx.sender(), Permissions.ADMIN_SENDMESSAGE, true)) {

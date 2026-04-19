@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /eliteessentials <action>
@@ -49,6 +50,7 @@ public class HytaleReloadCommand extends CommandBase {
 
     @Override
     protected void executeSync(@Nonnull CommandContext ctx) {
+        CommandSpyUtil.notify(ctx);
         String action = ctx.get(actionArg);
 
         if ("groupsync".equalsIgnoreCase(action)) {

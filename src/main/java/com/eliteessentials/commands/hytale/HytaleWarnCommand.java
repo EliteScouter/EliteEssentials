@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /warn <player> [reason]
@@ -59,6 +60,7 @@ public class HytaleWarnCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store,
             @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         if (!CommandPermissionUtil.canExecuteAdmin(ctx, player, Permissions.ADMIN_WARN,
                 configManager.getConfig().warn.enabled)) {
             return;

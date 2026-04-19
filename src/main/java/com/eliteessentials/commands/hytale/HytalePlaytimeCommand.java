@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /playtime [player]
@@ -53,6 +54,7 @@ public class HytalePlaytimeCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.PLAYTIME, configManager.getConfig().playtime.enabled)) {
             return;
         }
@@ -94,6 +96,7 @@ public class HytalePlaytimeCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             if (!CommandPermissionUtil.canExecute(ctx, player, Permissions.PLAYTIME_OTHERS, configManager.getConfig().playtime.enabled)) {
                 return;
             }

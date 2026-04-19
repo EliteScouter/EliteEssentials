@@ -30,6 +30,7 @@ import com.eliteessentials.util.CommandExecutor;
 import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.logging.Logger;
+import com.eliteessentials.util.CommandSpyUtil;
 
 /**
  * Command: /kit [name]
@@ -74,6 +75,7 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     @Override
     protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                           @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
         UUID playerId = player.getUuid();
         
         if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
@@ -407,6 +409,7 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
+        CommandSpyUtil.notify(ctx);
             UUID playerId = player.getUuid();
             
             if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
