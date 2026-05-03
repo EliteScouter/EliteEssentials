@@ -89,6 +89,13 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
         }
 
         UUID playerId = playerRef.getUuid();
+        
+        // Self-heal: ensure a PlayerFile exists before any kit operation. Prevents the
+        // infinite-kit exploit where a player whose PlayerReadyEvent never fired (observed
+        // on abnormally slow logins) has no PlayerFile, causing KitService reads to return
+        // 0 (no cooldown) and writes to silently no-op. Mirrors the guard in HytaleKitCommand.
+        kitService.ensurePlayerFile(playerId, playerRef.getUsername());
+        
         Kit kit = kitService.getKit(data.kit);
         
         if (kit == null) {
@@ -313,6 +320,11 @@ public class KitSelectionPage extends InteractiveCustomUIPage<KitSelectionPage.K
     private void buildKitList(UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         List<Kit> allKits = new ArrayList<>(kitService.getAllKits());
         UUID playerId = playerRef.getUuid();
+        
+        // Self-heal before display-side storage reads, so hasClaimedOnetime / getRemainingCooldown
+        // don't hit the fail-closed paths (which would incorrectly show "Claimed" or a full
+        // cooldown for a legitimate player who simply has no PlayerFile yet).
+        kitService.ensurePlayerFile(playerId, playerRef.getUsername());
         
         if (allKits.isEmpty()) {
             commandBuilder.clear("#KitCards");
