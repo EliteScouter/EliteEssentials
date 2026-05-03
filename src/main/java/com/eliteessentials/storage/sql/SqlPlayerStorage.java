@@ -76,7 +76,7 @@ public class SqlPlayerStorage implements PlayerStorageProvider {
             return data;
         }
 
-        // H2 / single-server mode: use cache-first approach
+        // SQLite / single-server mode: use cache-first approach
         PlayerFile data = cache.get(uuid);
         if (data != null) {
             if (name != null && !name.equals(data.getName())) {
@@ -618,8 +618,8 @@ public class SqlPlayerStorage implements PlayerStorageProvider {
                     + "last_seen=VALUES(last_seen), play_time=VALUES(play_time), wallet=VALUES(wallet), "
                     + "vanished=VALUES(vanished), default_group_chat=VALUES(default_group_chat)";
         } else {
-            sql = "MERGE INTO " + prefix + "players (uuid, name, nickname, first_join, last_seen, play_time, wallet, vanished, default_group_chat) "
-                    + "KEY (uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT OR REPLACE INTO " + prefix + "players (uuid, name, nickname, first_join, last_seen, play_time, wallet, vanished, default_group_chat) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, uuidStr);

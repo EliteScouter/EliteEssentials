@@ -197,6 +197,7 @@ public class EliteEssentials extends JavaPlugin {
         // Initialize storage factory and create providers based on config
         storageFactory = new StorageFactory();
         PluginConfig.StorageConfig storageConfig = configManager.getConfig().storage;
+        
         playerStorageProvider = storageFactory.createPlayerStorage(storageConfig, this.dataFolder);
         globalStorageProvider = storageFactory.createGlobalStorage(storageConfig, this.dataFolder);
         

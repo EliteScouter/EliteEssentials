@@ -203,8 +203,8 @@ public class SqlGlobalStorage implements GlobalStorageProvider {
                     + "yaw=VALUES(yaw), pitch=VALUES(pitch), permission=VALUES(permission), "
                     + "created_by=VALUES(created_by), created_at=VALUES(created_at), description=VALUES(description)";
         } else {
-            sql = "MERGE INTO " + prefix + "warps (name, world, x, y, z, yaw, pitch, permission, created_by, created_at, description) "
-                    + "KEY (name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT OR REPLACE INTO " + prefix + "warps (name, world, x, y, z, yaw, pitch, permission, created_by, created_at, description) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -330,8 +330,8 @@ public class SqlGlobalStorage implements GlobalStorageProvider {
                     + "ON DUPLICATE KEY UPDATE world=VALUES(world), x=VALUES(x), y=VALUES(y), z=VALUES(z), "
                     + "yaw=VALUES(yaw), pitch=VALUES(pitch)";
         } else {
-            sql = "MERGE INTO " + prefix + "first_join_spawn (id, world, x, y, z, yaw, pitch) "
-                    + "KEY (id) VALUES (1, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT OR REPLACE INTO " + prefix + "first_join_spawn (id, world, x, y, z, yaw, pitch) "
+                    + "VALUES (1, ?, ?, ?, ?, ?, ?)";
         }
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

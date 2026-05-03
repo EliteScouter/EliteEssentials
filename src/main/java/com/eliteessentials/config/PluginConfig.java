@@ -89,7 +89,7 @@ public class PluginConfig {
     
     // ==================== STORAGE ====================
     
-    /** Storage backend configuration (json, h2, or mysql) */
+    /** Storage backend configuration (json, sqlite, or mysql) */
     public StorageConfig storage = new StorageConfig();
     
     // ==================== MESSAGES ====================
@@ -2128,7 +2128,7 @@ public class PluginConfig {
     // ==================== STORAGE ====================
 
     public static class StorageConfig {
-        /** Storage type: "json" (default), "h2", or "mysql" */
+        /** Storage type: "json" (default), "sqlite", or "mysql" */
         public String storageType = "json";
 
         /** MySQL/MariaDB connection settings (only used when storageType is "mysql") */

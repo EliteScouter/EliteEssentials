@@ -1,6 +1,8 @@
 # Changelog
 
-## 2.0.6 - 2026-04-13
+## 2.0.6 - 2026-04-20
+
+**IMPORTANT: If you are using H2 storage, you MUST run this version before updating to 2.0.7.** This version automatically migrates your H2 database to SQLite on startup. Starting with 2.0.7, H2 will be fully removed and the migration will no longer be available. JSON and MySQL users are not affected.
 
 ### Added
 * **Currency format position option** - new `currencyFormat` config option in the economy section. Set to `"before"` (default, e.g. `$100.00`) or `"after"` (e.g. `100.00$`) to control whether the currency symbol appears before or after the amount. Useful for locales that place the currency identifier after the number
@@ -16,6 +18,9 @@
   * 13 new configurable messages in `messages.json` (all prefixed with `spy`)
   * **Permission:** `eliteessentials.admin.spy` (Admin in simple mode; grant via LuckPerms in advanced mode)
   * Spy state is cleaned up automatically on player disconnect
+
+### Changed
+* **Replaced H2 with SQLite for embedded database storage** - the embedded SQL storage engine has been switched from H2 to SQLite. H2 contains classes that mod platforms flag as "powerful PC abilities," causing JAR rejections on upload. SQLite provides the same embedded database experience with no security flags. The config option is now `"sqlite"` instead of `"h2"`. MySQL is unaffected. Servers that were running on H2 will have their data automatically migrated to SQLite on first startup after updating, with no manual steps required. The old `eliteessentials.mv.db` file is kept as a backup and the config is updated from `"h2"` to `"sqlite"` automatically. If migration fails, the plugin falls back to JSON storage to prevent data loss. H2 is still bundled in this version solely for migration purposes and will be removed in 2.0.7
 
 ## 2.0.5 - 2026-04-13
 

@@ -54,11 +54,11 @@ public class ConfigManager {
             config = new PluginConfig();
             
             // Fresh install detection: if no existing JSON data files exist,
-            // default to H2 for better performance. Existing installs that lost
+            // default to SQLite for better performance. Existing installs that lost
             // their config.json but still have data files stay on JSON to be safe.
             if (!hasExistingJsonData()) {
-                logger.info("Fresh install detected - defaulting storage to H2.");
-                config.storage.storageType = "h2";
+                logger.info("Fresh install detected - defaulting storage to SQLite.");
+                config.storage.storageType = "sqlite";
             } else {
                 logger.info("Existing JSON data found - keeping storage as JSON.");
             }

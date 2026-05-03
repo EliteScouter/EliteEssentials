@@ -324,7 +324,7 @@ public class HytaleMigrationCommand extends CommandBase {
         // Refuse if storage type is JSON
         if ("json".equals(storageType)) {
             ctx.sendMessage(Message.raw("Cannot migrate: storageType is set to \"json\".").color("#FF5555"));
-            ctx.sendMessage(Message.raw("Set storageType to \"h2\" or \"mysql\" in config.json, reload, then run this command.").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("Set storageType to \"sqlite\" or \"mysql\" in config.json, reload, then run this command.").color("#AAAAAA"));
             return;
         }
 
@@ -402,7 +402,7 @@ public class HytaleMigrationCommand extends CommandBase {
 
         if ("json".equals(storageType)) {
             ctx.sendMessage(Message.raw("Cannot cleanup: storageType is still \"json\".").color("#FF5555"));
-            ctx.sendMessage(Message.raw("Switch to \"h2\" or \"mysql\" first, then run /eemigration sql, then cleanup.").color("#AAAAAA"));
+            ctx.sendMessage(Message.raw("Switch to \"sqlite\" or \"mysql\" first, then run /eemigration sql, then cleanup.").color("#AAAAAA"));
             return;
         }
 

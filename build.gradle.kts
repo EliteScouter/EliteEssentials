@@ -46,7 +46,7 @@ dependencies {
 
     // SQL storage support
     implementation("com.zaxxer:HikariCP:6.2.1")
-    implementation("com.h2database:h2:2.3.232")
+    implementation("org.xerial:sqlite-jdbc:3.47.1.0")
     implementation("com.mysql:mysql-connector-j:9.1.0")
     
     // Test dependencies
@@ -89,14 +89,14 @@ tasks {
         relocate("com.google.gson", "com.eliteessentials.libs.gson")
         relocate("com.zaxxer.hikari", "com.eliteessentials.libs.hikari")
         relocate("org.slf4j", "com.eliteessentials.libs.slf4j")
-        // Note: H2 is NOT relocated because its internal engine uses class name lookups
-        // and service loaders that break when packages are renamed
         relocate("com.mysql", "com.eliteessentials.libs.mysql")
+        relocate("org.xerial", "com.eliteessentials.libs.xerial")
+        relocate("org.sqlite", "com.eliteessentials.libs.sqlite")
         
         minimize {
             // JDBC drivers are loaded via reflection (Class.forName), so the shadow
             // plugin can't detect usage. Exclude them from minimization.
-            exclude(dependency("com.h2database:h2:.*"))
+            exclude(dependency("org.xerial:sqlite-jdbc:.*"))
             exclude(dependency("com.mysql:mysql-connector-j:.*"))
         }
     }

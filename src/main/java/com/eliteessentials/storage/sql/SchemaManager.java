@@ -23,10 +23,11 @@ public class SchemaManager {
      *
      * @param conn        a live JDBC connection
      * @param tablePrefix the table name prefix (e.g. "ee_")
+     * @param isMySQL     true if using MySQL/MariaDB, false for SQLite
      * @throws SQLException if table creation or migration fails
      */
-    public void initialize(Connection conn, String tablePrefix) throws SQLException {
-        createTables(conn, tablePrefix);
+    public void initialize(Connection conn, String tablePrefix, boolean isMySQL) throws SQLException {
+        createTables(conn, tablePrefix, isMySQL);
 
         int currentVersion = getCurrentVersion(conn, tablePrefix);
         if (currentVersion == 0) {
@@ -64,10 +65,12 @@ public class SchemaManager {
      */
     public void migrate(Connection conn, String tablePrefix, int fromVersion, int toVersion) throws SQLException {
         boolean originalAutoCommit = conn.getAutoCommit();
+        // Detect MySQL vs SQLite for migration DDL
+        boolean isMySQL = conn.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql");
         for (int v = fromVersion + 1; v <= toVersion; v++) {
             try {
                 conn.setAutoCommit(false);
-                applyMigration(conn, tablePrefix, v);
+                applyMigration(conn, tablePrefix, v, isMySQL);
                 insertSchemaVersion(conn, tablePrefix, v);
                 conn.commit();
                 logger.info("[SchemaManager] Applied migration to v" + v);
@@ -83,7 +86,8 @@ public class SchemaManager {
 
     // ==================== Private helpers ====================
 
-    private void applyMigration(Connection conn, String tablePrefix, int version) throws SQLException {
+    private void applyMigration(Connection conn, String tablePrefix, int version, boolean isMySQL) throws SQLException {
+        String autoInc = isMySQL ? "INT AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
         // Future migrations go here as case statements.
         // Example:
         // case 2: applyV2Migration(conn, tablePrefix); break;
@@ -92,7 +96,7 @@ public class SchemaManager {
                 // Add activity_log table
                 try (Statement stmt = conn.createStatement()) {
                     stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "activity_log ("
-                            + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                            + "id         " + autoInc + ","
                             + "type       VARCHAR(32)  NOT NULL,"
                             + "admin      VARCHAR(64)  NOT NULL,"
                             + "target     VARCHAR(64)  NOT NULL,"
@@ -142,7 +146,8 @@ public class SchemaManager {
         }
     }
 
-    private void createTables(Connection conn, String tablePrefix) throws SQLException {
+    private void createTables(Connection conn, String tablePrefix, boolean isMySQL) throws SQLException {
+        String autoInc = isMySQL ? "INT AUTO_INCREMENT PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
         try (Statement stmt = conn.createStatement()) {
             // Players
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "players ("
@@ -176,7 +181,7 @@ public class SchemaManager {
 
             // Back history
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "back_history ("
-                    + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                    + "id         " + autoInc + ","
                     + "uuid       VARCHAR(36)  NOT NULL,"
                     + "position   INT          NOT NULL,"
                     + "world      VARCHAR(128) NOT NULL,"
@@ -227,7 +232,7 @@ public class SchemaManager {
 
             // Mailbox
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "mailbox ("
-                    + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                    + "id         " + autoInc + ","
                     + "uuid       VARCHAR(36)  NOT NULL,"
                     + "message_id VARCHAR(16)  NOT NULL,"
                     + "sender_uuid VARCHAR(36),"
@@ -306,7 +311,7 @@ public class SchemaManager {
 
             // Activity log
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "activity_log ("
-                    + "id         INT          AUTO_INCREMENT PRIMARY KEY,"
+                    + "id         " + autoInc + ","
                     + "type       VARCHAR(32)  NOT NULL,"
                     + "admin      VARCHAR(64)  NOT NULL,"
                     + "target     VARCHAR(64)  NOT NULL,"

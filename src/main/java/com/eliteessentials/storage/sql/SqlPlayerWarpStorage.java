@@ -153,8 +153,8 @@ public class SqlPlayerWarpStorage implements PlayerWarpStorageProvider {
                     + "yaw=VALUES(yaw), pitch=VALUES(pitch), owner_uuid=VALUES(owner_uuid), owner_name=VALUES(owner_name), "
                     + "visibility=VALUES(visibility), description=VALUES(description), created_at=VALUES(created_at)";
         } else {
-            sql = "MERGE INTO " + prefix + "player_warps (name, world, x, y, z, yaw, pitch, owner_uuid, owner_name, visibility, description, created_at) "
-                    + "KEY (name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT OR REPLACE INTO " + prefix + "player_warps (name, world, x, y, z, yaw, pitch, owner_uuid, owner_name, visibility, description, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

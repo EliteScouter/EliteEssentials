@@ -29,7 +29,7 @@ public class StorageFactory {
         String type = normalizeType(config);
 
         switch (type) {
-            case "h2":
+            case "sqlite":
             case "mysql":
                 try {
                     ensureDataSource(config, dataFolder, type);
@@ -57,7 +57,7 @@ public class StorageFactory {
         String type = normalizeType(config);
 
         switch (type) {
-            case "h2":
+            case "sqlite":
             case "mysql":
                 if (dataSource == null) {
                     // Player storage init failed and closed the pool — fall back
@@ -87,7 +87,7 @@ public class StorageFactory {
         String type = normalizeType(config);
 
         switch (type) {
-            case "h2":
+            case "sqlite":
             case "mysql":
                 if (dataSource == null) {
                     logger.severe("No active connection pool for player warp storage, falling back to JSON.");
@@ -149,14 +149,15 @@ public class StorageFactory {
         HikariConfig hikari = new HikariConfig();
         hikari.setPoolName("EliteEssentials-HikariPool");
 
-        if ("h2".equals(type)) {
-            String dbPath = new File(dataFolder, "eliteessentials").getAbsolutePath();
-            String jdbcUrl = "jdbc:h2:file:" + dbPath + ";MODE=MySQL;DB_CLOSE_DELAY=-1";
-            hikari.setDriverClassName("org.h2.Driver");
+        if ("sqlite".equals(type)) {
+            String dbPath = new File(dataFolder, "eliteessentials.db").getAbsolutePath();
+            String jdbcUrl = "jdbc:sqlite:" + dbPath;
+            hikari.setDriverClassName("org.sqlite.JDBC");
             hikari.setJdbcUrl(jdbcUrl);
-            hikari.setUsername("sa");
-            hikari.setPassword("");
-            logger.info("Initializing H2 database at: " + dbPath);
+            // SQLite only supports a single writer at a time, so limit pool to 1 connection
+            hikari.setMaximumPoolSize(1);
+            hikari.setMinimumIdle(1);
+            logger.info("Initializing SQLite database at: " + dbPath);
         } else {
             // MySQL / MariaDB
             PluginConfig.StorageConfig.MysqlConfig mysql = config.mysql;
@@ -194,7 +195,14 @@ public class StorageFactory {
         // Run schema creation / migration
         SchemaManager schemaManager = new SchemaManager();
         try (Connection conn = dataSource.getConnection()) {
-            schemaManager.initialize(conn, getTablePrefix(config));
+            // Enable foreign keys for SQLite (off by default)
+            if ("sqlite".equals(type)) {
+                try (java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute("PRAGMA foreign_keys = ON");
+                    stmt.execute("PRAGMA journal_mode = WAL");
+                }
+            }
+            schemaManager.initialize(conn, getTablePrefix(config), "mysql".equals(type));
         } catch (Exception e) {
             logger.severe("Schema initialization failed: " + e.getMessage());
             shutdownPool();
@@ -210,6 +218,14 @@ public class StorageFactory {
     }
 
     private String normalizeType(PluginConfig.StorageConfig config) {
-        return config.storageType != null ? config.storageType.toLowerCase().trim() : "json";
+        String type = config.storageType != null ? config.storageType.toLowerCase().trim() : "json";
+        // H2 was removed in 2.0.7. If someone still has "h2" in their config, warn and fall back to JSON.
+        if ("h2".equals(type)) {
+            logger.severe("Storage type 'h2' is no longer supported. H2 was removed in 2.0.7.");
+            logger.severe("Please update your config.json storageType to 'sqlite', 'mysql', or 'json'.");
+            logger.severe("Falling back to 'json' storage to prevent data loss.");
+            return "json";
+        }
+        return type;
     }
 }
