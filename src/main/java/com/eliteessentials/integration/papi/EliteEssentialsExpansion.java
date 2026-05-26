@@ -48,7 +48,7 @@ public class EliteEssentialsExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "1.1.19";
+        return "2.0.7";
     }
 
     @Override

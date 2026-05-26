@@ -12,8 +12,8 @@ import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -252,11 +252,11 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         
         Vector3d pos = transform.getPosition();
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         
         Location location = new Location(
             world.getName(),
-            pos.getX(), pos.getY(), pos.getZ(),
+            pos.x, pos.y, pos.z,
             rotation.y, 0f
         );
         
@@ -279,7 +279,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
         }
         
         String permDisplay = permission == Warp.Permission.OP ? "OP only" : "everyone";
-        String locationStr = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        String locationStr = String.format("%.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
         
         if (isUpdate) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warpUpdated", "name", warpName, "permission", permDisplay, "location", locationStr), "#55FF55"));

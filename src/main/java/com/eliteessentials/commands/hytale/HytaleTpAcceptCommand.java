@@ -15,8 +15,8 @@ import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -166,14 +166,14 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
         Vector3d targetPos = targetTransform.getPosition();
         
         HeadRotation reqHeadRot = (HeadRotation) requesterStore.getComponent(requesterRef, HeadRotation.getComponentType());
-        Vector3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Rotation3f(0, 0, 0);
         
         HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
         float targetYaw = targetHeadRot != null ? targetHeadRot.getRotation().y : 0;
         
         // Prepare locations for /back — yaw only, pitch=0 to prevent tilt
-        Location requesterLoc = new Location(world.getName(), requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), reqRot.y, 0f);
-        Location targetLoc = new Location(world.getName(), targetPos.getX(), targetPos.getY(), targetPos.getZ(), 
+        Location requesterLoc = new Location(world.getName(), requesterPos.x, requesterPos.y, requesterPos.z, reqRot.y, 0f);
+        Location targetLoc = new Location(world.getName(), targetPos.x, targetPos.y, targetPos.z, 
                                           targetHeadRot != null ? targetHeadRot.getRotation().y : 0, 0f);
         
         // Define teleport action
@@ -186,7 +186,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
             if (request.getType() == TpaRequest.Type.TPA) {
                 // Requester teleports to acceptor - use PlayerRef for fresh refs
                 backService.pushLocation(request.getRequesterId(), requesterLoc);
-                TeleportUtil.safeTeleport(world, world, targetPos, new Vector3f(0, targetYaw, 0),
+                TeleportUtil.safeTeleport(world, world, targetPos, new Rotation3f(0, targetYaw, 0),
                     requester,
                     () -> {
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
@@ -206,7 +206,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
             } else {
                 // Acceptor teleports to requester (TPAHERE) - use PlayerRef for fresh refs
                 backService.pushLocation(playerId, targetLoc);
-                TeleportUtil.safeTeleport(world, world, requesterPos, new Vector3f(0, reqRot.y, 0),
+                TeleportUtil.safeTeleport(world, world, requesterPos, new Rotation3f(0, reqRot.y, 0),
                     player,
                     () -> {
                         CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);
@@ -258,7 +258,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
             
             Vector3d requesterPos = requesterTransform.getPosition();
             HeadRotation reqHeadRot = (HeadRotation) requesterStore.getComponent(requesterRef, HeadRotation.getComponentType());
-            Vector3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Vector3f(0, 0, 0);
+            Rotation3f reqRot = reqHeadRot != null ? reqHeadRot.getRotation() : new Rotation3f(0, 0, 0);
             
             // Now gather acceptor data on acceptor's world thread
             acceptorWorld.execute(() -> {
@@ -279,11 +279,11 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                 Vector3d targetPos = targetTransform.getPosition();
                 HeadRotation targetHeadRot = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
                 float targetYaw = targetHeadRot != null ? targetHeadRot.getRotation().y : 0;
-                Vector3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Vector3f(0, 0, 0);
+                Rotation3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Rotation3f(0, 0, 0);
                 
                 // Prepare locations for /back — yaw only, pitch=0 to prevent tilt
-                Location requesterLoc = new Location(requesterWorld.getName(), requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), reqRot.y, 0f);
-                Location targetLoc = new Location(acceptorWorld.getName(), targetPos.getX(), targetPos.getY(), targetPos.getZ(), targetRot.y, 0f);
+                Location requesterLoc = new Location(requesterWorld.getName(), requesterPos.x, requesterPos.y, requesterPos.z, reqRot.y, 0f);
+                Location targetLoc = new Location(acceptorWorld.getName(), targetPos.x, targetPos.y, targetPos.z, targetRot.y, 0f);
                 
                 // Determine who gets warmup/cooldown based on request type
                 boolean isTpaHere = request.getType() == TpaRequest.Type.TPAHERE;
@@ -297,7 +297,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                         // Requester teleports to acceptor (cross-world)
                         backService.pushLocation(request.getRequesterId(), requesterLoc);
                         // Pre-load destination chunk before teleporting
-                        TeleportUtil.safeTeleport(requesterWorld, acceptorWorld, targetPos, new Vector3f(0, targetYaw, 0),
+                        TeleportUtil.safeTeleport(requesterWorld, acceptorWorld, targetPos, new Rotation3f(0, targetYaw, 0),
                             requester,
                             () -> {
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpa", config.tpa.cost);
@@ -317,7 +317,7 @@ public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
                     } else {
                         // Acceptor teleports to requester (TPAHERE cross-world)
                         backService.pushLocation(playerId, targetLoc);
-                        TeleportUtil.safeTeleport(acceptorWorld, requesterWorld, requesterPos, new Vector3f(0, reqRot.y, 0),
+                        TeleportUtil.safeTeleport(acceptorWorld, requesterWorld, requesterPos, new Rotation3f(0, reqRot.y, 0),
                             player,
                             () -> {
                                 CommandPermissionUtil.chargeCost(ctx, requester, "tpahere", config.tpa.tpahereCost);

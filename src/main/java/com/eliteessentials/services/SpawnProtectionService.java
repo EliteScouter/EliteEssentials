@@ -4,8 +4,8 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.storage.SpawnStorage;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 import java.util.*;
 
@@ -142,10 +142,10 @@ public class SpawnProtectionService {
         
         int radius = getRadius();
         for (SpawnLocation spawn : spawns) {
-            double dx = Math.abs(blockPos.getX() - spawn.x);
-            double dz = Math.abs(blockPos.getZ() - spawn.z);
+            double dx = Math.abs(blockPos.x - spawn.x);
+            double dz = Math.abs(blockPos.z - spawn.z);
             
-            if (dx <= radius && dz <= radius && isInYRange(blockPos.getY())) {
+            if (dx <= radius && dz <= radius && isInYRange(blockPos.y)) {
                 return true;
             }
         }
@@ -162,10 +162,10 @@ public class SpawnProtectionService {
         int radius = getRadius();
         for (List<SpawnLocation> spawns : worldSpawns.values()) {
             for (SpawnLocation spawn : spawns) {
-                double dx = Math.abs(blockPos.getX() - spawn.x);
-                double dz = Math.abs(blockPos.getZ() - spawn.z);
+                double dx = Math.abs(blockPos.x - spawn.x);
+                double dz = Math.abs(blockPos.z - spawn.z);
 
-                if (dx <= radius && dz <= radius && isInYRange(blockPos.getY())) {
+                if (dx <= radius && dz <= radius && isInYRange(blockPos.y)) {
                     return true;
                 }
             }
@@ -184,10 +184,10 @@ public class SpawnProtectionService {
         
         int radius = getRadius();
         for (SpawnLocation spawn : spawns) {
-            double dx = Math.abs(entityPos.getX() - spawn.x);
-            double dz = Math.abs(entityPos.getZ() - spawn.z);
+            double dx = Math.abs(entityPos.x - spawn.x);
+            double dz = Math.abs(entityPos.z - spawn.z);
 
-            if (dx <= radius && dz <= radius && isInYRange((int) entityPos.getY())) {
+            if (dx <= radius && dz <= radius && isInYRange((int) entityPos.y)) {
                 return true;
             }
         }
@@ -204,10 +204,10 @@ public class SpawnProtectionService {
         int radius = getRadius();
         for (List<SpawnLocation> spawns : worldSpawns.values()) {
             for (SpawnLocation spawn : spawns) {
-                double dx = Math.abs(entityPos.getX() - spawn.x);
-                double dz = Math.abs(entityPos.getZ() - spawn.z);
+                double dx = Math.abs(entityPos.x - spawn.x);
+                double dz = Math.abs(entityPos.z - spawn.z);
 
-                if (dx <= radius && dz <= radius && isInYRange((int) entityPos.getY())) {
+                if (dx <= radius && dz <= radius && isInYRange((int) entityPos.y)) {
                     return true;
                 }
             }

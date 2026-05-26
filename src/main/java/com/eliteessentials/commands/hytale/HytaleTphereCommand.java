@@ -7,12 +7,11 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
-import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -45,14 +44,14 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
     private static final String COMMAND_NAME = "tphere";
     
     private final BackService backService;
-    private final RequiredArg<String> targetArg;
+    private final RequiredArg<PlayerRef> targetArg;
 
     public HytaleTphereCommand(BackService backService) {
         super(COMMAND_NAME, "Teleport a player to your location");
         this.backService = backService;
-        // Use STRING instead of PLAYER_REF to show custom error message
-        this.targetArg = withRequiredArg("player", "Target player", ArgTypes.STRING)
-            .suggest(PlayerSuggestionProvider.INSTANCE);
+        // PLAYER_REF wires the engine's built-in online-player tab autocomplete
+        // (server 0.5.1+ chat suggestion UI) and parses straight to PlayerRef.
+        this.targetArg = withRequiredArg("player", "Target player", ArgTypes.PLAYER_REF);
     }
 
     @Override
@@ -70,11 +69,9 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
         }
         
         ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
-        String targetName = ctx.get(targetArg);
-        
-        // Find target player by name
-        PlayerRef target = findPlayer(targetName);
-        
+        PlayerRef target = ctx.get(targetArg);
+        String targetName = target != null ? target.getUsername() : "";
+
         if (target == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
@@ -97,10 +94,10 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
         }
         
         Vector3d adminPos = adminTransform.getPosition();
-        Vector3f adminRot = adminHeadRotation.getRotation();
+        Rotation3f adminRot = adminHeadRotation.getRotation();
         
         // Destination rotation: preserve admin yaw, pitch=0 to avoid player tilt
-        Vector3f destRotation = new Vector3f(0.0f, adminRot.y, 0.0f);
+        Rotation3f destRotation = new Rotation3f(0.0f, adminRot.y, 0.0f);
         
         // CRITICAL: Target may be on a different world thread.
         // All target store/ref access MUST happen on the target's world thread.
@@ -129,13 +126,13 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
             if (targetTransform != null) {
                 Vector3d targetPos = targetTransform.getPosition();
                 HeadRotation targetHeadRot = (HeadRotation) freshTargetStore.getComponent(freshTargetRef, HeadRotation.getComponentType());
-                Vector3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Vector3f(0, 0, 0);
+                Rotation3f targetRot = targetHeadRot != null ? targetHeadRot.getRotation() : new Rotation3f(0, 0, 0);
                 EntityStore freshEntityStore = freshTargetStore.getExternalData();
                 World currentTargetWorld = freshEntityStore != null ? freshEntityStore.getWorld() : finalTargetWorld;
                 String worldName = currentTargetWorld != null ? currentTargetWorld.getName() : finalTargetWorld.getName();
                 Location targetLoc = new Location(
                     worldName,
-                    targetPos.getX(), targetPos.getY(), targetPos.getZ(),
+                    targetPos.x, targetPos.y, targetPos.z,
                     targetRot.y, 0f  // yaw only, pitch=0 to prevent tilt
                 );
                 backService.pushLocation(target.getUuid(), targetLoc);
@@ -152,12 +149,5 @@ public class HytaleTphereCommand extends AbstractPlayerCommand {
         // Send confirmation to admin (safe - on admin's world thread)
         ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("tphereSuccess", 
             "player", target.getUsername()), "#55FF55"));
-    }
-    
-    /**
-     * Find a player by name (partial match, case-insensitive).
-     */
-    private PlayerRef findPlayer(String name) {
-        return PlayerSuggestionProvider.findPlayer(name);
     }
 }

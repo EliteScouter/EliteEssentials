@@ -5,7 +5,7 @@ import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -314,9 +314,9 @@ public class AfkService {
             long now = System.currentTimeMillis();
             
             if (lastPos != null) {
-                double dx = currentPos.getX() - lastPos.getX();
-                double dy = currentPos.getY() - lastPos.getY();
-                double dz = currentPos.getZ() - lastPos.getZ();
+                double dx = currentPos.x - lastPos.x;
+                double dy = currentPos.y - lastPos.y;
+                double dz = currentPos.z - lastPos.z;
                 double distSq = dx * dx + dy * dy + dz * dz;
                 
                 if (distSq > MOVE_EPSILON_SQUARED) {

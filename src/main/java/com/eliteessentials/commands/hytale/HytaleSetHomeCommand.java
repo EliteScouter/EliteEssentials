@@ -10,8 +10,8 @@ import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -101,16 +101,16 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
         }
 
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         
         Vector3d position = transform.getPosition();
         UUID playerId = player.getUuid();
 
         Location location = new Location(
             world.getName(),
-            position.getX(),
-            position.getY(),
-            position.getZ(),
+            position.x,
+            position.y,
+            position.z,
             rotation.y,  // yaw=rotation.y
             rotation.x   // pitch=rotation.x
         );

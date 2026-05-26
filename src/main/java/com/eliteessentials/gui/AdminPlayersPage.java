@@ -14,8 +14,8 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -164,7 +164,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.P
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
                 World world = tStore.getExternalData().getWorld();
-                TeleportUtil.safeTeleport(world, world, pos, new Vector3f(0, 0, 0), playerRef, () -> {}, () -> {});
+                TeleportUtil.safeTeleport(world, world, pos, new Rotation3f(0, 0, 0), playerRef, () -> {}, () -> {});
                 this.close();
             }
         } catch (Exception e) { setStatus("Teleport failed: " + e.getMessage()); }
@@ -180,7 +180,7 @@ public class AdminPlayersPage extends InteractiveCustomUIPage<AdminPlayersPage.P
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
                 World world = store.getExternalData().getWorld();
-                TeleportUtil.safeTeleport(world, world, pos, new Vector3f(0, 0, 0), target, () -> {}, () -> {});
+                TeleportUtil.safeTeleport(world, world, pos, new Rotation3f(0, 0, 0), target, () -> {}, () -> {});
                 setStatus(configManager.getMessage("adminui.players.tpHereSuccess", "player", target.getUsername()));
             }
         } catch (Exception e) { setStatus("Teleport failed: " + e.getMessage()); }

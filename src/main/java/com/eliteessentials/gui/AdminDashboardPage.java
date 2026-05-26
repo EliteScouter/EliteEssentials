@@ -14,8 +14,8 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -401,7 +401,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
                 World world = tStore.getExternalData().getWorld();
-                TeleportUtil.safeTeleport(world, world, pos, new Vector3f(0, 0, 0), playerRef, () -> {}, () -> {});
+                TeleportUtil.safeTeleport(world, world, pos, new Rotation3f(0, 0, 0), playerRef, () -> {}, () -> {});
                 this.close();
             }
         } catch (Exception e) { setStatus("#PlayerStatusMsg", "Teleport failed"); }
@@ -420,7 +420,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             if (transform != null) {
                 Vector3d pos = transform.getPosition();
                 World world = store.getExternalData().getWorld();
-                TeleportUtil.safeTeleport(world, world, pos, new Vector3f(0, 0, 0), target, () -> {}, () -> {});
+                TeleportUtil.safeTeleport(world, world, pos, new Rotation3f(0, 0, 0), target, () -> {}, () -> {});
                 setStatus("#PlayerStatusMsg", configManager.getMessage("adminui.players.tpHereSuccess", "player", target.getUsername()));
             }
         } catch (Exception e) { setStatus("#PlayerStatusMsg", "Teleport failed"); }
@@ -1328,7 +1328,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
             World targetWorld = Universe.get().getWorld(loc.getWorld());
             if (targetWorld == null) { setStatus("#TpStatusMsg", "World not found: " + loc.getWorld()); return; }
             Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
-            Vector3f rot = new Vector3f(0, loc.getYaw(), 0);
+            Rotation3f rot = new Rotation3f(0, loc.getYaw(), 0);
             TeleportUtil.safeTeleport(targetWorld, targetWorld, pos, rot, playerRef, () -> {}, () -> {});
             this.close();
         } catch (Exception e) {

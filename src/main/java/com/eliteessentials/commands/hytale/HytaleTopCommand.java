@@ -14,8 +14,8 @@ import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -122,10 +122,10 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
 
         // Save current location for /back
         HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         Location currentLoc = new Location(
             world.getName(),
-            pos.getX(), pos.getY(), pos.getZ(),
+            pos.x, pos.y, pos.z,
             rotation.y, 0f  // yaw only, pitch=0 to prevent tilt
         );
         backService.pushLocation(playerId, currentLoc);
@@ -139,7 +139,7 @@ public class HytaleTopCommand extends AbstractPlayerCommand {
         // Round yaw to cardinal direction and zero pitch
         float yaw = rotation.y;
         float cardinalYaw = roundToCardinalYaw(yaw);
-        Vector3f targetRotation = new Vector3f(0, cardinalYaw, 0);
+        Rotation3f targetRotation = new Rotation3f(0, cardinalYaw, 0);
 
         // Use safe teleport with PlayerRef for fresh refs at teleport time
         TeleportUtil.safeTeleport(world, world, targetPos, targetRotation, player,

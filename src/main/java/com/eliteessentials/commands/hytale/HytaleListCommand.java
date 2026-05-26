@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -59,7 +60,7 @@ public class HytaleListCommand extends CommandBase {
         }
         
         // Get all online players
-        List<PlayerRef> players = Universe.get().getPlayers();
+        Collection<PlayerRef> players = Universe.get().getPlayers();
         
         // Check if the command sender can see vanished players
         // Get sender UUID - sender can be PlayerRef or Player (executeSync has no store/ref to resolve PlayerRef from Player)
@@ -78,7 +79,7 @@ public class HytaleListCommand extends CommandBase {
         
         // Filter out vanished players if the sender can't see them
         VanishService vanishService = EliteEssentials.getInstance().getVanishService();
-        List<PlayerRef> visiblePlayers = players;
+        Collection<PlayerRef> visiblePlayers = players;
         if (vanishService != null && !canSeeVanished) {
             visiblePlayers = players.stream()
                 .filter(p -> !vanishService.isVanished(p.getUuid()))

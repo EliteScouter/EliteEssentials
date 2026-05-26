@@ -7,7 +7,6 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.PlayerService;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
-import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -36,7 +35,7 @@ public class HytalePayCommand extends AbstractPlayerCommand {
 
     private static final String COMMAND_NAME = "pay";
     
-    private final RequiredArg<String> targetArg;
+    private final RequiredArg<PlayerRef> targetArg;
     private final RequiredArg<Double> amountArg;
     
     private final ConfigManager configManager;
@@ -47,8 +46,9 @@ public class HytalePayCommand extends AbstractPlayerCommand {
         this.configManager = configManager;
         this.playerService = playerService;
         
-        this.targetArg = withRequiredArg("player", "Player to pay (must be online)", ArgTypes.STRING)
-            .suggest(PlayerSuggestionProvider.INSTANCE);
+        // PLAYER_REF feeds the new chat tab-autocomplete UI directly with online
+        // players. /pay only supports online targets, so this is a clean fit.
+        this.targetArg = withRequiredArg("player", "Player to pay (must be online)", ArgTypes.PLAYER_REF);
         this.amountArg = withRequiredArg("amount", "Amount to send", ArgTypes.DOUBLE);
     }
 
@@ -75,8 +75,10 @@ public class HytalePayCommand extends AbstractPlayerCommand {
             return;
         }
         
-        String targetName = ctx.get(targetArg);
+        String targetName;
+        PlayerRef targetPlayer = ctx.get(targetArg);
         double amount = ctx.get(amountArg);
+        targetName = targetPlayer != null ? targetPlayer.getUsername() : "";
         
         // Validate amount
         if (amount <= 0) {
@@ -90,9 +92,6 @@ public class HytalePayCommand extends AbstractPlayerCommand {
                 configManager.getMessage("payMinimum", "amount", EconomyAPI.format(economyConfig.minPayment)), "#FF5555"));
             return;
         }
-        
-        // Find target player
-        PlayerRef targetPlayer = PlayerSuggestionProvider.findPlayer(targetName);
         
         if (targetPlayer == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(

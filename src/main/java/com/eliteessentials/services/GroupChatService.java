@@ -11,7 +11,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -55,6 +55,7 @@ public class GroupChatService {
     private IgnoreService ignoreService;
     private NickService nickService;
     private SpyService spyService;
+    private VanishService vanishService;
     
     public GroupChatService(File dataFolder, ConfigManager configManager) {
         this.dataFolder = dataFolder;
@@ -76,6 +77,10 @@ public class GroupChatService {
 
     public void setSpyService(SpyService spyService) {
         this.spyService = spyService;
+    }
+
+    public void setVanishService(VanishService vanishService) {
+        this.vanishService = vanishService;
     }
     
     /**
@@ -342,6 +347,11 @@ public class GroupChatService {
         List<PlayerRef> spyRecipients = new ArrayList<>();
         Universe universe = Universe.get();
         
+        // Check if sender is vanished and hideChat is enabled
+        boolean senderVanished = vanishService != null
+                && configManager.getConfig().vanish.hideChat
+                && vanishService.isVanished(sender.getUuid());
+        
         if (universe != null) {
             for (Map.Entry<String, World> entry : universe.getWorlds().entrySet()) {
                 World world = entry.getValue();
@@ -372,6 +382,11 @@ public class GroupChatService {
                                 }
                                 // Skip recipients who are ignoring the sender
                                 if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
+                                    continue;
+                                }
+                                // If sender is vanished, only admins can see their messages
+                                if (senderVanished && !player.getUuid().equals(sender.getUuid())
+                                        && !PermissionService.get().isAdmin(player.getUuid())) {
                                     continue;
                                 }
                                 recipients.add(player);

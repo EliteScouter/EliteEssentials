@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerRespawnPointData;
@@ -86,10 +86,10 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
         if (transform == null) return;
         Vector3d pos = transform.getPosition();
-        deathPositionCache.put(playerRef.getUuid(), pos.getX(), pos.getZ());
+        deathPositionCache.put(playerRef.getUuid(), pos.x, pos.z);
         if (EliteEssentials.getInstance().getConfigManager().isDebugEnabled()) {
             logger.info("[Respawn] DeathComponent ADDED - stored death position for " + playerRef.getUuid() +
-                " at " + String.format("%.1f, %.1f", pos.getX(), pos.getZ()));
+                " at " + String.format("%.1f, %.1f", pos.x, pos.z));
         }
     }
 
@@ -250,8 +250,8 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
                 TransformComponent deathTransform = store.getComponent(ref, TransformComponent.getComponentType());
                 if (deathTransform != null) {
                     Vector3d p = deathTransform.getPosition();
-                    deathX = p.getX();
-                    deathZ = p.getZ();
+                    deathX = p.x;
+                    deathZ = p.z;
                 } else {
                     deathX = 0;
                     deathZ = 0;
@@ -290,7 +290,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
             }
             
             final Vector3d nearSpawnPos = new Vector3d(nearestSpawn.x, nearestSpawn.y, nearestSpawn.z);
-            final Vector3f nearSpawnRot = new Vector3f(0, nearestSpawn.yaw, 0);
+            final Rotation3f nearSpawnRot = new Rotation3f(0, nearestSpawn.yaw, 0);
             final Store<EntityStore> storeFinal2 = store;
             final Ref<EntityStore> refFinal2 = ref;
             final World deathWorldFinal2 = deathWorld;
@@ -394,7 +394,7 @@ public class RespawnListener extends RefChangeSystem<EntityStore, DeathComponent
         // Prepare immutable copies for async usage
         final World deathWorldFinal = deathWorld;
         final Vector3d spawnPos = new Vector3d(ourSpawn.x, ourSpawn.y, ourSpawn.z);
-        final Vector3f spawnRot = new Vector3f(0, ourSpawn.yaw, 0);
+        final Rotation3f spawnRot = new Rotation3f(0, ourSpawn.yaw, 0);
         final Store<EntityStore> storeFinal = store;
         final Ref<EntityStore> refFinal = ref;
 

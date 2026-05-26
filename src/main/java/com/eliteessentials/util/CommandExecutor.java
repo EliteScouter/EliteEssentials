@@ -144,7 +144,7 @@ public final class CommandExecutor {
 
                     CommandSender consoleSender = new CommandSender() {
                         @Override
-                        public String getDisplayName() {
+                        public String getUsername() {
                             return "Console";
                         }
 

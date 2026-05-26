@@ -5,7 +5,7 @@ import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -203,16 +203,12 @@ public class WarmupService {
             return;
         }
         
-        // Get Player component to send messages
-        Player playerComponent;
-        try {
-            playerComponent = (Player) store.getComponent(ref, Player.getComponentType());
-        } catch (Exception e) {
-            pending.remove(warmup.playerUuid);
-            return;
-        }
-        
-        if (playerComponent == null) {
+        // Get PlayerRef to send messages (Player.sendMessage was removed in 0.5.0)
+        com.hypixel.hytale.server.core.universe.Universe universe =
+            com.hypixel.hytale.server.core.universe.Universe.get();
+        PlayerRef playerRef = universe != null ? universe.getPlayer(warmup.playerUuid) : null;
+
+        if (playerRef == null || !playerRef.isValid()) {
             pending.remove(warmup.playerUuid);
             return;
         }
@@ -229,7 +225,7 @@ public class WarmupService {
         // Check if player moved (using squared distance like HomeManager)
         if (hasMoved(warmup.startPos, currentPos)) {
             pending.remove(warmup.playerUuid);
-            playerComponent.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warmupCancelled"), "#FF5555"));
+            playerRef.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warmupCancelled"), "#FF5555"));
             return;
         }
         
@@ -258,14 +254,14 @@ public class WarmupService {
         int remainingSeconds = (int) Math.ceil(remainingNanos / 1_000_000_000.0);
         if (!warmup.silent && remainingSeconds != warmup.lastAnnouncedSeconds && remainingSeconds > 0) {
             warmup.lastAnnouncedSeconds = remainingSeconds;
-            playerComponent.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warmupCountdown", "seconds", String.valueOf(remainingSeconds)), "#FFAA00"));
+            playerRef.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("warmupCountdown", "seconds", String.valueOf(remainingSeconds)), "#FFAA00"));
         }
     }
     
     private boolean hasMoved(Vector3d start, Vector3d current) {
-        double dx = current.getX() - start.getX();
-        double dy = current.getY() - start.getY();
-        double dz = current.getZ() - start.getZ();
+        double dx = current.x - start.x;
+        double dy = current.y - start.y;
+        double dz = current.z - start.z;
         double distanceSquared = dx*dx + dy*dy + dz*dz;
         return distanceSquared > MOVE_EPSILON_SQUARED;
     }

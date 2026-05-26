@@ -17,8 +17,8 @@ import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
@@ -174,11 +174,11 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
         
         Vector3d currentPos = transform.getPosition();
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         
         Location currentLoc = new Location(
             world.getName(),
-            currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+            currentPos.x, currentPos.y, currentPos.z,
             rotation.y, 0f  // yaw only, pitch=0 to prevent tilt
         );
 
@@ -198,7 +198,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
             
             Vector3d targetPos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             // Always use pitch=0 to keep player upright, preserve yaw for direction
-            Vector3f targetRot = new Vector3f(0, loc.getYaw(), 0);
+            Rotation3f targetRot = new Rotation3f(0, loc.getYaw(), 0);
             
             TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,
                 () -> {

@@ -9,6 +9,7 @@ import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.IgnoreService;
 import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.NickService;
+import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
@@ -30,6 +31,7 @@ public class ChatListener {
     private IgnoreService ignoreService;
     private MuteService muteService;
     private NickService nickService;
+    private VanishService vanishService;
     
     public ChatListener(ConfigManager configManager) {
         this.configManager = configManager;
@@ -46,6 +48,10 @@ public class ChatListener {
     public void setNickService(NickService nickService) {
         this.nickService = nickService;
     }
+
+    public void setVanishService(VanishService vanishService) {
+        this.vanishService = vanishService;
+    }
     
     /**
      * Register event listeners.
@@ -53,6 +59,18 @@ public class ChatListener {
     public void registerEvents(EventRegistry eventRegistry) {
         if (!configManager.getConfig().chatFormat.enabled) {
             logger.info("Chat formatting is disabled in config");
+            
+            // Even with formatting disabled, we need to intercept vanished players' chat.
+            // The Hytale engine's default chat path respects HiddenPlayersManager, which
+            // silently drops messages from vanished players. Register a minimal listener
+            // that only activates for vanished senders: cancel the engine event and
+            // rebroadcast the raw message via sendMessage() to bypass the filter.
+            if (configManager.getConfig().vanish.enabled) {
+                eventRegistry.registerGlobal(PlayerChatEvent.class, event -> {
+                    onVanishedPlayerChat(event);
+                });
+                logger.info("Vanish chat bypass listener registered (chat formatting disabled).");
+            }
             return;
         }
         
@@ -80,8 +98,59 @@ public class ChatListener {
     }
     
     /**
-     * Handle player chat event.
+     * Minimal chat handler for when chat formatting is disabled.
+     * Only intercepts messages from vanished players to bypass the engine's
+     * HiddenPlayersManager filtering. Non-vanished players' messages pass through
+     * to the default engine chat handler untouched.
      */
+    private void onVanishedPlayerChat(PlayerChatEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
+
+        PlayerRef sender = event.getSender();
+        if (!sender.isValid()) {
+            return;
+        }
+
+        // Only intercept if sender is vanished
+        if (vanishService == null || !vanishService.isVanished(sender.getUuid())) {
+            return; // Let the engine handle it normally
+        }
+
+        // If hideChat is enabled, let the engine suppress it (default behavior)
+        if (configManager.getConfig().vanish.hideChat) {
+            return;
+        }
+
+        // Cancel the engine event so it doesn't get filtered by HiddenPlayersManager
+        event.setCancelled(true);
+
+        // Block muted players
+        if (muteService != null && muteService.isMuted(sender.getUuid())) {
+            sender.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("mutedBlocked"), "#FF5555"));
+            return;
+        }
+
+        String playerName = sender.getUsername();
+        String message = event.getContent();
+
+        // Rebroadcast with simple format: "PlayerName: message"
+        // This matches the engine's default chat format
+        String formatted = playerName + ": " + message;
+
+        for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
+            if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
+                continue;
+            }
+            player.sendMessage(Message.raw(formatted));
+        }
+
+        // Log to console
+        logger.info("[CHAT] " + formatted);
+    }
+
     /**
      * Handle player chat event.
      * 
@@ -198,12 +267,17 @@ public class ChatListener {
 
     /**
      * Broadcast a formatted chat message to all online players.
-     * Handles ignore filtering and optional PAPI relational placeholders.
+     * Handles ignore filtering, vanish hiding, and optional PAPI relational placeholders.
      */
     private void broadcastMessage(PlayerRef sender, String formattedMessage, String processedMessage, boolean usePapi) {
         if (configManager.isDebugEnabled()) {
             logger.info("Formatted message: " + formattedMessage.replace("{message}", processedMessage));
         }
+
+        // Check if sender is vanished and hideChat is enabled
+        boolean senderVanished = vanishService != null
+                && configManager.getConfig().vanish.hideChat
+                && vanishService.isVanished(sender.getUuid());
 
         // Broadcast to console if enabled
         if (configManager.getConfig().chatFormat.broadcastToConsole) {
@@ -216,6 +290,12 @@ public class ChatListener {
         for (PlayerRef player : com.hypixel.hytale.server.core.universe.Universe.get().getPlayers()) {
             // Skip players who are ignoring the sender
             if (ignoreService != null && ignoreService.isIgnoring(player.getUuid(), sender.getUuid())) {
+                continue;
+            }
+
+            // If sender is vanished, only admins can see their messages
+            if (senderVanished && !player.getUuid().equals(sender.getUuid())
+                    && !PermissionService.get().isAdmin(player.getUuid())) {
                 continue;
             }
 

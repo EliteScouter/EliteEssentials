@@ -8,8 +8,8 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -60,12 +60,12 @@ public class HytaleSetFirstJoinSpawnCommand extends AbstractPlayerCommand {
 
         Vector3d pos = transform.getPosition();
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rot = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rot = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
 
         String worldName = world.getName();
-        String location = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        String location = String.format("%.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
 
-        spawnStorage.setFirstJoinSpawn(worldName, pos.getX(), pos.getY(), pos.getZ(), rot.y, rot.x);
+        spawnStorage.setFirstJoinSpawn(worldName, pos.x, pos.y, pos.z, rot.y, rot.x);
 
         String message = configManager.getMessage("firstJoinSpawnSet", "location", location, "world", worldName);
         ctx.sendMessage(MessageFormatter.format(message));

@@ -15,8 +15,8 @@ import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.SavedMovementStates;
@@ -274,13 +274,13 @@ public class HytaleFlyCommand extends CommandBase {
             double centerX = Math.floor(pos.x) + 0.5;
             double centerZ = Math.floor(pos.z) + 0.5;
             Vector3d targetPos = new Vector3d(centerX, targetY, centerZ);
-            Vector3f targetRot = new Vector3f(0, 0, 0);
+            Rotation3f targetRot = new Rotation3f(0, 0, 0);
 
             // Preserve player's current yaw
             HeadRotation headRotation =
                 store.getComponent(ref, HeadRotation.getComponentType());
             if (headRotation != null) {
-                targetRot = new Vector3f(0, headRotation.getRotation().y, 0);
+                targetRot = new Rotation3f(0, headRotation.getRotation().y, 0);
             }
 
             Teleport teleport = Teleport.createForPlayer(world, targetPos, targetRot);

@@ -9,8 +9,8 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -75,14 +75,14 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
 
         Vector3d pos = transform.getPosition();
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rot = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rot = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
 
         String worldName = world.getName();
-        String location = String.format("%.1f, %.1f, %.1f", pos.getX(), pos.getY(), pos.getZ());
+        String location = String.format("%.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
         
         if (name == null) {
             // Set/update primary spawn (backward compatible path)
-            spawnStorage.setSpawn(worldName, pos.getX(), pos.getY(), pos.getZ(), rot.y, rot.x);
+            spawnStorage.setSpawn(worldName, pos.x, pos.y, pos.z, rot.y, rot.x);
             
             SpawnStorage.SpawnData spawnData = spawnStorage.getSpawn(worldName);
             if (spawnData != null) {
@@ -108,7 +108,7 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
             int maxPerWorld = config.spawn.maxSpawnsPerWorld;
             
             SpawnStorage.SpawnData result = spawnStorage.addSpawn(
-                worldName, name, pos.getX(), pos.getY(), pos.getZ(), rot.y, rot.x,
+                worldName, name, pos.x, pos.y, pos.z, rot.y, rot.x,
                 isPrimary, true, maxPerWorld);
             
             if (result == null) {

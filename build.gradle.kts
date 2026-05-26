@@ -5,7 +5,7 @@ plugins {
 }
 
 group = findProperty("pluginGroup") as String? ?: "com.eliteessentials"
-version = findProperty("pluginVersion") as String? ?: "2.0.6"
+version = findProperty("pluginVersion") as String? ?: "2.0.8"
 description = findProperty("pluginDescription") as String? ?: "Essential commands for Hytale servers"
 
 repositories {
@@ -29,7 +29,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    val serverVersion = findProperty("serverVersion") as String? ?: "2026.03.26-89796e57b"
+    val serverVersion = findProperty("serverVersion") as String? ?: "0.5.1"
     compileOnly("com.hypixel.hytale:Server:$serverVersion")
 
     compileOnly("at.helpch:placeholderapi-hytale:1.0.4")
@@ -73,7 +73,7 @@ tasks {
             "group" to project.group,
             "version" to project.version,
             "description" to project.description,
-            "serverVersion" to (findProperty("serverVersion") as String? ?: "2026.03.26-89796e57b")
+            "serverVersion" to (findProperty("serverVersion") as String? ?: "0.5.1")
         )
         inputs.properties(props)
         
@@ -91,7 +91,9 @@ tasks {
         relocate("org.slf4j", "com.eliteessentials.libs.slf4j")
         relocate("com.mysql", "com.eliteessentials.libs.mysql")
         relocate("org.xerial", "com.eliteessentials.libs.xerial")
-        relocate("org.sqlite", "com.eliteessentials.libs.sqlite")
+        // NOTE: org.sqlite must NOT be relocated. SQLite JDBC uses JNI native
+        // libraries that call back into Java via Class.forName("org.sqlite.core.NativeDB").
+        // Relocating this package breaks that lookup, causing NoClassDefFoundError at runtime.
         
         minimize {
             // JDBC drivers are loaded via reflection (Class.forName), so the shadow

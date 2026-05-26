@@ -3,9 +3,8 @@ package com.eliteessentials.services;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.server.core.io.PacketHandler;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
-import io.netty.channel.Channel;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -19,8 +18,8 @@ import java.util.logging.Logger;
 /**
  * Manages IP-based bans.
  * Persists to ipbans.json keyed by IP address string.
- * 
- * IP extraction uses PacketHandler -> Netty Channel -> NettyUtil.getRemoteSocketAddress()
+ *
+ * IP extraction uses PacketHandler -&gt; ChannelConnection -&gt; remoteAddress()
  * which works with both TCP and QUIC connections.
  */
 public class IpBanService {
@@ -67,15 +66,22 @@ public class IpBanService {
     }
 
     /**
-     * Extract IP address from a PacketHandler via Netty channel.
+     * Extract IP address from a PacketHandler via the channel connection.
+     *
+     * In server 0.5.1+, {@code PacketHandler#getChannel()} returns
+     * {@link ChannelConnection} (an abstraction over Netty/QUIC) instead of a
+     * raw Netty {@code Channel}. We resolve the remote address through the
+     * abstraction's {@link ChannelConnection#remoteAddress()} method, which
+     * works for both TCP and QUIC connections.
+     *
      * @return IP string or null if extraction fails
      */
     public static String getIpFromPacketHandler(PacketHandler packetHandler) {
         try {
             if (packetHandler == null) return null;
-            Channel channel = packetHandler.getChannel();
+            ChannelConnection channel = packetHandler.getChannel();
             if (channel == null) return null;
-            SocketAddress addr = NettyUtil.getRemoteSocketAddress(channel);
+            SocketAddress addr = channel.remoteAddress();
             if (addr instanceof InetSocketAddress) {
                 return ((InetSocketAddress) addr).getAddress().getHostAddress();
             }

@@ -7,8 +7,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.eliteessentials.spawn.DeathPositionCache;
@@ -592,7 +592,7 @@ public class SpawnStorage {
             } else {
                 Transform spawnTransform = new Transform(
                     new Vector3d(spawn.x, spawn.y, spawn.z),
-                    new Vector3f(0, spawn.yaw, 0)
+                    new Rotation3f(0, spawn.yaw, 0)
                 );
                 provider = new GlobalSpawnProvider(spawnTransform);
                 logger.info("[SpawnSync] Set GlobalSpawnProvider for world '" + worldName + 

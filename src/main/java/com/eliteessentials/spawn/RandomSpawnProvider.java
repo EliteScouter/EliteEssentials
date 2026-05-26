@@ -2,8 +2,8 @@ package com.eliteessentials.spawn;
 
 import com.eliteessentials.storage.SpawnStorage;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 
@@ -32,12 +32,12 @@ public final class RandomSpawnProvider implements ISpawnProvider {
             spawn = spawnStorage.getPrimarySpawn(worldName);
         }
         if (spawn == null) {
-            return new Transform(new Vector3d(0, 100, 0), new Vector3f(0, 0, 0));
+            return new Transform(new Vector3d(0, 100, 0), new Rotation3f(0, 0, 0));
         }
         deathPositionCache.putChosenSpawn(playerId, spawn.name);
         return new Transform(
                 new Vector3d(spawn.x, spawn.y, spawn.z),
-                new Vector3f(0, spawn.yaw, 0)
+                new Rotation3f(0, spawn.yaw, 0)
         );
     }
 
@@ -46,7 +46,7 @@ public final class RandomSpawnProvider implements ISpawnProvider {
         return spawnStorage.getSpawns(worldName).stream()
                 .map(s -> new Transform(
                         new Vector3d(s.x, s.y, s.z),
-                        new Vector3f(0, s.yaw, 0)))
+                        new Rotation3f(0, s.yaw, 0)))
                 .toArray(Transform[]::new);
     }
 
@@ -54,8 +54,8 @@ public final class RandomSpawnProvider implements ISpawnProvider {
     public boolean isWithinSpawnDistance(Vector3d position, double distance) {
         SpawnStorage.SpawnData primary = spawnStorage.getPrimarySpawn(worldName);
         if (primary == null) return false;
-        double dx = primary.x - position.getX();
-        double dz = primary.z - position.getZ();
+        double dx = primary.x - position.x;
+        double dz = primary.z - position.z;
         return (dx * dx + dz * dz) <= distance * distance;
     }
 }

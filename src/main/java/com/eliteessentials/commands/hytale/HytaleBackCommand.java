@@ -15,8 +15,8 @@ import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -147,7 +147,7 @@ public class HytaleBackCommand extends AbstractPlayerCommand {
             
             Vector3d targetPos = new Vector3d(destination.getX(), destination.getY(), destination.getZ());
             // Always use pitch=0 to keep player upright, preserve yaw for direction
-            Vector3f targetRot = new Vector3f(0, destination.getYaw(), 0);
+            Rotation3f targetRot = new Rotation3f(0, destination.getYaw(), 0);
             
             // Always use PlayerRef overload - gets fresh store/ref at teleport time
             TeleportUtil.safeTeleport(world, finalWorld, targetPos, targetRot, player,

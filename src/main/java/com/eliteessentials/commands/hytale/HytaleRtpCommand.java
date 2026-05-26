@@ -17,8 +17,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -326,10 +326,10 @@ public class HytaleRtpCommand extends CommandBase {
 
         // Save current location for /back
         HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         Location currentLoc = new Location(
             world.getName(),
-            currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+            currentPos.x, currentPos.y, currentPos.z,
             rotation.y, 0f  // yaw only, pitch=0 to prevent tilt
         );
 
@@ -675,7 +675,7 @@ public class HytaleRtpCommand extends CommandBase {
         currentYaw = headRotation != null ? headRotation.getRotation().y : 0;
         
         Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
-        Vector3f targetRot = new Vector3f(0, currentYaw, 0);
+        Rotation3f targetRot = new Rotation3f(0, currentYaw, 0);
         
         TeleportUtil.safeTeleport(world, world, targetPos, targetRot, currentStore, currentRef,
             () -> {
@@ -731,17 +731,17 @@ public class HytaleRtpCommand extends CommandBase {
             if (transform != null) {
                 Vector3d currentPos = transform.getPosition();
                 HeadRotation headRotation = (HeadRotation) store.getComponent(ref, HeadRotation.getComponentType());
-                Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+                Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
                 Location currentLoc = new Location(
                     currentWorld.getName(),
-                    currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+                    currentPos.x, currentPos.y, currentPos.z,
                     rotation.y, 0f  // yaw only, pitch=0 to prevent tilt
                 );
                 backService.pushLocation(playerId, currentLoc);
             }
             
             Vector3d targetPos = new Vector3d(teleportX, teleportY, teleportZ);
-            Vector3f targetRot = new Vector3f(0, 0, 0);
+            Rotation3f targetRot = new Rotation3f(0, 0, 0);
             
             // Use PlayerRef-based safeTeleport to get fresh store/ref at teleport time
             TeleportUtil.safeTeleport(currentWorld, targetWorld, targetPos, targetRot, player,

@@ -159,14 +159,18 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
 
     /**
      * Variant: /tpa <player>
+     *
+     * Uses {@code ArgTypes.PLAYER_REF} so the chat autocomplete UI introduced
+     * in server 0.5.1 surfaces online players directly via the engine's
+     * built-in {@code suggestOnlinePlayers} hook. This is online-only by
+     * design (the engine rejects offline names with its own error).
      */
     private class TpaWithTargetCommand extends AbstractPlayerCommand {
-        private final RequiredArg<String> targetArg;
+        private final RequiredArg<PlayerRef> targetArg;
 
         TpaWithTargetCommand(TpaService tpaService) {
             super(COMMAND_NAME);
-            this.targetArg = withRequiredArg("player", "Target player", ArgTypes.STRING)
-                .suggest(PlayerSuggestionProvider.INSTANCE);
+            this.targetArg = withRequiredArg("player", "Target player", ArgTypes.PLAYER_REF);
         }
 
         @Override
@@ -177,8 +181,9 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
         @Override
         protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
                               @Nonnull PlayerRef player, @Nonnull World world) {
-        CommandSpyUtil.notify(ctx);
-            sendRequest(ctx, player, ctx.get(targetArg));
+            CommandSpyUtil.notify(ctx);
+            PlayerRef target = ctx.get(targetArg);
+            sendRequest(ctx, player, target != null ? target.getUsername() : "");
         }
     }
 }

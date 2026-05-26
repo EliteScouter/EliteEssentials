@@ -2,8 +2,8 @@ package com.eliteessentials.util;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -52,7 +52,7 @@ public class TeleportUtil {
      * @param onSuccess   Callback after teleport component is applied (may be null)
      * @param onFailure   Callback if ref is invalid (may be null)
      */
-    public static void safeTeleport(World world, World targetWorld, Vector3d targetPos, Vector3f targetRot,
+    public static void safeTeleport(World world, World targetWorld, Vector3d targetPos, Rotation3f targetRot,
                                      Store<EntityStore> store, Ref<EntityStore> ref,
                                      Runnable onSuccess, Runnable onFailure) {
         if (!ref.isValid()) {
@@ -86,7 +86,7 @@ public class TeleportUtil {
      * @param onSuccess   Callback after teleport component is applied (may be null)
      * @param onFailure   Callback if player ref is invalid (may be null)
      */
-    public static void safeTeleport(World world, World targetWorld, Vector3d targetPos, Vector3f targetRot,
+    public static void safeTeleport(World world, World targetWorld, Vector3d targetPos, Rotation3f targetRot,
                                      PlayerRef playerRef,
                                      Runnable onSuccess, Runnable onFailure) {
         Ref<EntityStore> freshRef = playerRef.getReference();

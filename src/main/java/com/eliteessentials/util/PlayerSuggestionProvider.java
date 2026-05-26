@@ -31,7 +31,17 @@ public final class PlayerSuggestionProvider implements SuggestionProvider {
     @Override
     public void suggest(@Nonnull CommandSender sender, @Nonnull String input, int numParams,
                         @Nonnull SuggestionResult result) {
-        result.fuzzySuggest(input, Universe.get().getPlayers(), PlayerRef::getUsername);
+        // Server 0.5.0+ removed SuggestionResult#fuzzySuggest. Filter manually
+        // and add each match via #suggest. Keep behaviour close to the old
+        // fuzzy match: case-insensitive contains.
+        String needle = input == null ? "" : input.toLowerCase(java.util.Locale.ROOT);
+        for (PlayerRef p : Universe.get().getPlayers()) {
+            String name = p.getUsername();
+            if (name == null) continue;
+            if (needle.isEmpty() || name.toLowerCase(java.util.Locale.ROOT).contains(needle)) {
+                result.suggest(name);
+            }
+        }
     }
 
     /**

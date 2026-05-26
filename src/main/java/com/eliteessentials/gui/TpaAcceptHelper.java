@@ -12,8 +12,8 @@ import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -124,13 +124,13 @@ public final class TpaAcceptHelper {
                     configCooldown = config.tpa.tpahereCooldownSeconds;
                     
                     Location backLoc = new Location(acceptorWorld.getName(), 
-                        acceptorPos.getX(), acceptorPos.getY(), acceptorPos.getZ(), acceptorYaw, 0f);
+                        acceptorPos.x, acceptorPos.y, acceptorPos.z, acceptorYaw, 0f);
                     
                     doTeleport = () -> {
                         backService.pushLocation(acceptor.getUuid(), backLoc);
                         acceptorWorld.execute(() -> {
                             if (!acceptorRef.isValid()) return;
-                            Teleport teleport = new Teleport(requesterWorld, requesterPos, new Vector3f(0, requesterYaw, 0));
+                            Teleport teleport = new Teleport(requesterWorld, requesterPos, new Rotation3f(0, requesterYaw, 0));
                             acceptorStore.putComponent(acceptorRef, Teleport.getComponentType(), teleport);
                             CommandPermissionUtil.chargeCostDirect(requester.getUuid(), "tpahere", config.tpa.tpahereCost);
                             int effectiveCooldown = CommandPermissionUtil.getEffectiveTpCooldown(teleportingPlayerId, cooldownCommandName, configCooldown);
@@ -154,13 +154,13 @@ public final class TpaAcceptHelper {
                     configCooldown = config.tpa.cooldownSeconds;
                     
                     Location backLoc = new Location(requesterWorld.getName(),
-                        requesterPos.getX(), requesterPos.getY(), requesterPos.getZ(), requesterYaw, 0f);
+                        requesterPos.x, requesterPos.y, requesterPos.z, requesterYaw, 0f);
                     
                     doTeleport = () -> {
                         backService.pushLocation(request.getRequesterId(), backLoc);
                         requesterWorld.execute(() -> {
                             if (!requesterRef.isValid()) return;
-                            Teleport teleport = new Teleport(acceptorWorld, acceptorPos, new Vector3f(0, acceptorYaw, 0));
+                            Teleport teleport = new Teleport(acceptorWorld, acceptorPos, new Rotation3f(0, acceptorYaw, 0));
                             requesterStore.putComponent(requesterRef, Teleport.getComponentType(), teleport);
                             CommandPermissionUtil.chargeCostDirect(request.getRequesterId(), "tpa", config.tpa.cost);
                             requester.sendMessage(MessageFormatter.formatWithFallback(

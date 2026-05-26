@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.Universe;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
 import com.eliteessentials.util.CommandSpyUtil;
@@ -222,7 +223,7 @@ public class HytaleSendMessageCommand extends CommandBase {
             return;
         }
         
-        List<PlayerRef> players = universe.getPlayers();
+        Collection<PlayerRef> players = universe.getPlayers();
         if (players.isEmpty()) {
             ctx.sendMessage(Message.raw("No players online.").color("#FFAA00"));
             return;

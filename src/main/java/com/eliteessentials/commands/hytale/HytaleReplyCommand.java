@@ -16,7 +16,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -138,8 +137,7 @@ public class HytaleReplyCommand extends AbstractPlayerCommand {
     }
 
     private PlayerRef findPlayerByUuid(UUID uuid) {
-        List<PlayerRef> players = Universe.get().getPlayers();
-        for (PlayerRef p : players) {
+        for (PlayerRef p : Universe.get().getPlayers()) {
             if (p.getUuid().equals(uuid)) {
                 return p;
             }

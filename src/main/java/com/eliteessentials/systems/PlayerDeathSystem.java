@@ -12,8 +12,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -125,16 +125,16 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
 
                     float yaw = 0f;
                     if (headRotation != null) {
-                        Vector3f rotation = headRotation.getRotation();
+                        Rotation3f rotation = headRotation.getRotation();
                         yaw = rotation.y;
                     }
 
                     // pitch = 0 on purpose; only preserve yaw
                     Location deathLocation = new Location(
                             worldName,
-                            pos.getX(),
-                            pos.getY(),
-                            pos.getZ(),
+                            pos.x,
+                            pos.y,
+                            pos.z,
                             yaw,
                             0f
                     );
@@ -145,7 +145,7 @@ public class PlayerDeathSystem extends RefChangeSystem<EntityStore, DeathCompone
                         logger.info("[PlayerDeathSystem] Recorded death location for " + playerName +
                                 " (" + playerId + "): " + worldName + " @ " +
                                 String.format("%.1f, %.1f, %.1f (yaw=%.1f) [history=%d]",
-                                        pos.getX(), pos.getY(), pos.getZ(), yaw,
+                                        pos.x, pos.y, pos.z, yaw,
                                         backService.getHistorySize(playerId)));
                     }
                 } else if (configManager.isDebugEnabled()) {

@@ -302,6 +302,7 @@ public class EliteEssentials extends JavaPlugin {
         groupChatService.setMuteService(muteService);
         groupChatService.setIgnoreService(ignoreService);
         groupChatService.setNickService(nickService);
+        groupChatService.setVanishService(vanishService);
 
         // Initialize spy service (centralized spy for gchat, dm, command)
         spyService = new SpyService(configManager);
@@ -393,6 +394,7 @@ public class EliteEssentials extends JavaPlugin {
         chatListener.setIgnoreService(ignoreService);
         chatListener.setMuteService(muteService);
         chatListener.setNickService(nickService);
+        chatListener.setVanishService(vanishService);
         chatListener.registerEvents(getEventRegistry());
         if (configManager.getConfig().chatFormat.enabled) {
             getLogger().at(Level.INFO).log("Chat formatting system registered.");

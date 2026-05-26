@@ -3,8 +3,8 @@ package com.eliteessentials.services;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.model.Location;
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -212,11 +212,11 @@ public class DeathTrackingService {
             
             Vector3d pos = transform.getPosition();
             HeadRotation headRotation = holder.getComponent(HeadRotation.getComponentType());
-            Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+            Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
             
             String worldName = "world";
             // NOTE: pitch is 0 to avoid player tilt on teleport, only preserve yaw (rotation.y)
-            return new Location(worldName, pos.getX(), pos.getY(), pos.getZ(), rotation.y, 0f);
+            return new Location(worldName, pos.x, pos.y, pos.z, rotation.y, 0f);
         } catch (Exception e) {
             return null;
         }

@@ -16,8 +16,8 @@ import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -131,7 +131,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
                     return;
                 }
                 Vector3d prePos = preCheck.getPosition();
-                spawn = spawnStorage.getNearestSpawn(targetWorldName, prePos.getX(), prePos.getZ());
+                spawn = spawnStorage.getNearestSpawn(targetWorldName, prePos.x, prePos.z);
             } else {
                 spawn = spawnStorage.getPrimarySpawn(targetWorldName);
             }
@@ -159,11 +159,11 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         
         Vector3d currentPos = currentTransform.getPosition();
         HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f currentRot = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f currentRot = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         
         Location currentLoc = new Location(
             world.getName(),
-            currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+            currentPos.x, currentPos.y, currentPos.z,
             currentRot.y, 0f
         );
         
@@ -174,7 +174,7 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
         final World finalTargetWorld = targetWorld;
         
         Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
-        Vector3f spawnRot = new Vector3f(0, spawn.yaw, 0);
+        Rotation3f spawnRot = new Rotation3f(0, spawn.yaw, 0);
         
         final int finalEffectiveCooldown = effectiveCooldown;
         final SpawnStorage.SpawnData finalSpawn = spawn;

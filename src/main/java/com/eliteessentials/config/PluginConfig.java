@@ -1365,6 +1365,17 @@ public class PluginConfig {
          * Note: This makes the player invulnerable to ALL damage, not just mob damage.
          */
         public boolean mobImmunity = true;
+        
+        /**
+         * Hide chat messages from vanished players.
+         * When true: Messages sent by vanished players are only visible to admins (OPs),
+         * not to regular players. The vanished player still sees their own message.
+         * When false (default): Vanished players' chat messages are visible to everyone as normal.
+         * Note: This only applies when chatFormat is enabled. If chatFormat is disabled,
+         * the Hytale engine handles chat natively and will hide messages from vanished
+         * players regardless of this setting (engine-level HiddenPlayersManager filtering).
+         */
+        public boolean hideChat = false;
     }
 
     // ==================== GROUP CHAT ====================

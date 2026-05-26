@@ -30,7 +30,7 @@ public class PlayerCommandSender implements CommandSender {
     }
 
     @Override
-    public String getDisplayName() {
+    public String getUsername() {
         return displayName;
     }
 

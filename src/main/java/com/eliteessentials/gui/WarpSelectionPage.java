@@ -20,8 +20,8 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -272,11 +272,11 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
         
         Vector3d currentPos = transform.getPosition();
         HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
-        Vector3f rotation = headRotation != null ? headRotation.getRotation() : new Vector3f(0, 0, 0);
+        Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
         
         com.eliteessentials.model.Location currentLoc = new com.eliteessentials.model.Location(
             world.getName(),
-            currentPos.getX(), currentPos.getY(), currentPos.getZ(),
+            currentPos.x, currentPos.y, currentPos.z,
             rotation.y, 0f
         );
         
@@ -298,7 +298,7 @@ public class WarpSelectionPage extends InteractiveCustomUIPage<WarpSelectionPage
             backService.pushLocation(playerId, currentLoc);
             
             Vector3d targetPos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
-            Vector3f targetRot = new Vector3f(0, loc.getYaw(), 0);
+            Rotation3f targetRot = new Rotation3f(0, loc.getYaw(), 0);
             
             // Execute on the CURRENT world's thread (where player is now)
             world.execute(() -> {

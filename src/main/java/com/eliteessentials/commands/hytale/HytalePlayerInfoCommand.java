@@ -18,7 +18,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -354,7 +354,7 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
             if (transform == null) return;
             Vector3d pos = transform.getPosition();
             String worldName = targetWorld.getName();
-            String coords = String.format("%.1f, %.1f, %.1f (%s)", pos.getX(), pos.getY(), pos.getZ(), worldName);
+            String coords = String.format("%.1f, %.1f, %.1f (%s)", pos.x, pos.y, pos.z, worldName);
             ctx.sendMessage(Message.join(
                 MessageFormatter.formatWithFallback(configManager.getMessage("playerinfoLabelCoordinates"), "#AAAAAA"),
                 Message.raw(coords).color("#55FF55")

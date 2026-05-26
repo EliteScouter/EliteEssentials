@@ -26,8 +26,8 @@ import com.google.gson.JsonParser;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.EventRegistry;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
@@ -438,7 +438,7 @@ public class JoinQuitListener {
                             }
 
                             Vector3d spawnPos = new Vector3d(fjSpawn.x, fjSpawn.y, fjSpawn.z);
-                            Vector3f spawnRot = new Vector3f(0, fjSpawn.yaw, 0);
+                            Rotation3f spawnRot = new Rotation3f(0, fjSpawn.yaw, 0);
 
                             TeleportUtil.safeTeleport(fjCurrentWorld, targetWorld, spawnPos, spawnRot, fjPlayer,
                                 () -> {
