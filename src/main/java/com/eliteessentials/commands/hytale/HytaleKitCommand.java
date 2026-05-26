@@ -78,6 +78,12 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         CommandSpyUtil.notify(ctx);
         UUID playerId = player.getUuid();
         
+        // Self-heal: ensure a PlayerFile exists before any kit operation. Prevents the
+        // infinite-kit exploit where a player whose PlayerReadyEvent never fired (observed
+        // on abnormally slow logins) has no PlayerFile, causing all KitService reads to
+        // return 0 (no cooldown) and writes to silently no-op.
+        kitService.ensurePlayerFile(playerId, player.getUsername());
+        
         if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
@@ -152,6 +158,9 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     public static void claimKit(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
                                 PlayerRef player, String kitName, KitService kitService, ConfigManager configManager) {
         UUID playerId = player.getUuid();
+        
+        // Self-heal: ensure a PlayerFile exists before any kit operation. See note in execute().
+        kitService.ensurePlayerFile(playerId, player.getUsername());
         
         // Get the kit
         Kit kit = kitService.getKit(kitName);

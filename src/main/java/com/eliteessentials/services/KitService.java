@@ -44,6 +44,49 @@ public class KitService {
     }
 
     /**
+     * Ensure a PlayerFile exists (create + cache + persist if missing) for the given player.
+     *
+     * This is a self-heal path for the case where {@code PlayerReadyEvent} never fired for the
+     * player (observed in practice when a player's initial login is abnormally slow, e.g. a
+     * previous handshake timeout plus a long anti-cheat registration). Without this, every
+     * KitService read/write silently no-ops because {@code getPlayer(UUID)} returns null for
+     * players who are neither cached nor on disk — which previously allowed infinite /kit
+     * usage with no cooldown recorded.
+     *
+     * Callers should invoke this at every kit entry point (command handler, NPC, GUI) before
+     * any cooldown / onetime lookup.
+     *
+     * @return true if the PlayerFile exists or was created; false if storage is unavailable.
+     */
+    public boolean ensurePlayerFile(UUID playerId, String playerName) {
+        if (playerFileStorage == null) {
+            logger.warning("[Kit] ensurePlayerFile: storage is null, cannot ensure PlayerFile for " + playerId);
+            return false;
+        }
+
+        // Fast path: already cached or on disk.
+        PlayerFile existing = playerFileStorage.getPlayer(playerId);
+        if (existing != null) {
+            return true;
+        }
+
+        // Slow path: the 2-arg overload creates + caches + indexes + marks dirty. We then
+        // force an immediate save so the file survives a crash/restart even if no further
+        // operations mark it dirty. This mirrors what PlayerService.onPlayerJoin does for
+        // new players.
+        PlayerFile created = playerFileStorage.getPlayer(playerId, playerName);
+        if (created == null) {
+            logger.warning("[Kit] ensurePlayerFile: failed to create PlayerFile for " + playerName + " (" + playerId + ")");
+            return false;
+        }
+
+        playerFileStorage.saveAndMarkDirty(playerId);
+        logger.warning("[Kit] Self-healed missing PlayerFile for " + playerName + " (" + playerId
+            + "). This usually means PlayerReadyEvent did not fire for this player at initial join.");
+        return true;
+    }
+
+    /**
      * Load kits from kits.json
      */
     public void loadKits() {
@@ -157,7 +200,14 @@ public class KitService {
         
         PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
         if (playerFile == null) {
-            return 0;
+            // Fail closed: if we cannot read cooldown state, assume the player is still on cooldown.
+            // Previously this returned 0, which allowed infinite kit claims when PlayerReadyEvent
+            // failed to fire at player join (no PlayerFile existed anywhere). Callers should use
+            // ensurePlayerFile() before this path; this branch is defense-in-depth.
+            logger.warning("[Kit] PlayerFile missing for " + playerId
+                + " on cooldown check for kit '" + kitId
+                + "' — treating as on cooldown (fail-closed).");
+            return effectiveCooldown;
         }
 
         long lastUsed = playerFile.getKitLastUsed(kitId);
@@ -188,7 +238,13 @@ public class KitService {
         if (playerFileStorage == null) return;
         
         PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
-        if (playerFile == null) return;
+        if (playerFile == null) {
+            // Defense-in-depth: log rather than silently lose the cooldown write.
+            // Callers should ensurePlayerFile() before this path.
+            logger.warning("[Kit] Cannot record cooldown for kit '" + kitId
+                + "' for " + playerId + ": PlayerFile missing (callers should ensurePlayerFile first).");
+            return;
+        }
         
         playerFile.setKitUsed(kitId);
         playerFileStorage.saveAndMarkDirty(playerId);
@@ -221,7 +277,15 @@ public class KitService {
         if (playerFileStorage == null) return false;
         
         PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
-        if (playerFile == null) return false;
+        if (playerFile == null) {
+            // Fail closed: if we cannot read claim state, assume already claimed so we don't
+            // hand out one-time kits (e.g. starter) repeatedly. Callers should ensurePlayerFile()
+            // before this path; when they do, a freshly-created PlayerFile has no claims recorded
+            // and this branch is not reached, so legitimate new players still get their kit.
+            logger.warning("[Kit] hasClaimedOnetime: PlayerFile missing for " + playerId
+                + ", kit '" + kitId + "' — treating as claimed (fail-closed).");
+            return true;
+        }
         
         boolean hasClaimed = playerFile.hasClaimedKit(kitId);
         
@@ -256,7 +320,13 @@ public class KitService {
         }
         
         PlayerFile playerFile = playerFileStorage.getPlayer(playerId);
-        if (playerFile == null) return;
+        if (playerFile == null) {
+            // Defense-in-depth: log rather than silently lose the claim write. Callers should
+            // ensurePlayerFile() before this path.
+            logger.warning("[Kit] Cannot record one-time claim for kit '" + kitId
+                + "' for " + playerId + ": PlayerFile missing (callers should ensurePlayerFile first).");
+            return;
+        }
         
         playerFile.claimKit(kitId);
         playerFileStorage.saveAndMarkDirty(playerId);

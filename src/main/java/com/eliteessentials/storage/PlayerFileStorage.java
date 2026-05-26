@@ -155,6 +155,13 @@ public class PlayerFileStorage implements PlayerStorageProvider {
     public void savePlayer(UUID uuid) {
         PlayerFile data = cache.get(uuid);
         if (data == null) {
+            // Historically this silently returned, which hid bugs where callers marked a
+            // player dirty without the file ever being loaded into cache (e.g. KitService
+            // writes for a player whose PlayerReadyEvent never fired). Log a warning so
+            // such cases are visible; callers should ensure the PlayerFile is cached first.
+            logger.warning("[PlayerFileStorage] savePlayer called for uncached UUID " + uuid
+                + " — save skipped. A caller tried to persist a player that was never loaded; "
+                + "this usually means KitService (or similar) ran before the PlayerFile existed.");
             return;
         }
         
