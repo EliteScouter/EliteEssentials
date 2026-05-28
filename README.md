@@ -8,7 +8,7 @@ A comprehensive server essentials plugin for Hytale that brings everything you n
 
 ### Full Localization Support
 
-All 300+ player-facing messages are configurable in `messages.json`. Translate your server to any language!
+All 500+ player-facing messages are configurable in `messages.json`. Translate your server to any language!
 
 - Placeholder support: `{player}`, `{seconds}`, `{name}`, `{count}`, `{max}`, `{location}`
 - Config auto-migrates - existing settings preserved when updating
@@ -156,7 +156,14 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - **Group Chat Formatting** - Use the same prefix/color formatting from regular chat in group chat
   - When enabled, player names in group chat use LuckPerms prefixes/suffixes and group priorities
   - Configurable format template: `{channel_color}{channel_prefix} {chat_format}`
-  - Admin spy mode to monitor all channels with `/gcspy`
+  - Admin spy mode via `/spy gchat` (legacy `/gcspy` alias still works) to monitor all channels
+- **Staff Spy** - Unified `/spy` command for staff monitoring with three independently toggleable modes
+  - `/spy gchat` - See group chat messages from channels you don't belong to
+  - `/spy dm` - See all `/msg` and `/reply` private messages between players
+  - `/spy command` - See all commands executed by other players
+  - `/spy` with no arguments shows your current spy status
+  - Each mode is independently configurable in `config.json` under the `spy` section
+  - Permission: `eliteessentials.admin.spy`
 - **Group Chat Channels** - Create private chat channels for different groups
   - Group-based chats tied to LuckPerms groups (e.g., admin, moderator)
   - Permission-based chats tied to permission nodes (e.g., trade chat)
@@ -174,6 +181,13 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
   - Configurable delay, show-once per session, and stop-after-match
   - Vanish-safe: broadcast rules are skipped for vanished players
   - Rules stored in `greetings.json`, reloads with `/ee reload`
+
+### Auto Broadcast
+- **Scheduled announcements** that cycle through a list of messages on a configurable interval.
+- Configure in `autobroadcast.json` with multiple independent broadcast groups, each with its own interval and message list.
+- Per-broadcast options: `enabled`, `intervalSeconds`, `prefix`, `messages`, `requirePlayers`.
+- Messages support color codes, hex colors, and the standard chat placeholders.
+- Reloads live with `/ee reload`. Master toggle via `autoBroadcast.enabled` in `config.json`.
 
 ### Nickname System
 - **`/nick <nickname>`** - Set your own display nickname (persists across restarts)
@@ -305,10 +319,10 @@ All 300+ player-facing messages are configurable in `messages.json`. Translate y
 - **EssentialsCore** — Imports warps, spawn, kits, homes, and kit cooldowns from `mods/com.nhulston_Essentials/`
 
 ### SQL Database Storage
-- **Three storage backends** — `"json"` (default), `"h2"` (embedded), or `"mysql"` (external)
-- **H2 embedded** — zero-setup SQL database stored in the plugin data folder
+- **Three storage backends** — `"json"` (default), `"sqlite"` (embedded), or `"mysql"` (external)
+- **SQLite embedded** — zero-setup SQL database stored in the plugin data folder
 - **MySQL/MariaDB** — external database for multi-server networks with shared player data
-- **`/eemigrate`** — Migrate existing JSON data to the configured SQL database (Admin)
+- **`/eemigration sql`** — Migrate existing JSON data to the configured SQL database (Admin)
 - **Automatic schema management** — tables and indexes created on first startup
 - **Connection pooling** — HikariCP with configurable pool size and timeouts
 - **Async writes** — SQL writes run on a background thread, reads use in-memory cache
@@ -327,7 +341,7 @@ All settings are fully configurable via `mods/EliteEssentials/config.json`:
 - **Home limits** - Max homes per player
 - **Back history** - How many locations to remember
 - **Death tracking** - Enable/disable /back to death location
-- **Messages** - 300+ configurable messages for full localization
+- **Messages** - 500+ configurable messages for full localization
 
 Config file is automatically created on first server start with sensible defaults. Existing configs auto-migrate when updating to new versions.
 
@@ -393,7 +407,8 @@ Config file is automatically created on first server start with sensible default
 | `/gc [chat] <message>` | Group chat | Everyone |
 | `/gcset [chat]` | Set default group chat | Everyone |
 | `/chats` | List chat channels | Everyone |
-| `/gcspy` | Spy on group chats | Admin |
+| `/gcspy` | Spy on group chats (alias for `/spy gchat`) | Admin |
+| `/spy [gchat\|dm\|command]` | Toggle staff spy modes (group chat, DMs, commands) | Admin |
 | `/mute <player> [reason]` | Mute a player | Admin |
 | `/unmute <player>` | Unmute a player | Admin |
 | `/warn <player> [reason]` | Add warning | Admin |
@@ -418,7 +433,8 @@ Config file is automatically created on first server start with sensible default
 | `/alias` | Manage aliases | Admin |
 | `/eehelp` | Show available commands | Everyone |
 | `/eliteessentials reload` | Reload config | Admin |
-| `/eemigrate` | Migrate JSON data to SQL | Admin |
+| `/eemigration sql [force]` | Migrate JSON data to SQL | Admin |
+| `/eemigration cleanup` | Move old JSON files into `backup/` after SQL migration | Admin |
 | `/eemigration <source>` | Migrate from other plugins | Admin |
 | `/eeadmin` | Open Admin UI panel | Admin |
 | `/ee groupsync` | Sync groups between LP/HP and EE | Admin |
@@ -445,8 +461,10 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Player Warp | `command.pwarp.use`, `command.pwarp.create`, `command.pwarp.delete`, `command.pwarp.limit.5`, `command.pwarp.bypass.cooldown` |
 | Spawn | `command.spawn.use`, `command.spawn.set`, `command.spawn.delete`, `command.spawn.list`, `command.spawn.setfirstjoin`, `command.spawn.delfirstjoin`, `command.spawn.protection.bypass` |
 | Kit | `command.kit.use`, `command.kit.gui`, `command.kit.<kitname>`, `command.kit.bypass.cooldown`, `command.kit.bypass.onetime` |
-| Misc | `command.misc.msg`, `command.misc.heal`, `command.misc.heal.others`, `command.misc.repair`, `command.misc.repair.all`, `command.misc.ignore`, `command.misc.invsee`, `command.misc.groupchat`, `command.misc.groupchat.spy` |
-| Admin | `admin.reload`, `admin.alias`, `admin.mute`, `admin.unmute`, `admin.ban`, `admin.freeze`, `admin.warn`, `admin.clearwarnings` |
+| Misc | `command.misc.msg`, `command.misc.heal`, `command.misc.heal.others`, `command.misc.repair`, `command.misc.repair.all`, `command.misc.ignore`, `command.misc.invsee`, `command.misc.groupchat`, `command.misc.groupchat.spy`, `command.misc.nick`, `command.misc.nick.color`, `command.misc.nickname.others`, `command.misc.nickname.lookup` |
+| Mail | `command.mail.use`, `command.mail.send` |
+| Chat | `chat.color`, `chat.format`, `chat.<chatname>` (permission-based group chats) |
+| Admin | `admin.reload`, `admin.alias`, `admin.mute`, `admin.unmute`, `admin.ban`, `admin.tempban`, `admin.ipban`, `admin.unban`, `admin.unipban`, `admin.freeze`, `admin.warn`, `admin.clearwarnings`, `admin.spy`, `admin.adminui` |
 | Bypass | `command.home.bypass.cooldown`, `command.tp.bypass.warmup`, `bypass.cost` |
 
 See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.

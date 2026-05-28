@@ -51,6 +51,17 @@ Commands are either available to Everyone or Admin only:
 | `/joindate <player>` | View other's join date | Everyone |
 | `/playtime [player]` | View own playtime | Everyone |
 | `/playtime <player>` | View other's playtime | Everyone |
+| `/mail` | Read, list, delete, clear your own mail | Everyone |
+| `/mail send <player> <msg>` | Send mail | Everyone |
+| `/nick <nickname\|off>` | Set or clear your own nickname | Admin |
+| `/nick <player> <nickname\|off>` | Set or clear another player's nickname | Admin+ |
+| `/realname <name>` | Look up real username behind a nickname | Admin |
+| `/ignore <player>` | Block a player's messages | Everyone |
+| `/ignore list` | List ignored players | Everyone |
+| `/unignore <player\|all>` | Stop ignoring | Everyone |
+| `/vanish` | Toggle invisibility | Admin |
+| `/invsee <player>` | View / modify another player's inventory | Admin |
+| `/spy gchat \| dm \| command` | Staff monitoring (group chat / DM / command spy) | Admin |
 | `/god` | Toggle invincibility | Admin |
 | `/heal` | Restore your health | Everyone |
 | `/heal <player>` | Restore another player's health | Admin |
@@ -288,6 +299,8 @@ eliteessentials
 | `eliteessentials.command.tp.back` | Return to previous location |
 | `eliteessentials.command.tp.back.ondeath` | Use /back after death |
 | `eliteessentials.command.tp.top` | Teleport to highest block (Admin) |
+| `eliteessentials.command.tp.top.bypass.cooldown` | Bypass /top cooldown |
+| `eliteessentials.command.tp.top.cooldown.<seconds>` | Custom /top cooldown |
 | `eliteessentials.command.tp.tphere` | Teleport player to you (Admin) |
 | `eliteessentials.command.tp.bypass.cooldown` | Bypass all tp cooldowns |
 | `eliteessentials.command.tp.bypass.cooldown.rtp` | Bypass RTP cooldown |
@@ -382,15 +395,21 @@ eliteessentials
 | `eliteessentials.command.misc.playtime` | View own playtime |
 | `eliteessentials.command.misc.playtime.others` | View other players' playtime |
 | `eliteessentials.command.misc.god` | Toggle god mode (Admin) |
+| `eliteessentials.command.misc.god.bypass.cooldown` | Bypass god cooldown |
+| `eliteessentials.command.misc.god.cooldown.<seconds>` | Custom god cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.heal` | Heal yourself |
 | `eliteessentials.command.misc.heal.others` | Heal other players |
 | `eliteessentials.command.misc.heal.bypass.cooldown` | Bypass heal cooldown |
 | `eliteessentials.command.misc.heal.cooldown.<seconds>` | Custom heal cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.fly` | Toggle flight mode (Admin) |
+| `eliteessentials.command.misc.fly.bypass.cooldown` | Bypass fly cooldown |
+| `eliteessentials.command.misc.fly.cooldown.<seconds>` | Custom fly cooldown (any value, requires LuckPerms) |
 | `eliteessentials.command.misc.flyspeed` | Set fly speed (Admin) |
 | `eliteessentials.command.misc.broadcast` | Server announcements (Admin) |
 | `eliteessentials.command.misc.clearchat` | Clear chat for all players (Admin) |
 | `eliteessentials.command.misc.clearinv` | Clear inventory (Admin) |
+| `eliteessentials.command.misc.clearinv.bypass.cooldown` | Bypass clearinv cooldown |
+| `eliteessentials.command.misc.clearinv.cooldown.<seconds>` | Custom clearinv cooldown (requires LuckPerms) |
 | `eliteessentials.command.misc.repair` | Repair items (Admin) |
 | `eliteessentials.command.misc.repair.all` | Repair all items (Admin) |
 | `eliteessentials.command.misc.repair.bypass.cooldown` | Bypass repair cooldown (single and all) |
@@ -398,12 +417,42 @@ eliteessentials
 | `eliteessentials.command.misc.repair.all.cooldown.<seconds>` | Cooldown for /repair all |
 | `eliteessentials.bypass.cost.repair` | Bypass cost for /repair |
 | `eliteessentials.bypass.cost.repair.all` | Bypass cost for /repair all |
+| `eliteessentials.command.misc.trash` | Open disposal window (/trash) |
+| `eliteessentials.command.misc.trash.bypass.cooldown` | Bypass trash cooldown |
+| `eliteessentials.command.misc.trash.cooldown.<seconds>` | Custom trash cooldown |
+| `eliteessentials.command.misc.vanish` | Toggle vanish mode (Admin) |
+| `eliteessentials.command.misc.invsee` | View / modify another player's inventory (Admin) |
 | `eliteessentials.command.misc.sleeppercent` | Set sleep percentage (Admin) |
 | `eliteessentials.command.misc.afk` | Toggle AFK status |
-| `eliteessentials.command.misc.joindate` | View own join date |
-| `eliteessentials.command.misc.joindate.others` | View other players' join date |
-| `eliteessentials.command.misc.playtime` | View own playtime |
-| `eliteessentials.command.misc.playtime.others` | View other players' playtime |
+| `eliteessentials.command.misc.ignore` | Use /ignore and /unignore |
+| `eliteessentials.command.misc.groupchat` | Use /gc, /g, /chats, /gcset |
+| `eliteessentials.command.misc.groupchat.spy` | /spy gchat (legacy /gcspy) |
+| `eliteessentials.command.misc.chats` | List available chat channels (/chats) |
+
+### Nickname Commands
+
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.misc.nick` | Set your own nickname |
+| `eliteessentials.command.misc.nick.color` | Use color codes in nicknames |
+| `eliteessentials.command.misc.nick.formatting` | Use formatting codes (bold, etc.) in nicknames |
+| `eliteessentials.command.misc.nickname.others` | Set or clear other players' nicknames |
+| `eliteessentials.command.misc.nickname.lookup` | Use /realname to look up a real username |
+
+### Mail Commands
+
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.command.mail.use` | Read, list, delete, and clear your own mail |
+| `eliteessentials.command.mail.send` | Send mail to other players |
+
+### Chat Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `eliteessentials.chat.color` | Use color codes in public chat |
+| `eliteessentials.chat.format` | Use formatting codes (bold, etc.) in public chat |
+| `eliteessentials.chat.<chatname>` | Access a permission-based group chat channel (e.g. `eliteessentials.chat.trade`) |
 
 ### Economy Commands
 
@@ -437,6 +486,7 @@ eliteessentials
 | `eliteessentials.admin.freeze` | /freeze command |
 | `eliteessentials.admin.warn` | /warn and /warnings commands |
 | `eliteessentials.admin.clearwarnings` | /clearwarnings command |
+| `eliteessentials.admin.spy` | /spy command (DM, group chat, command spy) |
 | `eliteessentials.admin.adminui` | /eeadmin command (open Admin UI panel) |
 | `eliteessentials.admin.kick` | Kick player (Admin UI) |
 | `eliteessentials.admin.heal` | Heal player (Admin UI) |
@@ -481,6 +531,8 @@ eliteessentials
 | `eliteessentials.command.pwarp.*` | All player warp commands + bypass |
 | `eliteessentials.command.misc.*` | All utility commands |
 | `eliteessentials.command.economy.*` | All economy commands |
+| `eliteessentials.command.mail.*` | All mail commands |
+| `eliteessentials.chat.*` | All chat permissions (color, format, channel access) |
 | `eliteessentials.bypass.cost.*` | Bypass all command costs |
 
 ## Example Group Configurations (Advanced Mode)
