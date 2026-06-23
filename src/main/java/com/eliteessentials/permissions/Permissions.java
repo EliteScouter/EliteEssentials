@@ -175,6 +175,7 @@ public final class Permissions {
     public static final String TRASH_BYPASS_COOLDOWN = MISC_CATEGORY + ".trash.bypass.cooldown";
     public static final String TRASH_COOLDOWN_PREFIX = MISC_CATEGORY + ".trash.cooldown.";
     public static final String LIST = MISC_CATEGORY + ".list";
+    public static final String NEAR = MISC_CATEGORY + ".near";
     public static final String DISCORD = MISC_CATEGORY + ".discord";
     public static final String SEEN = MISC_CATEGORY + ".seen";
     public static final String EEHELP = MISC_CATEGORY + ".eehelp";
@@ -237,6 +238,7 @@ public final class Permissions {
     public static final String KIT_GUI = KIT_CATEGORY + ".gui";       // Open kit selection GUI
     public static final String KIT_CREATE = KIT_CATEGORY + ".create";
     public static final String KIT_DELETE = KIT_CATEGORY + ".delete";
+    public static final String KIT_GIVE = KIT_CATEGORY + ".give";     // Give a kit to another player (/kit <player> <kit>)
     public static final String KIT_BYPASS_COOLDOWN = KIT_CATEGORY + ".bypass.cooldown";
     public static final String KIT_BYPASS_ONETIME = KIT_CATEGORY + ".bypass.onetime";
     

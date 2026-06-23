@@ -7,13 +7,15 @@ import com.eliteessentials.model.KitItem;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.services.KitService;
+import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -22,9 +24,9 @@ import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.eliteessentials.commands.args.SimpleStringArg;
 import com.eliteessentials.util.CommandExecutor;
 
 import javax.annotation.Nonnull;
@@ -33,18 +35,24 @@ import java.util.logging.Logger;
 import com.eliteessentials.util.CommandSpyUtil;
 
 /**
- * Command: /kit [name]
- * - /kit - Opens the kit selection GUI (requires eliteessentials.command.kit.gui)
- * - /kit <name> - Claims a specific kit directly (requires eliteessentials.command.kit.<name>)
- * 
+ * Command: /kit [name] | /kit &lt;player&gt; &lt;kit&gt;
+ * - /kit                 - Opens the kit selection GUI (player; requires eliteessentials.command.kit.gui)
+ * - /kit &lt;name&gt;          - Claims a specific kit directly (player; requires eliteessentials.command.kit.&lt;name&gt;)
+ * - /kit &lt;player&gt; &lt;kit&gt;  - Gives a kit to another player (admin / console; bypasses kit permission,
+ *                          cooldown, and one-time restrictions)
+ *
+ * Extends {@link CommandBase} (not AbstractPlayerCommand) so the server console can apply kits to
+ * players for automation, matching the /rtp, /spawn, /warp, /heal, /god, /fly, /clearinv pattern.
+ *
  * Permissions:
  * - eliteessentials.command.kit.use - Base permission for /kit command
  * - eliteessentials.command.kit.gui - Permission to open the kit GUI
- * - eliteessentials.command.kit.<kitname> - Access specific kit
+ * - eliteessentials.command.kit.&lt;kitname&gt; - Access specific kit
+ * - eliteessentials.command.kit.give - Give a kit to another player (admin)
  * - eliteessentials.command.kit.bypass.cooldown - Bypass kit cooldowns
  * - eliteessentials.command.kit.bypass.onetime - Bypass one-time kit restrictions
  */
-public class HytaleKitCommand extends AbstractPlayerCommand {
+public class HytaleKitCommand extends CommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "kit";
@@ -58,9 +66,8 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
         this.configManager = configManager;
         
         addAliases("kits");
-        
-        // Add variant for /kit <name> - direct kit claiming
-        addUsageVariant(new KitWithNameCommand(kitService, configManager));
+        // Trailing arguments: kit name (self) or "<player> <kit>" (admin/console give)
+        setAllowsExtraArguments(true);
         
         // Add subcommands for admin operations
         addSubCommand(new HytaleKitCreateCommand(kitService));
@@ -73,82 +80,283 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
-                          @Nonnull PlayerRef player, @Nonnull World world) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
         CommandSpyUtil.notify(ctx);
-        UUID playerId = player.getUuid();
-        
-        // Self-heal: ensure a PlayerFile exists before any kit operation. Prevents the
-        // infinite-kit exploit where a player whose PlayerReadyEvent never fired (observed
-        // on abnormally slow logins) has no PlayerFile, causing all KitService reads to
-        // return 0 (no cooldown) and writes to silently no-op.
-        kitService.ensurePlayerFile(playerId, player.getUsername());
-        
-        if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
+
+        // Parse: /kit [name] | /kit <player> <kit>
+        String[] parts = ctx.getInputString().trim().split("\\s+");
+
+        Object sender = ctx.sender();
+        boolean isConsole = !(sender instanceof PlayerRef) && !(sender instanceof Player);
+
+        // /kit <player> <kit> - admin/console give (two trailing arguments)
+        if (parts.length >= 3) {
+            handleGive(ctx, sender, isConsole, parts[1], parts[2]);
+            return;
+        }
+
+        // Anything below requires a player sender
+        if (isConsole) {
+            ctx.sendMessage(Message.raw("Console usage: /kit <player> <kit>").color("#FF5555"));
+            return;
+        }
+
+        PlayerRef senderRef = resolveSenderPlayer(sender);
+        if (senderRef == null) {
+            ctx.sendMessage(Message.raw("Could not determine player.").color("#FF5555"));
+            return;
+        }
+
+        World world = Universe.get().getWorld(senderRef.getWorldUuid());
+        if (world == null) {
+            ctx.sendMessage(Message.raw("Could not determine your world.").color("#FF5555"));
+            return;
+        }
+
+        if (parts.length == 2) {
+            // /kit <name> - self-claim
+            handleSelfClaim(ctx, senderRef, world, parts[1]);
+        } else {
+            // /kit - open GUI
+            handleGui(ctx, senderRef, world);
+        }
+    }
+
+    /**
+     * Resolve the sender to a live PlayerRef (handles both PlayerRef and Player sender types).
+     */
+    @SuppressWarnings("removal") // Entity.getUuid() deprecated; no alternative in CommandContext for executeSync
+    private static PlayerRef resolveSenderPlayer(Object sender) {
+        if (sender instanceof PlayerRef playerRef) {
+            return playerRef;
+        }
+        if (sender instanceof Player player) {
+            UUID uuid = player.getUuid();
+            return uuid != null ? Universe.get().getPlayer(uuid) : null;
+        }
+        return null;
+    }
+
+    /**
+     * /kit &lt;player&gt; &lt;kit&gt; - give a kit to another player. Console is always allowed;
+     * in-game senders need the kit give admin permission. Bypasses the target's kit
+     * permission, cooldown, and one-time restrictions.
+     */
+    private void handleGive(CommandContext ctx, Object sender, boolean isConsole, String targetName, String kitName) {
+        // Defensive: admin subcommands normally intercept these tokens before executeSync.
+        if (targetName.equalsIgnoreCase("create") || targetName.equalsIgnoreCase("delete")) {
+            ctx.sendMessage(Message.raw("Usage: /kit " + targetName.toLowerCase() + " <name> ...").color("#FF5555"));
+            return;
+        }
+
+        if (!isConsole) {
+            PlayerRef senderRef = resolveSenderPlayer(sender);
+            if (senderRef == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+            if (!CommandPermissionUtil.canExecuteAdmin(ctx, senderRef, Permissions.KIT_GIVE,
+                    configManager.getConfig().kits.enabled)) {
+                return;
+            }
+        }
+
+        PlayerRef target = PlayerSuggestionProvider.findPlayer(targetName);
+        if (target == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                configManager.getMessage("playerNotFound", "player", targetName), "#FF5555"));
             return;
         }
-        
-        if (configManager.isDebugEnabled()) {
-            logger.info("[Kit] Player " + player.getUsername() + " executing /kit");
-            logger.info("[Kit] Checking KIT permission: " + Permissions.KIT);
+
+        World targetWorld = Universe.get().getWorld(target.getWorldUuid());
+        if (targetWorld == null) {
+            ctx.sendMessage(Message.raw("Could not determine the player's world.").color("#FF5555"));
+            return;
         }
-        
-        // Check base kit permission
-        if (!PermissionService.get().canUseEveryoneCommand(playerId, Permissions.KIT, 
-                configManager.getConfig().kits.enabled)) {
-            if (configManager.isDebugEnabled()) {
-                logger.info("[Kit] Player " + player.getUsername() + " FAILED base kit permission check");
+
+        final PlayerRef finalTarget = target;
+        final String finalKitName = kitName;
+        targetWorld.execute(() -> {
+            Ref<EntityStore> ref = finalTarget.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNotFound", "player", finalTarget.getUsername()), "#FF5555"));
+                return;
             }
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
-            return;
-        }
-
-        if (configManager.isDebugEnabled()) {
-            logger.info("[Kit] Player " + player.getUsername() + " PASSED base kit permission, checking GUI...");
-            logger.info("[Kit] Checking KIT_GUI permission: " + Permissions.KIT_GUI);
-        }
-
-        // Check GUI permission - use hasPermission directly for strict check
-        boolean hasGuiPerm = PermissionService.get().hasPermission(playerId, Permissions.KIT_GUI);
-        boolean isAdmin = PermissionService.get().isAdmin(playerId);
-        
-        if (configManager.isDebugEnabled()) {
-            logger.info("[Kit] Player " + player.getUsername() + " GUI check: hasGuiPerm=" + hasGuiPerm + ", isAdmin=" + isAdmin);
-        }
-        
-        if (!hasGuiPerm && !isAdmin) {
-            if (configManager.isDebugEnabled()) {
-                logger.info("[Kit] Player " + player.getUsername() + " FAILED GUI permission check");
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
+                return;
             }
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+            giveKit(ctx, store, ref, finalTarget, finalKitName, kitService, configManager);
+        });
+    }
+
+    /**
+     * /kit &lt;name&gt; - player claims a kit for themselves (full permission/cooldown/one-time checks).
+     */
+    private void handleSelfClaim(CommandContext ctx, PlayerRef senderRef, World world, String kitName) {
+        final PlayerRef finalSender = senderRef;
+        final World finalWorld = world;
+        final String finalKitName = kitName;
+        world.execute(() -> {
+            Ref<EntityStore> ref = finalSender.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
+                return;
+            }
+
+            if (WorldBlacklistUtil.isWorldBlacklisted(finalWorld.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                return;
+            }
+
+            // Base kit permission
+            if (!PermissionService.get().canUseEveryoneCommand(finalSender.getUuid(), Permissions.KIT,
+                    configManager.getConfig().kits.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+
+            claimKit(ctx, store, ref, finalSender, finalKitName, kitService, configManager);
+        });
+    }
+
+    /**
+     * /kit - open the kit selection GUI for the sender.
+     */
+    private void handleGui(CommandContext ctx, PlayerRef senderRef, World world) {
+        final PlayerRef finalSender = senderRef;
+        final World finalWorld = world;
+        world.execute(() -> {
+            UUID playerId = finalSender.getUuid();
+
+            // Self-heal: ensure a PlayerFile exists before any kit operation. Prevents the
+            // infinite-kit exploit where a player whose PlayerReadyEvent never fired (observed
+            // on abnormally slow logins) has no PlayerFile, causing all KitService reads to
+            // return 0 (no cooldown) and writes to silently no-op.
+            kitService.ensurePlayerFile(playerId, finalSender.getUsername());
+
+            if (WorldBlacklistUtil.isWorldBlacklisted(finalWorld.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
+                return;
+            }
+
+            // Check base kit permission
+            if (!PermissionService.get().canUseEveryoneCommand(playerId, Permissions.KIT,
+                    configManager.getConfig().kits.enabled)) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+
+            // Check GUI permission - use hasPermission directly for strict check
+            boolean hasGuiPerm = PermissionService.get().hasPermission(playerId, Permissions.KIT_GUI);
+            boolean isAdmin = PermissionService.get().isAdmin(playerId);
+            if (!hasGuiPerm && !isAdmin) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
+                return;
+            }
+
+            Ref<EntityStore> ref = finalSender.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+                return;
+            }
+
+            // Get the Player component to access PageManager
+            Player playerComponent;
+            try {
+                playerComponent = store.getComponent(ref, Player.getComponentType());
+            } catch (Exception e) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+                return;
+            }
+
+            if (playerComponent == null) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+                return;
+            }
+
+            // Check if there are any kits
+            if (kitService.getAllKits().isEmpty()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitNoKits"), "#FFAA00"));
+                return;
+            }
+
+            // Create and open the kit selection page
+            KitSelectionPage kitPage = new KitSelectionPage(finalSender, kitService, configManager);
+            playerComponent.getPageManager().openCustomPage(ref, store, kitPage);
+        });
+    }
+
+    /**
+     * Give a kit to a player as an admin/console action.
+     * Bypasses the kit permission, cooldown, and one-time restrictions. Does not record a
+     * cooldown or mark a one-time kit as claimed against the receiving player.
+     */
+    public static void giveKit(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
+                               PlayerRef target, String kitName, KitService kitService, ConfigManager configManager) {
+        UUID targetId = target.getUuid();
+        kitService.ensurePlayerFile(targetId, target.getUsername());
+
+        Kit kit = kitService.getKit(kitName);
+        if (kit == null) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(
+                configManager.getMessage("kitNotFound", "kit", kitName), "#FF5555"));
             return;
         }
 
-        // Get the Player component to access PageManager
         Player playerComponent;
         try {
             playerComponent = store.getComponent(ref, Player.getComponentType());
         } catch (Exception e) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
             return;
         }
-        
         if (playerComponent == null) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitOpenFailed"), "#FF5555"));
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitClaimFailed"), "#FF5555"));
             return;
         }
 
-        // Check if there are any kits
-        if (kitService.getAllKits().isEmpty()) {
-            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitNoKits"), "#FFAA00"));
+        // Inventory space check (skip for replace-inventory kits since they clear first)
+        if (!kit.isReplaceInventory() && !hasInventorySpace(kit, store, ref)) {
+            ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("kitInventoryFull"), "#FF5555"));
             return;
         }
 
-        // Create and open the kit selection page
-        KitSelectionPage kitPage = new KitSelectionPage(player, kitService, configManager);
-        playerComponent.getPageManager().openCustomPage(ref, store, kitPage);
+        if (kit.isReplaceInventory()) {
+            clearAllInventory(store, ref);
+        }
+
+        applyKit(kit, store, ref);
+
+        // Execute kit commands (run ANY server command as console), targeting the receiving player
+        if (kit.hasCommands()) {
+            CommandExecutor.setDebugEnabled(configManager.isDebugEnabled());
+            CommandExecutor.executeCommands(kit.getCommands(), target.getUsername(), targetId, "Kit-" + kit.getId());
+        }
+
+        // Notify the receiving player and the executor. No cooldown/one-time bookkeeping on an admin give.
+        target.sendMessage(MessageFormatter.formatWithFallback(
+            configManager.getMessage("kitClaimed", "kit", kit.getDisplayName()), "#55FF55"));
+        ctx.sendMessage(MessageFormatter.formatWithFallback(
+            configManager.getMessage("kitClaimed", "kit", kit.getDisplayName()) + " &7(for " + target.getUsername() + ")", "#55FF55"));
+
+        if (configManager.isDebugEnabled()) {
+            logger.info("[Kit] Gave kit '" + kit.getId() + "' to " + target.getUsername() + " (admin/console give)");
+        }
     }
 
     /**
@@ -391,51 +599,6 @@ public class HytaleKitCommand extends AbstractPlayerCommand {
             long hours = seconds / 3600;
             long mins = (seconds % 3600) / 60;
             return hours + "h " + mins + "m";
-        }
-    }
-
-    /**
-     * Variant: /kit <name>
-     * Claims a specific kit directly without opening the GUI.
-     */
-    private static class KitWithNameCommand extends AbstractPlayerCommand {
-        private final KitService kitService;
-        private final ConfigManager configManager;
-        private final RequiredArg<String> nameArg;
-        
-        KitWithNameCommand(KitService kitService, ConfigManager configManager) {
-            super(COMMAND_NAME);
-            this.kitService = kitService;
-            this.configManager = configManager;
-            this.nameArg = withRequiredArg("name", "Kit name to claim", SimpleStringArg.KIT_NAME);
-        }
-        
-        @Override
-        protected boolean canGeneratePermission() {
-            return false;
-        }
-        
-        @Override
-        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
-                              @Nonnull PlayerRef player, @Nonnull World world) {
-        CommandSpyUtil.notify(ctx);
-            UUID playerId = player.getUuid();
-            
-            if (WorldBlacklistUtil.isWorldBlacklisted(world.getName(), configManager.getConfig().kits.blacklistedWorlds)) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(
-                    configManager.getMessage("commandBlacklistedWorld"), "#FF5555"));
-                return;
-            }
-            
-            // Check base kit permission
-            if (!PermissionService.get().canUseEveryoneCommand(playerId, Permissions.KIT, 
-                    configManager.getConfig().kits.enabled)) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("noPermission"), "#FF5555"));
-                return;
-            }
-            
-            String kitName = ctx.get(nameArg);
-            HytaleKitCommand.claimKit(ctx, store, ref, player, kitName, kitService, configManager);
         }
     }
 }

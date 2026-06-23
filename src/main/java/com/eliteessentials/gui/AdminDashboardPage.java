@@ -1264,7 +1264,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 Optional<Warp> warpOpt = plugin.getWarpService().getWarp(data.player);
                 if (warpOpt.isEmpty()) { setStatus("#TpStatusMsg", "Warp not found"); return; }
                 Location loc = warpOpt.get().getLocation();
-                teleportToLocation(loc);
+                teleportToLocation(loc, "#TpStatusMsg");
                 break;
             }
             case "tpspawn": {
@@ -1280,7 +1280,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 if (sp == null) sp = ss.getPrimarySpawn(worldName);
                 if (sp == null) { setStatus("#TpStatusMsg", "Spawn not found"); return; }
                 Location loc = new Location(sp.world, sp.x, sp.y, sp.z, sp.yaw, 0f);
-                teleportToLocation(loc);
+                teleportToLocation(loc, "#TpStatusMsg");
                 break;
             }
             case "delwarp": {
@@ -1322,17 +1322,24 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         }
     }
 
-    /** Teleport the admin to a Location model and close the UI. */
-    private void teleportToLocation(Location loc) {
+    /**
+     * Teleport the admin to a Location model and close the UI.
+     * @param statusSelector the status label element to write errors to. Must match an
+     *        element present in the currently rendered view (e.g. "#TpStatusMsg" for the
+     *        Teleports view, "#PdStatusMsg" for the Player Data view). Passing a selector
+     *        that doesn't exist in the active view causes the client to disconnect with
+     *        "Selected element in CustomUI command was not found."
+     */
+    private void teleportToLocation(Location loc, String statusSelector) {
         try {
             World targetWorld = Universe.get().getWorld(loc.getWorld());
-            if (targetWorld == null) { setStatus("#TpStatusMsg", "World not found: " + loc.getWorld()); return; }
+            if (targetWorld == null) { setStatus(statusSelector, "World not found: " + loc.getWorld()); return; }
             Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
             Rotation3f rot = new Rotation3f(0, loc.getYaw(), 0);
             TeleportUtil.safeTeleport(targetWorld, targetWorld, pos, rot, playerRef, () -> {}, () -> {});
             this.close();
         } catch (Exception e) {
-            setStatus("#TpStatusMsg", "Teleport failed");
+            setStatus(statusSelector, "Teleport failed");
         }
     }
 
@@ -1415,7 +1422,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 if (pdTargetUuid == null || data.player == null) return;
                 Optional<Home> homeOpt = plugin.getHomeService().getHome(pdTargetUuid, data.player);
                 if (homeOpt.isPresent()) {
-                    teleportToLocation(homeOpt.get().getLocation());
+                    teleportToLocation(homeOpt.get().getLocation(), "#PdStatusMsg");
                 } else {
                     setStatus("#PdStatusMsg", "Home not found");
                 }
@@ -1429,7 +1436,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                     if (pf != null) {
                         List<Location> history = pf.getBackHistory();
                         if (index >= 0 && index < history.size()) {
-                            teleportToLocation(history.get(index));
+                            teleportToLocation(history.get(index), "#PdStatusMsg");
                         } else {
                             setStatus("#PdStatusMsg", "Back location not found");
                         }
@@ -1443,7 +1450,7 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
                 if (data.player == null) return;
                 Optional<PlayerWarp> pwOpt = plugin.getPlayerWarpService().getWarp(data.player);
                 if (pwOpt.isPresent()) {
-                    teleportToLocation(pwOpt.get().getLocation());
+                    teleportToLocation(pwOpt.get().getLocation(), "#PdStatusMsg");
                 } else {
                     setStatus("#PdStatusMsg", "Player warp not found");
                 }

@@ -567,13 +567,36 @@ public class JoinQuitListener {
                 (playerLastWorld.get(playerId) != null ? playerLastWorld.get(playerId) : config.spawn.mainWorld) :
                 config.spawn.mainWorld;
             SpawnStorage.SpawnData spawn = spawnStorage.getSpawn(targetWorldName);
+            // If the configured world has no spawn set, fall back to any available spawn.
+            // This handles the common case where mainWorld in config (default: "default") does
+            // not match the actual world name used when /setspawn was run.
+            if (spawn == null && !spawnStorage.getWorldsWithSpawn().isEmpty()) {
+                String fallbackWorld = spawnStorage.getWorldsWithSpawn().iterator().next();
+                spawn = spawnStorage.getSpawn(fallbackWorld);
+                if (spawn != null) {
+                    logger.warning("[SpawnOnLogout] No spawn found for world '" + targetWorldName +
+                        "', falling back to spawn in world '" + fallbackWorld +
+                        "'. Check that spawn.mainWorld in config matches the world where /setspawn was run.");
+                    targetWorldName = fallbackWorld;
+                }
+            }
             if (spawn != null) {
                 final String pName = playerName;
                 final UUID pId = playerId;
                 final String lastWorld = playerLastWorld.get(playerId);
+                final String resolvedWorld = targetWorldName;
+                final SpawnStorage.SpawnData finalSpawn = spawn;
+                if (configManager.isDebugEnabled()) {
+                    logger.info("[SpawnOnLogout] Scheduling save-file rewrite for " + playerName +
+                        " -> spawn in world '" + resolvedWorld + "' at " +
+                        String.format("%.1f, %.1f, %.1f", finalSpawn.x, finalSpawn.y, finalSpawn.z));
+                }
                 scheduler.schedule(() -> {
-                    rewritePlayerSaveFile(pId, pName, spawn, targetWorldName, lastWorld);
+                    rewritePlayerSaveFile(pId, pName, finalSpawn, resolvedWorld, lastWorld);
                 }, 2, TimeUnit.SECONDS);
+            } else {
+                logger.warning("[SpawnOnLogout] teleportOnEveryLogin is enabled but no spawn is set in any world. " +
+                    "Run /setspawn in-game to configure a spawn point.");
             }
         }
 

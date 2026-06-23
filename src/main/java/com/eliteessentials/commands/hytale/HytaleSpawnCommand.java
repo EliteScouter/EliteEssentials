@@ -1,7 +1,6 @@
 package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.EliteEssentials;
-import com.eliteessentials.commands.args.SimpleStringArg;
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.config.PluginConfig;
 import com.eliteessentials.model.Location;
@@ -11,16 +10,19 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.WarmupService;
 import com.eliteessentials.storage.SpawnStorage;
 import com.eliteessentials.util.CommandPermissionUtil;
+import com.eliteessentials.util.CommandSpyUtil;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -31,23 +33,27 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
-import com.eliteessentials.util.CommandSpyUtil;
 
 /**
- * Command: /spawn [name]
- * Teleports the player to a spawn point.
- * 
- * When perWorld=false: always teleports to mainWorld's primary spawn (no multi-spawn).
- * When perWorld=true:
- *   - /spawn      → nearest spawn in current world
- *   - /spawn name → specific named spawn in current world
- * 
+ * Command: /spawn [name]  (player)  |  /spawn <player>  (console)
+ * Teleports a player to a spawn point.
+ *
+ * Player sender:
+ *   - /spawn      -> auto-select spawn (nearest when perWorld=true, primary otherwise)
+ *   - /spawn name -> specific named spawn in current world (when perWorld=true)
+ *
+ * Console sender (for server automation):
+ *   - /spawn <player> -> send the named online player to spawn (bypasses warmup/cooldown)
+ *
+ * This command extends {@link CommandBase} (not AbstractPlayerCommand) so the
+ * server console can run it with a player argument, matching the /rtp pattern.
+ *
  * Permissions:
  * - eliteessentials.command.spawn.use - Use /spawn command
  * - eliteessentials.bypass.warmup.spawn - Skip warmup
  * - eliteessentials.bypass.cooldown.spawn - Skip cooldown
  */
-public class HytaleSpawnCommand extends AbstractPlayerCommand {
+public class HytaleSpawnCommand extends CommandBase {
 
     private static final String COMMAND_NAME = "spawn";
     private final BackService backService;
@@ -55,8 +61,9 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     public HytaleSpawnCommand(BackService backService) {
         super(COMMAND_NAME, "Teleport to spawn");
         this.backService = backService;
-        
-        addUsageVariant(new SpawnWithNameCommand(backService));
+
+        // Allow a trailing argument: spawn point name (player) or player name (console)
+        setAllowsExtraArguments(true);
     }
 
     @Override
@@ -65,15 +72,168 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
     }
 
     @Override
-    protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, 
-                          @Nonnull PlayerRef player, @Nonnull World world) {
+    protected void executeSync(@Nonnull CommandContext ctx) {
         CommandSpyUtil.notify(ctx);
-        doSpawn(ctx, store, ref, player, world, null, backService);
+
+        // Parse: /spawn [arg]
+        String[] parts = ctx.getInputString().split("\\s+");
+        String arg1 = parts.length >= 2 ? parts[1] : null;
+
+        Object sender = ctx.sender();
+        boolean isConsole = !(sender instanceof PlayerRef) && !(sender instanceof Player);
+
+        if (isConsole) {
+            // Console usage: /spawn <player>
+            if (arg1 == null) {
+                ctx.sendMessage(Message.raw("Console usage: /spawn <player>").color("#FF5555"));
+                return;
+            }
+            PlayerRef target = PlayerSuggestionProvider.findPlayer(arg1);
+            if (target == null) {
+                ConfigManager configManager = EliteEssentials.getInstance().getConfigManager();
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerNotFound", "player", arg1), "#FF5555"));
+                return;
+            }
+            adminTeleportToSpawn(ctx, target, backService);
+            return;
+        }
+
+        // Player sender - resolve self ref and run the normal /spawn flow on the world thread.
+        PlayerRef senderRef = resolveSenderPlayer(sender);
+        if (senderRef == null) {
+            ctx.sendMessage(Message.raw("Could not determine player.").color("#FF5555"));
+            return;
+        }
+
+        World world = Universe.get().getWorld(senderRef.getWorldUuid());
+        if (world == null) {
+            ctx.sendMessage(Message.raw("Could not determine your world.").color("#FF5555"));
+            return;
+        }
+
+        final String spawnName = arg1; // may be null -> auto-select
+        final PlayerRef finalSender = senderRef;
+        final World finalWorld = world;
+        world.execute(() -> {
+            Ref<EntityStore> ref = finalSender.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(Message.raw("Could not determine your position.").color("#FF5555"));
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(Message.raw("Could not determine your position.").color("#FF5555"));
+                return;
+            }
+            doSpawn(ctx, store, ref, finalSender, finalWorld, spawnName, backService);
+        });
     }
-    
+
     /**
-     * Core spawn teleport logic. Used by both /spawn and /spawn <name>.
-     * 
+     * Resolve the sender to a live PlayerRef (handles both PlayerRef and Player sender types).
+     */
+    @SuppressWarnings("removal") // Entity.getUuid() deprecated; no alternative in CommandContext for executeSync
+    private static PlayerRef resolveSenderPlayer(Object sender) {
+        if (sender instanceof PlayerRef playerRef) {
+            return playerRef;
+        }
+        if (sender instanceof Player player) {
+            UUID uuid = player.getUuid();
+            return uuid != null ? Universe.get().getPlayer(uuid) : null;
+        }
+        return null;
+    }
+
+    /**
+     * Console/admin action: send another online player to spawn.
+     * Bypasses warmup, cooldown, cost and permission checks (intended for server automation).
+     */
+    private static void adminTeleportToSpawn(CommandContext ctx, PlayerRef target, BackService backService) {
+        EliteEssentials plugin = EliteEssentials.getInstance();
+        ConfigManager configManager = plugin.getConfigManager();
+        PluginConfig config = configManager.getConfig();
+        SpawnStorage spawnStorage = plugin.getSpawnStorage();
+
+        if (!config.spawn.enabled) {
+            ctx.sendMessage(Message.raw("Spawn system is disabled.").color("#FF5555"));
+            return;
+        }
+
+        World currentWorld = Universe.get().getWorld(target.getWorldUuid());
+        if (currentWorld == null) {
+            ctx.sendMessage(Message.raw("Could not determine the player's world.").color("#FF5555"));
+            return;
+        }
+
+        final String targetWorldName = config.spawn.perWorld ? currentWorld.getName() : config.spawn.mainWorld;
+        World resolvedTargetWorld = Universe.get().getWorld(targetWorldName);
+        final World finalTargetWorld = resolvedTargetWorld != null ? resolvedTargetWorld : currentWorld;
+        final World finalCurrentWorld = currentWorld;
+
+        finalCurrentWorld.execute(() -> {
+            Ref<EntityStore> ref = target.getReference();
+            if (ref == null || !ref.isValid()) {
+                ctx.sendMessage(Message.raw("Could not determine the player's position.").color("#FF5555"));
+                return;
+            }
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) {
+                ctx.sendMessage(Message.raw("Could not determine the player's position.").color("#FF5555"));
+                return;
+            }
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) {
+                ctx.sendMessage(Message.raw("Could not determine the player's position.").color("#FF5555"));
+                return;
+            }
+            Vector3d currentPos = transform.getPosition();
+
+            // Resolve spawn point (auto-select, mirroring /spawn with no name)
+            SpawnStorage.SpawnData spawn;
+            if (config.spawn.perWorld) {
+                if (config.spawn.multiRandomSpawn) {
+                    spawn = spawnStorage.getRandomSpawn(targetWorldName);
+                } else if (config.spawn.multiNearbySpawn) {
+                    spawn = spawnStorage.getNearestSpawn(targetWorldName, currentPos.x, currentPos.z);
+                } else {
+                    spawn = spawnStorage.getPrimarySpawn(targetWorldName);
+                }
+            } else {
+                spawn = spawnStorage.getPrimarySpawn(targetWorldName);
+            }
+
+            if (spawn == null) {
+                ctx.sendMessage(Message.raw("No spawn set for world: " + targetWorldName).color("#FF5555"));
+                return;
+            }
+
+            // Save /back location for the target
+            HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
+            Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
+            backService.pushLocation(target.getUuid(), new Location(
+                finalCurrentWorld.getName(),
+                currentPos.x, currentPos.y, currentPos.z,
+                rotation.y, 0f));
+
+            Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
+            Rotation3f spawnRot = new Rotation3f(0, spawn.yaw, 0);
+
+            TeleportUtil.safeTeleport(finalCurrentWorld, finalTargetWorld, spawnPos, spawnRot, target,
+                () -> {
+                    target.sendMessage(MessageFormatter.formatWithFallback(
+                        configManager.getMessage("spawnTeleported"), "#55FF55"));
+                    ctx.sendMessage(Message.raw("Teleported " + target.getUsername() + " to spawn.").color("#55FF55"));
+                },
+                () -> ctx.sendMessage(Message.raw(
+                    "Teleport failed - destination chunk could not be loaded.").color("#FF5555"))
+            );
+        });
+    }
+
+    /**
+     * Core spawn teleport logic for a self /spawn. Used by the player path above.
+     *
      * @param spawnName null = auto-select (nearest when perWorld=true, primary when perWorld=false)
      */
     static void doSpawn(CommandContext ctx, Store<EntityStore> store, Ref<EntityStore> ref,
@@ -211,32 +371,5 @@ public class HytaleSpawnCommand extends AbstractPlayerCommand {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("spawnWarmup", "seconds", String.valueOf(warmupSeconds)), "#FFAA00"));
         }
         warmupService.startWarmup(player, currentPos, warmupSeconds, doTeleport, COMMAND_NAME, world, store, ref);
-    }
-    
-    /**
-     * Variant: /spawn <name>
-     */
-    private static class SpawnWithNameCommand extends AbstractPlayerCommand {
-        private final BackService backService;
-        private final RequiredArg<String> nameArg;
-        
-        SpawnWithNameCommand(BackService backService) {
-            super(COMMAND_NAME);
-            this.backService = backService;
-            this.nameArg = withRequiredArg("name", "Spawn point name", SimpleStringArg.SPAWN_NAME);
-        }
-        
-        @Override
-        protected boolean canGeneratePermission() {
-            return false;
-        }
-        
-        @Override
-        protected void execute(@Nonnull CommandContext ctx, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
-                              @Nonnull PlayerRef player, @Nonnull World world) {
-        CommandSpyUtil.notify(ctx);
-            String name = ctx.get(nameArg);
-            HytaleSpawnCommand.doSpawn(ctx, store, ref, player, world, name, backService);
-        }
     }
 }

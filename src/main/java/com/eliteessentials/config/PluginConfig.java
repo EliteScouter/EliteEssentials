@@ -66,6 +66,7 @@ public class PluginConfig {
     public ClearInvConfig clearInv = new ClearInvConfig();
     public TrashConfig trash = new TrashConfig();
     public ListConfig list = new ListConfig();
+    public NearConfig near = new NearConfig();
     public ChatFormatConfig chatFormat = new ChatFormatConfig();
     public TabListConfig tabList = new TabListConfig();
     public DiscordConfig discord = new DiscordConfig();
@@ -420,6 +421,12 @@ public class PluginConfig {
         messages.put("listHeader", "&aOnline Players &7({count}/{max})&a:");
         messages.put("listPlayers", "&f{players}");
         messages.put("listNoPlayers", "&cNo players online.");
+        
+        // ==================== NEAR (Nearby Players) ====================
+        messages.put("nearHeader", "&aPlayers within &e{distance} &ablocks &7({count})&a:");
+        messages.put("nearEntry", "&f{player} &7({distance}m)");
+        messages.put("nearPlayers", "&f{players}");
+        messages.put("nearNoPlayers", "&7No players within &e{distance} &7blocks.");
         
         // ==================== WARPS (additional) ====================
         messages.put("warpLimitReached", "&cWarp limit reached! &7({count}/{max})");
@@ -1626,6 +1633,16 @@ public class PluginConfig {
         
         /** Maximum players (for display purposes) */
         public int maxPlayers = 100;
+    }
+    
+    // ==================== NEAR (Nearby Players) ====================
+    
+    public static class NearConfig {
+        /** Enable/disable the /near command */
+        public boolean enabled = true;
+        
+        /** Radius in blocks to search for nearby players */
+        public int distance = 200;
     }
     
     // ==================== CHAT FORMAT ====================

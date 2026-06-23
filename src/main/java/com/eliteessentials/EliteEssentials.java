@@ -816,6 +816,12 @@ public class EliteEssentials extends JavaPlugin {
             registeredCommands.append("/list, ");
         }
         
+        // Near command
+        if (config.near.enabled) {
+            getCommandRegistry().registerCommand(new HytaleNearCommand(configManager));
+            registeredCommands.append("/near, ");
+        }
+        
         // Discord command
         if (config.discord.enabled) {
             getCommandRegistry().registerCommand(new HytaleDiscordCommand(configManager, discordStorage));

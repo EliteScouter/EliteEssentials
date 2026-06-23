@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.9 - 2026-06-22
+
+Console support for the teleport and kit commands, so server owners automating their servers can move players and apply kits from the console or scheduled tasks.
+
+### Added
+* **`/kit <player> <kit>` gives a kit to another player from the console or in-game admins** - server owners automating their servers (for example, granting a kit on a scheduled event or from another mod) can now apply kits directly to a named online player. In-game use requires the new `eliteessentials.command.kit.give` permission; the console is always allowed. This admin give intentionally bypasses the target's kit access permission, cooldown, and one-time-claim restrictions, and does not record a cooldown or mark a one-time kit as claimed against them. Inventory space handling is unchanged (overflow drops on the ground, or the kit's replace-inventory behavior applies), and any commands attached to the kit still run for the receiving player. Player usage is unchanged: `/kit` opens the GUI and `/kit <name>` claims a kit for yourself with the normal permission, cooldown, and one-time checks. `/kit` now extends `CommandBase` to allow the console sender (matching the other console-capable commands), so tab-completion of kit names for `/kit <name>` is no longer offered; the `/kit create` and `/kit delete` admin subcommands are unchanged
+* **`/near` command** - lists other online players within a configurable radius of you, sorted closest first, with each player's distance shown in blocks (e.g. `Steve (42m)`). Only players in the same world are considered, since cross-world distance is meaningless and reading another player's components off their world thread is unsafe in the ECS. Vanished players are hidden unless you are an admin or hold the vanish permission, matching `/list`. Nicknames are respected when set. Aliased as `/nearby`
+  * **Config:** new `near` section with `near.enabled` (default `true`) and `near.distance` (radius in blocks, default `200`)
+  * **Permission:** `eliteessentials.command.misc.near` (Everyone in simple mode; grant via LuckPerms in advanced mode)
+  * **Messages:** new configurable `nearHeader`, `nearEntry`, `nearPlayers`, and `nearNoPlayers` entries (placeholders: `{count}`, `{distance}`, `{player}`, `{players}`)
+
+### Changed
+* **`/spawn` can now be run from the console** - `/spawn <player>` sends the named online player to spawn. Previously `/spawn` extended the engine's `AbstractPlayerCommand`, which rejected console senders with `Sender must be a player or provide the --player option!` since Update 5. It now extends `CommandBase` and parses the player argument directly, matching the `/rtp` pattern. Player usage is unchanged: `/spawn` still sends you to your own spawn and `/spawn <name>` still selects a named spawn point when `perWorld` is enabled. The console action auto-selects the spawn point (nearest, random, or primary, per your config), saves the target's previous location for `/back`, and bypasses warmup and cooldown
+* **`/warp` can now be run from the console** - `/warp <warpname> <player>` sends the named online player to a warp. In-game admins can use the same two-argument form to send another player (gated on the warp admin permission). Player usage is unchanged: `/warp` opens the GUI, `/warp list` lists warps, and `/warp <name>` warps you. Like `/spawn`, the console/admin action saves the target's previous location for `/back` and bypasses warmup, cooldown, cost, and per-warp access checks
+* Both commands now resolve the target with the shared `PlayerSuggestionProvider`, fetch fresh entity refs on the owning world thread before teleporting, and route through `TeleportUtil.safeTeleport`, consistent with the existing console-capable commands (`/rtp`, `/heal`, `/god`, `/fly`, `/clearinv`)
+
+### Note
+* Because `/spawn` and `/warp` moved off `AbstractPlayerCommand`, the engine's built-in `--player` flag is no longer attached to them. Use the plain `/spawn <player>` and `/warp <warpname> <player>` forms instead. Tab-completion of spawn-point and warp names is also no longer offered for these two commands (the same trade-off `/rtp` already made); the commands themselves are unaffected
+
+### Fixed
+* **`/eeadmin` disconnect when teleporting to another player's home from the Player Data tab.** The Player Data tab's "go to home" (and the related "go to back location" and "go to player warp") buttons routed through `teleportToLocation()`, which hardcoded the `#TpStatusMsg` status element on its error paths. That element only exists in the Teleports view, not the Player Data view (which uses `#PdStatusMsg`). When a teleport hit an error path, most commonly the home's world resolving to `null`, the plugin sent a UI update for an element that did not exist in the active view, and the Hytale client disconnected with "Selected element in CustomUI command was not found. Selector: #TpStatusMsg.Text". Teleporting to your own home appeared to work because that world was loaded, so the teleport succeeded and closed the UI without ever writing a status message. `teleportToLocation()` now takes the status selector from its caller, so each view reports errors to the label it actually renders
+
 ## 2.0.8 - 2026-05-26
 
 Compatibility update for Hytale Update 5 (server `0.5.1`). The plugin now compiles and runs against the new server jar; older 2.0.x builds will fail with `NoSuchMethodError` on the new server because of breaking API changes in the network and ECS layers.
