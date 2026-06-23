@@ -83,9 +83,9 @@ public class HytaleSpawnCommand extends CommandBase {
         boolean isConsole = !(sender instanceof PlayerRef) && !(sender instanceof Player);
 
         if (isConsole) {
-            // Console usage: /spawn <player>
+            // Console usage: /spawn <player> [world] [spawnName]
             if (arg1 == null) {
-                ctx.sendMessage(Message.raw("Console usage: /spawn <player>").color("#FF5555"));
+                ctx.sendMessage(Message.raw("Console usage: /spawn <player> [world] [spawnName]").color("#FF5555"));
                 return;
             }
             PlayerRef target = PlayerSuggestionProvider.findPlayer(arg1);
@@ -95,7 +95,9 @@ public class HytaleSpawnCommand extends CommandBase {
                     configManager.getMessage("playerNotFound", "player", arg1), "#FF5555"));
                 return;
             }
-            adminTeleportToSpawn(ctx, target, backService);
+            String worldArg = parts.length >= 3 ? parts[2] : null;
+            String spawnNameArg = parts.length >= 4 ? parts[3] : null;
+            adminTeleportToSpawn(ctx, target, backService, worldArg, spawnNameArg);
             return;
         }
 
@@ -148,8 +150,14 @@ public class HytaleSpawnCommand extends CommandBase {
     /**
      * Console/admin action: send another online player to spawn.
      * Bypasses warmup, cooldown, cost and permission checks (intended for server automation).
+     *
+     * @param worldArg     optional world name; when null, uses the target's current world
+     *                     (or the configured main world when perWorld is disabled)
+     * @param spawnNameArg optional named spawn point within the resolved world; when null,
+     *                     uses that world's primary ("main") spawn
      */
-    private static void adminTeleportToSpawn(CommandContext ctx, PlayerRef target, BackService backService) {
+    private static void adminTeleportToSpawn(CommandContext ctx, PlayerRef target, BackService backService,
+                                             String worldArg, String spawnNameArg) {
         EliteEssentials plugin = EliteEssentials.getInstance();
         ConfigManager configManager = plugin.getConfigManager();
         PluginConfig config = configManager.getConfig();
@@ -166,10 +174,45 @@ public class HytaleSpawnCommand extends CommandBase {
             return;
         }
 
-        final String targetWorldName = config.spawn.perWorld ? currentWorld.getName() : config.spawn.mainWorld;
-        World resolvedTargetWorld = Universe.get().getWorld(targetWorldName);
-        final World finalTargetWorld = resolvedTargetWorld != null ? resolvedTargetWorld : currentWorld;
+        // Resolve which world's spawn to use
+        final String targetWorldName;
+        if (worldArg != null) {
+            String canonical = resolveSpawnWorldName(spawnStorage, worldArg);
+            if (canonical == null) {
+                ctx.sendMessage(Message.raw("No spawns are set for world '" + worldArg + "'.").color("#FF5555"));
+                return;
+            }
+            targetWorldName = canonical;
+        } else {
+            targetWorldName = config.spawn.perWorld ? currentWorld.getName() : config.spawn.mainWorld;
+        }
+
+        // Resolve the spawn point: named when provided, otherwise the primary ("main") spawn
+        SpawnStorage.SpawnData spawn;
+        if (spawnNameArg != null) {
+            spawn = spawnStorage.getSpawnByName(targetWorldName, spawnNameArg);
+            if (spawn == null) {
+                ctx.sendMessage(Message.raw(
+                    "Spawn point '" + spawnNameArg + "' not found in world '" + targetWorldName + "'.").color("#FF5555"));
+                return;
+            }
+        } else {
+            spawn = spawnStorage.getPrimarySpawn(targetWorldName);
+            if (spawn == null) {
+                ctx.sendMessage(Message.raw("No spawn set for world: " + targetWorldName).color("#FF5555"));
+                return;
+            }
+        }
+
+        World resolvedTargetWorld = findLoadedWorld(targetWorldName);
+        if (resolvedTargetWorld == null) {
+            ctx.sendMessage(Message.raw("World '" + targetWorldName + "' is not loaded.").color("#FF5555"));
+            return;
+        }
+
+        final World finalTargetWorld = resolvedTargetWorld;
         final World finalCurrentWorld = currentWorld;
+        final SpawnStorage.SpawnData finalSpawn = spawn;
 
         finalCurrentWorld.execute(() -> {
             Ref<EntityStore> ref = target.getReference();
@@ -189,25 +232,6 @@ public class HytaleSpawnCommand extends CommandBase {
             }
             Vector3d currentPos = transform.getPosition();
 
-            // Resolve spawn point (auto-select, mirroring /spawn with no name)
-            SpawnStorage.SpawnData spawn;
-            if (config.spawn.perWorld) {
-                if (config.spawn.multiRandomSpawn) {
-                    spawn = spawnStorage.getRandomSpawn(targetWorldName);
-                } else if (config.spawn.multiNearbySpawn) {
-                    spawn = spawnStorage.getNearestSpawn(targetWorldName, currentPos.x, currentPos.z);
-                } else {
-                    spawn = spawnStorage.getPrimarySpawn(targetWorldName);
-                }
-            } else {
-                spawn = spawnStorage.getPrimarySpawn(targetWorldName);
-            }
-
-            if (spawn == null) {
-                ctx.sendMessage(Message.raw("No spawn set for world: " + targetWorldName).color("#FF5555"));
-                return;
-            }
-
             // Save /back location for the target
             HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
             Rotation3f rotation = headRotation != null ? headRotation.getRotation() : new Rotation3f(0, 0, 0);
@@ -216,19 +240,46 @@ public class HytaleSpawnCommand extends CommandBase {
                 currentPos.x, currentPos.y, currentPos.z,
                 rotation.y, 0f));
 
-            Vector3d spawnPos = new Vector3d(spawn.x, spawn.y, spawn.z);
-            Rotation3f spawnRot = new Rotation3f(0, spawn.yaw, 0);
+            Vector3d spawnPos = new Vector3d(finalSpawn.x, finalSpawn.y, finalSpawn.z);
+            Rotation3f spawnRot = new Rotation3f(0, finalSpawn.yaw, 0);
 
             TeleportUtil.safeTeleport(finalCurrentWorld, finalTargetWorld, spawnPos, spawnRot, target,
                 () -> {
+                    String spawnLabel = finalSpawn.name != null ? finalSpawn.name : "spawn";
                     target.sendMessage(MessageFormatter.formatWithFallback(
                         configManager.getMessage("spawnTeleported"), "#55FF55"));
-                    ctx.sendMessage(Message.raw("Teleported " + target.getUsername() + " to spawn.").color("#55FF55"));
+                    ctx.sendMessage(Message.raw("Teleported " + target.getUsername() + " to spawn '"
+                        + spawnLabel + "' in world '" + finalTargetWorld.getName() + "'.").color("#55FF55"));
                 },
                 () -> ctx.sendMessage(Message.raw(
                     "Teleport failed - destination chunk could not be loaded.").color("#FF5555"))
             );
         });
+    }
+
+    /**
+     * Find the canonical world name (as stored in spawn data) matching the input, case-insensitively.
+     * Returns null if no world has any spawns set under a matching name.
+     */
+    private static String resolveSpawnWorldName(SpawnStorage spawnStorage, String input) {
+        for (String worldName : spawnStorage.getWorldsWithSpawn()) {
+            if (worldName.equalsIgnoreCase(input)) {
+                return worldName;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve a loaded world by name, case-insensitively.
+     */
+    private static World findLoadedWorld(String name) {
+        for (var entry : Universe.get().getWorlds().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(name)) {
+                return entry.getValue();
+            }
+        }
+        return Universe.get().getWorld(name);
     }
 
     /**
