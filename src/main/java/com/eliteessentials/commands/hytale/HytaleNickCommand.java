@@ -11,7 +11,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -36,7 +36,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  *   eliteessentials.command.misc.nick.formatting - Use formatting codes in nickname (when requireFormattingPermission is true)
  *   eliteessentials.command.misc.nickname.others - Set/clear other players' nicknames
  */
-public class HytaleNickCommand extends AbstractPlayerCommand {
+public class HytaleNickCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "nick";
 

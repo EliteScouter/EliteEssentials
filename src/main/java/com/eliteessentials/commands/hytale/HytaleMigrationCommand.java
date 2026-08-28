@@ -12,7 +12,7 @@ import com.eliteessentials.services.SqlMigrationService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -40,7 +40,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - Admin only (simple mode)
  * - eliteessentials.admin.reload (advanced mode)
  */
-public class HytaleMigrationCommand extends CommandBase {
+public class HytaleMigrationCommand extends EliteCommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
 

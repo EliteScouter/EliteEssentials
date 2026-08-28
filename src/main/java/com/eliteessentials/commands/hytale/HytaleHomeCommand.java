@@ -23,7 +23,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -48,7 +48,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.bypass.warmup.home - Skip warmup
  * - eliteessentials.bypass.cooldown.home - Skip cooldown
  */
-public class HytaleHomeCommand extends AbstractPlayerCommand {
+public class HytaleHomeCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "home";
     
@@ -229,7 +229,7 @@ public class HytaleHomeCommand extends AbstractPlayerCommand {
     /**
      * Variant: /home <name>
      */
-    private static class HomeWithNameCommand extends AbstractPlayerCommand {
+    private static class HomeWithNameCommand extends ElitePlayerCommand {
         private final HomeService homeService;
         private final BackService backService;
         private final RequiredArg<String> nameArg;

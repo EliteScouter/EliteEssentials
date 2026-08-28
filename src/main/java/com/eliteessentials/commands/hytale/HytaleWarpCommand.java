@@ -24,7 +24,7 @@ import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -51,7 +51,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Extends {@link CommandBase} (not AbstractPlayerCommand) so the server console
  * can send a player to a warp for automation, matching the /rtp and /spawn pattern.
  */
-public class HytaleWarpCommand extends CommandBase {
+public class HytaleWarpCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "warp";
     

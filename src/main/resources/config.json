@@ -178,6 +178,9 @@
     "enabled": true,
     "defaultFormat": "&7{player}: &f{message}",
     "placeholderapi": true,
+    "timeFormat": "HH:mm",
+    "dateFormat": "yyyy-MM-dd",
+    "timeZone": "",
     "groupFormats": {
       "Owner": "&4[Owner] {player}&r: {message}",
       "Admin": "&c[Admin] {player}&r: {message}",

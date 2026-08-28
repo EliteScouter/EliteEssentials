@@ -841,9 +841,13 @@ public class JoinQuitListener {
      * Rewrite the player's Hytale save file on disk to set spawn coordinates.
      * Called on a scheduler thread after a delay to let Hytale finish saving.
      * 
-     * Modifies both Components.Transform.Position and 
-     * Components.Player.PlayerData.PerWorldData.{world}.LastPosition
+     * Modifies Components.Transform.Position and
+     * Components.Player.PlayerData.PerWorldData.{spawnWorld}.LastPosition
      * so the player loads at spawn on next login.
+     *
+     * Only the spawn world's PerWorldData entry is modified. The logout world's entry is
+     * left alone so returning to that world (via portal or world switch) still restores
+     * the player's real last position there.
      */
     private void rewritePlayerSaveFile(UUID playerId, String playerName, 
             SpawnStorage.SpawnData spawn, String targetWorldName, String lastWorld) {
@@ -910,18 +914,24 @@ public class JoinQuitListener {
 
                     JsonObject perWorldData = playerData.getAsJsonObject("PerWorldData");
                     if (perWorldData != null) {
-                        // Update LastPosition in the world the player was in
-                        String worldKey = currentWorld;
-                        JsonObject worldData = perWorldData.getAsJsonObject(worldKey);
-                        if (worldData != null) {
-                            updateLastPosition(worldData, spawn);
-                        }
-                        // Also update target world if different
-                        if (!currentWorld.equalsIgnoreCase(targetWorldName)) {
-                            JsonObject targetData = perWorldData.getAsJsonObject(targetWorldName);
-                            if (targetData != null) {
-                                updateLastPosition(targetData, spawn);
-                            }
+                        // Only touch the spawn world's entry. Writing spawn coords into the
+                        // logout world's entry would clobber the position the engine restores
+                        // when the player later returns to that world (portals and world
+                        // switches read PerWorldData.{world}.LastPosition), sending them to the
+                        // spawn world's coordinates inside the wrong world.
+                        JsonObject targetData = perWorldData.getAsJsonObject(targetWorldName);
+                        if (targetData != null) {
+                            updateLastPosition(targetData, spawn);
+                        } else {
+                            // Player has never been to the spawn world, so there is no entry
+                            // to update. Create one so the engine restores spawn instead of
+                            // falling back to the world's own spawn provider.
+                            targetData = new JsonObject();
+                            JsonObject lastPos = new JsonObject();
+                            targetData.add("LastPosition", lastPos);
+                            targetData.addProperty("FirstSpawn", false);
+                            updateLastPosition(targetData, spawn);
+                            perWorldData.add(targetWorldName, targetData);
                         }
                     }
                 }

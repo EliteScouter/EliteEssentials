@@ -15,7 +15,7 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -36,7 +36,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.limit.homes.<number> - Max homes allowed
  * - eliteessentials.limit.homes.unlimited - Unlimited homes
  */
-public class HytaleSetHomeCommand extends AbstractPlayerCommand {
+public class HytaleSetHomeCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "sethome";
     
@@ -140,7 +140,7 @@ public class HytaleSetHomeCommand extends AbstractPlayerCommand {
     /**
      * Variant: /sethome <name>
      */
-    private static class SetHomeWithNameCommand extends AbstractPlayerCommand {
+    private static class SetHomeWithNameCommand extends ElitePlayerCommand {
         private final HomeService homeService;
         private final RequiredArg<String> nameArg;
         

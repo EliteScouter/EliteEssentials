@@ -11,7 +11,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -26,7 +26,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Works by setting all movement speeds to 0 via MovementSettings.
  * Persists across restarts. Supports offline players (freeze applied on join).
  */
-public class HytaleFreezeCommand extends AbstractPlayerCommand {
+public class HytaleFreezeCommand extends ElitePlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final FreezeService freezeService;

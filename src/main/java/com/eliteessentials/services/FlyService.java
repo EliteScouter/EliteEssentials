@@ -9,6 +9,7 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.SavedMovementStates;
+import com.hypixel.hytale.protocol.FlyMode;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -120,10 +121,10 @@ public class FlyService {
                 return;
             }
             var settings = movementManager.getSettings();
-            if (!settings.canFly) {
+            if (settings.fly == FlyMode.Disabled) {
                 return; // already off
             }
-            settings.canFly = false;
+            settings.fly = FlyMode.Disabled;
             movementManager.update(playerRef.getPacketHandler());
 
             MovementStatesComponent movementStatesComponent = store.getComponent(ref, MovementStatesComponent.getComponentType());

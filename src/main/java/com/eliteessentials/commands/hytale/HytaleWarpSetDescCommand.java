@@ -8,7 +8,7 @@ import com.eliteessentials.services.WarpService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 
 import javax.annotation.Nonnull;
 import com.eliteessentials.util.CommandSpyUtil;
@@ -17,7 +17,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Command: /warpsetdesc <name> <description...>
  * Sets the description for a warp. Description can contain spaces.
  */
-public class HytaleWarpSetDescCommand extends CommandBase {
+public class HytaleWarpSetDescCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "warpsetdesc";
     

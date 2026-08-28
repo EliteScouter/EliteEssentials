@@ -126,6 +126,39 @@ When using advanced permissions mode, custom numeric values for cooldowns and li
 - Lowest cooldown value wins (most favorable to player)
 - Highest limit value wins (most favorable to player)
 
+**Per-group RTP ranges**
+
+`/rtp` min and max distance can differ per group. Two ways to set it up, both advanced mode only:
+
+1. **By permission** - define a named range in `config.json` under `rtp.permissionRanges`, then grant `eliteessentials.command.tp.rtp.range.<name>` to the group. This is a plain boolean node, so it works with LuckPerms, HyperPerms, or any permission source.
+
+   ```json
+   "rtp": {
+     "minRange": 100,
+     "maxRange": 5000,
+     "permissionRanges": {
+       "vip": { "minRange": 500, "maxRange": 10000 },
+       "staff": { "minRange": 100, "maxRange": 50000 }
+     }
+   }
+   ```
+
+   ```
+   /lp group vip permission set eliteessentials.command.tp.rtp.range.vip true
+   ```
+
+2. **By group name** - put the group name straight into `rtp.groupRanges`. No permission node needed; the plugin reads the player's groups from LuckPerms or HyperPerms.
+
+   ```json
+   "rtp": {
+     "groupRanges": {
+       "VIP": { "minRange": 500, "maxRange": 10000 }
+     }
+   }
+   ```
+
+Resolution order: `permissionRanges` match, then `groupRanges` match, then the per-world range in `rtp.worldRanges`, then the global `rtp.minRange` / `rtp.maxRange`. When a player matches several entries the one with the largest `maxRange` wins. Both maps are empty by default, so existing setups keep their current behavior. Note that granting the `eliteessentials.command.tp.rtp.*` wildcard hands out every named range.
+
 ## Permission Hierarchy (Advanced Mode)
 
 ```
@@ -149,6 +182,7 @@ eliteessentials
 │   │   ├── tpaccept                # /tpaccept command
 │   │   ├── tpdeny                  # /tpdeny command
 │   │   ├── rtp                     # /rtp command
+│   │   │   └── range.<name>        # Named RTP range from rtp.permissionRanges
 │   │   ├── back                    # /back command
 │   │   │   └── ondeath             # Use /back after death
 │   │   ├── top                     # /top command (Admin)
@@ -261,6 +295,7 @@ eliteessentials
     ├── sendmessage                 # /sendmessage command
     ├── rtp                         # /rtp <player> [world] (admin/console)
     ├── mute                        # /mute command
+    ├── tempmute                    # /tempmute command
     ├── unmute                      # /unmute command
     ├── ban                         # /ban command
     ├── tempban                     # /tempban command
@@ -296,6 +331,7 @@ eliteessentials
 | `eliteessentials.command.tp.tpaccept` | Accept requests |
 | `eliteessentials.command.tp.tpdeny` | Deny requests |
 | `eliteessentials.command.tp.rtp` | Random teleport |
+| `eliteessentials.command.tp.rtp.range.<name>` | Use the named RTP range from `rtp.permissionRanges` |
 | `eliteessentials.command.tp.back` | Return to previous location |
 | `eliteessentials.command.tp.back.ondeath` | Use /back after death |
 | `eliteessentials.command.tp.top` | Teleport to highest block (Admin) |
@@ -477,9 +513,10 @@ eliteessentials
 | `eliteessentials.admin.sendmessage` | /sendmessage command |
 | `eliteessentials.admin.rtp` | /rtp &lt;player&gt; [world] (admin/console) |
 | `eliteessentials.admin.mute` | /mute command |
+| `eliteessentials.admin.tempmute` | /tempmute command (console is always allowed) |
 | `eliteessentials.admin.unmute` | /unmute command |
 | `eliteessentials.admin.ban` | /ban command |
-| `eliteessentials.admin.tempban` | /tempban command |
+| `eliteessentials.admin.tempban` | /tempban command (console is always allowed) |
 | `eliteessentials.admin.ipban` | /ipban command |
 | `eliteessentials.admin.unban` | /unban command |
 | `eliteessentials.admin.unipban` | /unipban command |
@@ -570,6 +607,7 @@ eliteessentials.command.misc.joindate.others
 eliteessentials.command.misc.playtime.others
 eliteessentials.command.home.limit.20
 eliteessentials.admin.mute
+eliteessentials.admin.tempmute
 eliteessentials.admin.unmute
 eliteessentials.admin.warn
 eliteessentials.admin.clearwarnings

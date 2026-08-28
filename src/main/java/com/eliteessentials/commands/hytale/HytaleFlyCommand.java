@@ -24,7 +24,8 @@ import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
+import com.hypixel.hytale.protocol.FlyMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
@@ -56,7 +57,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.misc.fly.bypass.cooldown - Skip cooldown
  * - eliteessentials.command.misc.fly.cooldown.<seconds> - Set specific cooldown
  */
-public class HytaleFlyCommand extends CommandBase {
+public class HytaleFlyCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "fly";
     private static final int MAX_HEIGHT = 256;
@@ -199,8 +200,8 @@ public class HytaleFlyCommand extends CommandBase {
             }
 
             var settings = movementManager.getSettings();
-            boolean newState = !settings.canFly;
-            settings.canFly = newState;
+            boolean newState = settings.fly == FlyMode.Disabled;
+            settings.fly = newState ? FlyMode.Allowed : FlyMode.Disabled;
             movementManager.update(finalTarget.getPacketHandler());
 
             String suffix = finalIsTargetingOther ? " &7(for " + finalTarget.getUsername() + ")" : "";

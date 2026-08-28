@@ -19,7 +19,7 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 
@@ -42,7 +42,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.tp.top.bypass.cooldown - Skip cooldown
  * - eliteessentials.command.tp.top.cooldown.<seconds> - Set specific cooldown
  */
-public class HytaleTopCommand extends AbstractPlayerCommand {
+public class HytaleTopCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "top";
     private static final int MAX_HEIGHT = 256;

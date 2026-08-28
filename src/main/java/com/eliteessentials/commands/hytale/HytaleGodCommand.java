@@ -14,7 +14,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -43,7 +43,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.misc.god.bypass.cooldown - Skip cooldown
  * - eliteessentials.command.misc.god.cooldown.<seconds> - Set specific cooldown
  */
-public class HytaleGodCommand extends CommandBase {
+public class HytaleGodCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "god";
     private static final Logger logger = Logger.getLogger("EliteEssentials");

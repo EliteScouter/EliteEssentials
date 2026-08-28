@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -42,7 +42,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.misc.trash.bypass.cooldown - Skip cooldown
  * - eliteessentials.command.misc.trash.cooldown.<seconds> - Set specific cooldown
  */
-public class HytaleTrashCommand extends AbstractPlayerCommand {
+public class HytaleTrashCommand extends ElitePlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "trash";

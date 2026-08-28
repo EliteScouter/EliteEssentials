@@ -8,6 +8,10 @@ import com.google.gson.reflect.TypeToken;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -49,6 +53,14 @@ public class PlayerFileStorage implements PlayerStorageProvider {
     
     // Track dirty players that need saving
     private final Set<UUID> dirtyPlayers = ConcurrentHashMap.newKeySet();
+    
+    // Per-player write locks. Player files are written from at least three threads
+    // (the world thread via commands, the EliteEssentials-PeriodicPlayTimeSave daemon,
+    // and the EliteEssentials-JoinQuit scheduler). Without this, two threads could open
+    // their own stream to the same {uuid}.json and interleave their output.
+    // Never removed: one Object per player seen is negligible, and dropping a lock while
+    // another thread held it would reopen the interleaving window.
+    private final Map<UUID, Object> writeLocks = new ConcurrentHashMap<>();
     
     public PlayerFileStorage(File dataFolder) {
         this.dataFolder = dataFolder;
@@ -92,27 +104,73 @@ public class PlayerFileStorage implements PlayerStorageProvider {
      */
     private void saveIndex() {
         synchronized (indexLock) {
-            try (Writer writer = new OutputStreamWriter(new FileOutputStream(indexFile), StandardCharsets.UTF_8)) {
-                gson.toJson(nameIndex, INDEX_TYPE, writer);
-            } catch (Exception e) {
-                logger.severe("[PlayerFileStorage] Failed to save player_index.json: " + e.getMessage());
+            writeIndexLocked();
+        }
+    }
+    
+    /**
+     * Write the index using the same serialize-then-atomically-rename approach as player
+     * files. Losing this file does not lose player data, but a truncated index breaks every
+     * offline name lookup (/seen, /home of another player, ban by name) until it is rebuilt.
+     *
+     * <p>Caller must hold {@link #indexLock}.
+     */
+    private void writeIndexLocked() {
+        String json;
+        try {
+            json = gson.toJson(nameIndex, INDEX_TYPE);
+        } catch (Exception e) {
+            logger.severe("[PlayerFileStorage] Could not serialize player_index.json: " + e
+                    + " — the previous index on disk was left intact.");
+            return;
+        }
+        
+        Path target = indexFile.toPath();
+        Path tmp = new File(dataFolder, "player_index.json.tmp").toPath();
+        try {
+            Files.writeString(tmp, json, StandardCharsets.UTF_8);
+            try {
+                Files.move(tmp, target,
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception e) {
+            logger.severe("[PlayerFileStorage] Failed to save player_index.json: " + e
+                    + " — the previous index on disk was left intact.");
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (IOException ignored) {
+                // Leftover .tmp is harmless.
             }
         }
     }
     
     /**
      * Update the index with a player's name.
+     *
+     * <p>The read, the mutation, and the file write all happen under {@link #indexLock}.
+     * Previously only the write was locked, so two threads updating different players could
+     * interleave their {@code removeIf}/{@code put} and then each persist a different view
+     * of the map.
      */
     private void updateIndex(UUID uuid, String name) {
+        if (name == null) {
+            // Reachable from getPlayer(uuid, name) when a stored file has no name recorded.
+            return;
+        }
         String lowerName = name.toLowerCase();
-        UUID existing = nameIndex.get(lowerName);
         
-        // Only update if name is new or changed
-        if (existing == null || !existing.equals(uuid)) {
-            // Remove old name if this UUID had a different name
-            nameIndex.entrySet().removeIf(e -> e.getValue().equals(uuid) && !e.getKey().equals(lowerName));
-            nameIndex.put(lowerName, uuid);
-            saveIndex();
+        synchronized (indexLock) {
+            UUID existing = nameIndex.get(lowerName);
+            
+            // Only update if name is new or changed
+            if (existing == null || !existing.equals(uuid)) {
+                // Remove old name if this UUID had a different name
+                nameIndex.entrySet().removeIf(e -> e.getValue().equals(uuid) && !e.getKey().equals(lowerName));
+                nameIndex.put(lowerName, uuid);
+                writeIndexLocked();
+            }
         }
     }
     
@@ -127,6 +185,11 @@ public class PlayerFileStorage implements PlayerStorageProvider {
     
     /**
      * Load a player's data from disk.
+     *
+     * <p>Returns null when the player genuinely has no file yet. If a file exists but
+     * cannot be read as a player record, the file is quarantined first (see
+     * {@link #quarantineUnreadableFile}) so that the caller creating a fresh empty
+     * record cannot overwrite recoverable bytes.
      */
     private PlayerFile loadFromDisk(UUID uuid) {
         File file = getPlayerFile(uuid);
@@ -136,16 +199,56 @@ public class PlayerFileStorage implements PlayerStorageProvider {
         
         try (Reader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
             PlayerFile data = gson.fromJson(reader, PlayerFile.class);
-            if (data != null) {
-                // Ensure UUID is set (in case file was manually created)
-                if (data.getUuid() == null) {
-                    data.setUuid(uuid);
-                }
+            if (data == null) {
+                // The file exists but produced no object: it is zero-length or holds a bare
+                // "null". Gson does not throw for this, so it used to look identical to a
+                // brand new player and the record was silently replaced with an empty one.
+                quarantineUnreadableFile(uuid, file, "file is empty or contains no player object");
+                return null;
+            }
+            // Ensure UUID is set (in case file was manually created)
+            if (data.getUuid() == null) {
+                data.setUuid(uuid);
             }
             return data;
         } catch (Exception e) {
-            logger.severe("[PlayerFileStorage] Failed to load player file " + uuid + ": " + e.getMessage());
+            quarantineUnreadableFile(uuid, file, String.valueOf(e));
             return null;
+        }
+    }
+    
+    /**
+     * Move a player file that cannot be parsed into {@code players/corrupted/} and log loudly.
+     *
+     * <p>Callers treat a null load as "new player" and will write a fresh empty record over
+     * the same path, which previously turned an unreadable file into permanent loss of that
+     * player's homes, wallet, and playtime. Moving the file aside keeps the original bytes
+     * for manual recovery and makes the event visible in the log instead of silent.
+     *
+     * <p>This cannot reconstruct the data automatically; corrupt JSON is not recoverable
+     * programmatically. It preserves the evidence and stops the overwrite.
+     */
+    private void quarantineUnreadableFile(UUID uuid, File file, String reason) {
+        File corruptedFolder = new File(playersFolder, "corrupted");
+        if (!corruptedFolder.exists() && !corruptedFolder.mkdirs()) {
+            logger.severe("[PlayerFileStorage] Player file " + uuid + " is unreadable (" + reason
+                    + ") and the players/corrupted/ folder could not be created. "
+                    + "Leaving the file in place; back it up manually before this player reconnects, "
+                    + "because a fresh empty record will otherwise replace it.");
+            return;
+        }
+        
+        File destination = new File(corruptedFolder, uuid + ".json." + System.currentTimeMillis());
+        try {
+            Files.move(file.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            logger.severe("[PlayerFileStorage] Player file " + uuid + " is unreadable (" + reason
+                    + "). It has been moved to " + destination.getPath()
+                    + " and this player will be treated as new (homes, balance, and playtime will "
+                    + "start empty). Inspect that file to recover the data manually.");
+        } catch (Exception e) {
+            logger.severe("[PlayerFileStorage] Player file " + uuid + " is unreadable (" + reason
+                    + ") and could not be moved to players/corrupted/: " + e
+                    + ". Back the file up manually before this player reconnects.");
         }
     }
     
@@ -153,6 +256,17 @@ public class PlayerFileStorage implements PlayerStorageProvider {
      * Save a player's data to disk.
      */
     public void savePlayer(UUID uuid) {
+        trySavePlayer(uuid);
+    }
+    
+    /**
+     * Save a player's data to disk, reporting whether the data actually reached disk.
+     *
+     * @return true if the file was written, false if the save was skipped or failed.
+     *         A false return means the in-memory copy is still the only copy of the
+     *         data, so the caller must not discard it.
+     */
+    public boolean trySavePlayer(UUID uuid) {
         PlayerFile data = cache.get(uuid);
         if (data == null) {
             // Historically this silently returned, which hid bugs where callers marked a
@@ -162,16 +276,100 @@ public class PlayerFileStorage implements PlayerStorageProvider {
             logger.warning("[PlayerFileStorage] savePlayer called for uncached UUID " + uuid
                 + " — save skipped. A caller tried to persist a player that was never loaded; "
                 + "this usually means KitService (or similar) ran before the PlayerFile existed.");
-            return;
+            return false;
         }
         
-        File file = getPlayerFile(uuid);
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-            gson.toJson(data, writer);
-            dirtyPlayers.remove(uuid);
-        } catch (Exception e) {
-            logger.severe("[PlayerFileStorage] Failed to save player file " + uuid + ": " + e.getMessage());
+        if (!writeAtomically(uuid, data)) {
+            return false;
         }
+        dirtyPlayers.remove(uuid);
+        return true;
+    }
+    
+    /**
+     * Serialize and write a player file without any window in which the on-disk copy
+     * is incomplete.
+     *
+     * <p>Two properties matter here, and the previous implementation had neither:
+     *
+     * <ol>
+     *   <li><b>Serialize before touching the file.</b> {@code PlayerFile} holds plain
+     *       {@code LinkedHashMap}/{@code ArrayList}/{@code HashSet} collections that other
+     *       threads mutate without synchronization, so Gson can throw
+     *       {@code ConcurrentModificationException} partway through writing. Streaming Gson
+     *       straight into a {@code FileOutputStream} meant such a failure left a truncated
+     *       file on disk. Building the JSON in memory first means a failed serialize leaves
+     *       the previous good file completely untouched.</li>
+     *   <li><b>Write to a temp file and rename.</b> {@code new FileOutputStream(file)}
+     *       truncates the target immediately, so a crash or a full disk mid-write destroyed
+     *       the only copy of the player's homes, wallet, and playtime. Writing
+     *       {@code {uuid}.json.tmp} and then atomically renaming it over the target means a
+     *       reader either sees the complete old file or the complete new one.</li>
+     * </ol>
+     *
+     * @return true if the data is durably on disk under its final name.
+     */
+    private boolean writeAtomically(UUID uuid, PlayerFile data) {
+        synchronized (writeLockFor(uuid)) {
+            String json = serializeQuietly(uuid, data);
+            if (json == null) {
+                return false;
+            }
+            
+            Path target = getPlayerFile(uuid).toPath();
+            Path tmp = new File(playersFolder, uuid + ".json.tmp").toPath();
+            try {
+                Files.writeString(tmp, json, StandardCharsets.UTF_8);
+                try {
+                    Files.move(tmp, target,
+                            StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (AtomicMoveNotSupportedException e) {
+                    // Some filesystems (notably certain network mounts) cannot do this
+                    // atomically. A plain replace is still far better than truncate-in-place.
+                    Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+                }
+                return true;
+            } catch (Exception e) {
+                logger.severe("[PlayerFileStorage] Failed to save player file " + uuid + ": " + e
+                        + " — the previous file on disk was left intact.");
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (IOException ignored) {
+                    // Leftover .tmp is harmless: it is never read and never matches the
+                    // ".json" filter used when scanning the players folder.
+                }
+                return false;
+            }
+        }
+    }
+    
+    /**
+     * Serialize a player to JSON, retrying once on {@link ConcurrentModificationException}.
+     * A CME here means another thread mutated one of the player's collections mid-write;
+     * that is transient, so a single retry usually succeeds.
+     */
+    private String serializeQuietly(UUID uuid, PlayerFile data) {
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                return gson.toJson(data);
+            } catch (ConcurrentModificationException e) {
+                if (attempt == 2) {
+                    logger.severe("[PlayerFileStorage] Could not serialize player " + uuid
+                            + ": data was being modified on another thread during both attempts. "
+                            + "Save skipped; the previous file on disk was left intact.");
+                    return null;
+                }
+            } catch (Exception e) {
+                logger.severe("[PlayerFileStorage] Could not serialize player " + uuid + ": " + e
+                        + " — save skipped, the previous file on disk was left intact.");
+                return null;
+            }
+        }
+        return null;
+    }
+    
+    private Object writeLockFor(UUID uuid) {
+        return writeLocks.computeIfAbsent(uuid, k -> new Object());
     }
     
     /**
@@ -180,12 +378,7 @@ public class PlayerFileStorage implements PlayerStorageProvider {
     public void savePlayerDirect(PlayerFile data) {
         if (data == null || data.getUuid() == null) return;
         
-        File file = getPlayerFile(data.getUuid());
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-            gson.toJson(data, writer);
-        } catch (Exception e) {
-            logger.severe("[PlayerFileStorage] Failed to save player file " + data.getUuid() + ": " + e.getMessage());
-        }
+        writeAtomically(data.getUuid(), data);
         
         // Update index
         if (data.getName() != null) {
@@ -310,10 +503,19 @@ public class PlayerFileStorage implements PlayerStorageProvider {
     /**
      * Unload a player from cache (call on disconnect).
      * Saves the player first if dirty.
+     *
+     * <p>If that save fails, the entry is deliberately kept in the cache and left dirty.
+     * Evicting it would discard the only copy of the session's data, so instead it stays
+     * eligible for retry by {@link #saveAllDirty()} and the shutdown {@link #saveAll()}.
      */
     public void unloadPlayer(UUID uuid) {
         if (dirtyPlayers.contains(uuid)) {
-            savePlayer(uuid);
+            if (!trySavePlayer(uuid)) {
+                logger.severe("[PlayerFileStorage] Could not persist player " + uuid
+                        + " on unload; keeping the data in memory so it is not lost. "
+                        + "It will be retried on the next save and at shutdown.");
+                return;
+            }
         }
         cache.remove(uuid);
     }

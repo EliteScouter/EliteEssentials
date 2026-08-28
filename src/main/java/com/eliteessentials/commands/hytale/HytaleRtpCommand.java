@@ -23,7 +23,7 @@ import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -57,8 +57,12 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.admin.rtp - RTP other players / use from console
  * - eliteessentials.bypass.warmup.rtp - Skip warmup
  * - eliteessentials.bypass.cooldown.rtp - Skip cooldown
+ * - eliteessentials.command.tp.rtp.range.&lt;name&gt; - Use the named range from rtp.permissionRanges
+ *
+ * The range always belongs to the player being teleported, so /rtp &lt;player&gt; from an
+ * admin or the console uses that player's range tier, not the sender's.
  */
-public class HytaleRtpCommand extends CommandBase {
+public class HytaleRtpCommand extends EliteCommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "rtp";
@@ -336,8 +340,8 @@ public class HytaleRtpCommand extends CommandBase {
         // Get effective warmup (skip for admin RTP)
         int warmupSeconds = isAdminRtp ? 0 : CommandPermissionUtil.getEffectiveWarmup(playerId, COMMAND_NAME, rtpConfig.warmupSeconds);
         
-        // Get world-specific range
-        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        // Get the range that applies to this player in this world
+        var worldRange = rtpService.getRangeFor(playerId, world.getName());
         
         if (configManager.isDebugEnabled()) {
             logger.info("[RTP] Config warmup: " + rtpConfig.warmupSeconds + ", effective: " + warmupSeconds + 
@@ -401,8 +405,8 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
-        // Get world-specific range
-        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        // Get the range that applies to this player in this world
+        var worldRange = rtpService.getRangeFor(playerId, world.getName());
         
         if (attempt == 0 && debug) {
             logger.info("[RTP] Starting search: minRange=" + worldRange.minRange + ", maxRange=" + worldRange.maxRange + 
@@ -482,8 +486,8 @@ public class HytaleRtpCommand extends CommandBase {
             return;
         }
         
-        // Get world-specific range
-        var worldRange = rtpConfig.getRangeForWorld(world.getName());
+        // Get the range that applies to this player in this world
+        var worldRange = rtpService.getRangeFor(playerId, world.getName());
         
         Random random = new Random();
         double angle = random.nextDouble() * 2 * Math.PI;

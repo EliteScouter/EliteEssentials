@@ -116,7 +116,9 @@ public class TabListService {
                 targetPlayer.getUuid(),
                 displayName,
                 targetPlayer.getWorldUuid(),
-                0
+                0,
+                false,
+                null
             );
             AddToServerPlayerList addPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[] { listPlayer });
 
@@ -176,7 +178,9 @@ public class TabListService {
                     onlineId,
                     displayName,
                     online.getWorldUuid(),
-                    0
+                    0,
+                    false,
+                    null
                 );
                 AddToServerPlayerList addPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[]{listPlayer});
                 joiningPlayer.getPacketHandler().write(removePacket);

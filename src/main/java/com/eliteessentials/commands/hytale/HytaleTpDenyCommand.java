@@ -11,7 +11,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -30,7 +30,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.tpdeny - Deny teleport requests
  */
-public class HytaleTpDenyCommand extends AbstractPlayerCommand {
+public class HytaleTpDenyCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "tpdeny";
     

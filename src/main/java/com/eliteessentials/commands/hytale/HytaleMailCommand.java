@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -39,7 +39,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.mail.use - Use mail commands
  * - eliteessentials.command.mail.send - Send mail
  */
-public class HytaleMailCommand extends AbstractPlayerCommand {
+public class HytaleMailCommand extends ElitePlayerCommand {
 
     private final MailService mailService;
     private final ConfigManager configManager;

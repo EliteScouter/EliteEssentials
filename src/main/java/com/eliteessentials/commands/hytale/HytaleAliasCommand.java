@@ -9,7 +9,7 @@ import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -25,7 +25,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - /alias list - List all aliases
  * - /alias info <name> - Show alias details
  */
-public class HytaleAliasCommand extends CommandBase {
+public class HytaleAliasCommand extends EliteCommandBase {
 
     public HytaleAliasCommand() {
         super("alias", "Manage command aliases");

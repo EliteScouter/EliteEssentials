@@ -51,6 +51,11 @@ All 500+ player-facing messages are configurable in `messages.json`. Translate y
 - **`/rtp`** - Teleport to a random location in the world
 - Safe landing detection (avoids spawning underground)
 - Configurable min/max range, cooldown, and warmup
+- **Per-group ranges** (advanced permissions mode) - give different groups different min/max distances
+  - `rtp.permissionRanges` - named ranges granted with `eliteessentials.command.tp.rtp.range.<name>`
+  - `rtp.groupRanges` - ranges keyed directly by LuckPerms or HyperPerms group name
+  - Both are empty by default; see PERMISSIONS.md for examples
+- **Per-world ranges** - `rtp.worldRanges` sets min/max per world
 - **Force World Mode** - Optionally restrict RTP to a specific world
   - `rtp.forceWorldEnabled: false` (default) - RTP within current world
   - `rtp.forceWorldEnabled: true` - Always RTP to specified world
@@ -140,7 +145,8 @@ All 500+ player-facing messages are configurable in `messages.json`. Translate y
 - **Group-Based Chat Formatting** - Customize chat appearance by player group
   - Works with LuckPerms groups and simple permissions
   - Priority-based group selection (highest priority wins)
-  - Color codes and placeholders: `{player}`, `{displayname}`, `{message}`, `{prefix}`, `{suffix}`, `{group}`
+  - Color codes and placeholders: `{player}`, `{displayname}`, `{message}`, `{prefix}`, `{suffix}`, `{group}`, `{time}`, `{date}`
+  - **Timestamps in chat**: `{time}` and `{date}` with configurable patterns and time zone (`chatFormat.timeFormat`, `dateFormat`, `timeZone`)
   - **Hex color support**: Use `&#RRGGBB` format for precise colors (e.g., `&#FF5555`)
   - **LuckPerms prefix/suffix support**: Use `{prefix}` and `{suffix}` to display LuckPerms meta
   - Create gradients with per-character hex colors
@@ -210,10 +216,15 @@ All 500+ player-facing messages are configurable in `messages.json`. Translate y
 
 ### Mute System (Admin)
 - **`/mute <player> [reason]`** - Mute a player server-wide with optional reason
-- **`/unmute <player>`** - Unmute a player
+- **`/tempmute <player> <time> [reason]`** - Mute a player for a set duration
+  - Time format: `1d` (1 day), `2h` (2 hours), `30m` (30 minutes), `1d12h` (1 day 12 hours)
+  - Supports days (d), hours (h), minutes (m), seconds (s); a bare number means minutes
+  - Runnable from the console
+- **`/unmute <player>`** - Unmute a player (works on both permanent and temporary mutes)
 - Muted players cannot send public chat or private messages
-- Muted players are notified when muted/unmuted
+- Muted players are notified when muted/unmuted, and temp mutes report the time remaining
 - Mute data stored in `mutes.json` (persists across restarts)
+- Temporary mutes expire on their own and are cleaned up on server start
 
 ### Ban System (Admin)
 - **`/ban <player> [reason]`** - Permanently ban a player with optional reason
@@ -410,6 +421,7 @@ Config file is automatically created on first server start with sensible default
 | `/gcspy` | Spy on group chats (alias for `/spy gchat`) | Admin |
 | `/spy [gchat\|dm\|command]` | Toggle staff spy modes (group chat, DMs, commands) | Admin |
 | `/mute <player> [reason]` | Mute a player | Admin |
+| `/tempmute <player> <time> [reason]` | Temporarily mute a player | Admin |
 | `/unmute <player>` | Unmute a player | Admin |
 | `/warn <player> [reason]` | Add warning | Admin |
 | `/warnings [player]` | List warnings | Everyone / Admin* |
@@ -464,7 +476,7 @@ Full granular permissions following `eliteessentials.command.<category>.<action>
 | Misc | `command.misc.msg`, `command.misc.heal`, `command.misc.heal.others`, `command.misc.repair`, `command.misc.repair.all`, `command.misc.ignore`, `command.misc.invsee`, `command.misc.groupchat`, `command.misc.groupchat.spy`, `command.misc.nick`, `command.misc.nick.color`, `command.misc.nickname.others`, `command.misc.nickname.lookup` |
 | Mail | `command.mail.use`, `command.mail.send` |
 | Chat | `chat.color`, `chat.format`, `chat.<chatname>` (permission-based group chats) |
-| Admin | `admin.reload`, `admin.alias`, `admin.mute`, `admin.unmute`, `admin.ban`, `admin.tempban`, `admin.ipban`, `admin.unban`, `admin.unipban`, `admin.freeze`, `admin.warn`, `admin.clearwarnings`, `admin.spy`, `admin.adminui` |
+| Admin | `admin.reload`, `admin.alias`, `admin.mute`, `admin.tempmute`, `admin.unmute`, `admin.ban`, `admin.tempban`, `admin.ipban`, `admin.unban`, `admin.unipban`, `admin.freeze`, `admin.warn`, `admin.clearwarnings`, `admin.spy`, `admin.adminui` |
 | Bypass | `command.home.bypass.cooldown`, `command.tp.bypass.warmup`, `bypass.cost` |
 
 See [PERMISSIONS.md](PERMISSIONS.md) for the complete permission reference.

@@ -21,7 +21,7 @@ import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -53,7 +53,7 @@ import javax.annotation.Nonnull;
  * - eliteessentials.bypass.warmup.spawn - Skip warmup
  * - eliteessentials.bypass.cooldown.spawn - Skip cooldown
  */
-public class HytaleSpawnCommand extends CommandBase {
+public class HytaleSpawnCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "spawn";
     private final BackService backService;

@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -32,7 +32,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Shows relative time (e.g., "2 days, 3 hours ago") to avoid timezone issues.
  * If the player is currently online, shows "online now".
  */
-public class HytaleSeenCommand extends AbstractPlayerCommand {
+public class HytaleSeenCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "seen";
     

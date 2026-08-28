@@ -378,7 +378,9 @@ public class VanishService {
                     targetPlayer.getUuid(),
                     targetPlayer.getUsername(),
                     targetPlayer.getWorldUuid(),
-                    0
+                    0,
+                    false,
+                    null
                 );
                 AddToServerPlayerList addPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[] { listPlayer });
                 for (PlayerRef player : universe.getPlayers()) {
@@ -438,7 +440,9 @@ public class VanishService {
                             targetPlayer.getUuid(),
                             targetPlayer.getUsername(),
                             targetPlayer.getWorldUuid(),
-                            0
+                            0,
+                            false,
+                            null
                         );
                         AddToServerPlayerList packet = new AddToServerPlayerList(new ServerPlayerListPlayer[] { listPlayer });
                         player.getPacketHandler().write(packet);

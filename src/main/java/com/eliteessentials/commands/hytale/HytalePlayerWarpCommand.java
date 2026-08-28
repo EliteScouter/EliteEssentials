@@ -23,7 +23,7 @@ import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -54,7 +54,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - /pwarp setloc <name> - Update warp location to current position
  * - /pwarp toggle <name> - Toggle public/private
  */
-public class HytalePlayerWarpCommand extends AbstractPlayerCommand {
+public class HytalePlayerWarpCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "pwarp";
 

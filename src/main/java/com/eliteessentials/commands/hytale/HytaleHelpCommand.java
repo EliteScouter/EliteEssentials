@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - Are enabled in config
  * - The player has permission to use (based on simple/advanced mode)
  */
-public class HytaleHelpCommand extends CommandBase {
+public class HytaleHelpCommand extends EliteCommandBase {
 
     public HytaleHelpCommand() {
         super("eehelp", "Show available EliteEssentials commands");
@@ -241,6 +241,7 @@ public class HytaleHelpCommand extends CommandBase {
             
             if (config.mute.enabled) {
                 available.add(new CommandInfo("/mute <player> [reason]", "Mute a player"));
+                available.add(new CommandInfo("/tempmute <player> <time> [reason]", "Temporarily mute a player"));
                 available.add(new CommandInfo("/unmute <player>", "Unmute a player"));
             }
             

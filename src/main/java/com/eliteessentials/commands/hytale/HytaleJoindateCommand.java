@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -31,7 +31,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  *   /joindate        - Shows your own join date
  *   /joindate <name> - Shows another player's join date (requires .others permission)
  */
-public class HytaleJoindateCommand extends AbstractPlayerCommand {
+public class HytaleJoindateCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "joindate";
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MMM dd, yyyy 'at' HH:mm");
@@ -80,7 +80,7 @@ public class HytaleJoindateCommand extends AbstractPlayerCommand {
      * /joindate <player> - View another player's join date.
      * Requires eliteessentials.command.misc.joindate.others permission.
      */
-    private static class JoindateOtherCommand extends AbstractPlayerCommand {
+    private static class JoindateOtherCommand extends ElitePlayerCommand {
         private final ConfigManager configManager;
         private final PlayerService playerService;
         private final RequiredArg<String> targetArg;

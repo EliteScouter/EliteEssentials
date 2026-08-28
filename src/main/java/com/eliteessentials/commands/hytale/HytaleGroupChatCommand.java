@@ -13,7 +13,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -37,7 +37,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * 
  * Aliases: /groupchat, /gchat, /g
  */
-public class HytaleGroupChatCommand extends AbstractPlayerCommand {
+public class HytaleGroupChatCommand extends ElitePlayerCommand {
     
     private final GroupChatService groupChatService;
     private final ConfigManager configManager;
@@ -74,7 +74,7 @@ public class HytaleGroupChatCommand extends AbstractPlayerCommand {
         // Block muted players from sending group chat messages
         if (muteService != null && muteService.isMuted(player.getUuid())) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("mutedBlocked"), "#FF5555"));
+                muteService.getMuteBlockedMessage(player.getUuid()), "#FF5555"));
             return;
         }
         

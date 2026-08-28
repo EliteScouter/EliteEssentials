@@ -17,6 +17,9 @@ public class SchemaManager {
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final int CURRENT_SCHEMA_VERSION = 3;
 
+    /** MySQL ER_DUP_KEYNAME: the index name already exists on the table. */
+    private static final int MYSQL_ER_DUP_KEYNAME = 1061;
+
     /**
      * Initialize the database schema. Creates all tables if they don't exist
      * and applies any pending migrations.
@@ -35,7 +38,7 @@ public class SchemaManager {
             insertSchemaVersion(conn, tablePrefix, CURRENT_SCHEMA_VERSION);
             logger.info("[SchemaManager] Created schema version " + CURRENT_SCHEMA_VERSION);
         } else if (currentVersion < CURRENT_SCHEMA_VERSION) {
-            migrate(conn, tablePrefix, currentVersion, CURRENT_SCHEMA_VERSION);
+            migrate(conn, tablePrefix, currentVersion, CURRENT_SCHEMA_VERSION, isMySQL);
             logger.info("[SchemaManager] Migrated schema from v" + currentVersion + " to v" + CURRENT_SCHEMA_VERSION);
         } else {
             logger.info("[SchemaManager] Schema is up to date (v" + currentVersion + ")");
@@ -62,11 +65,15 @@ public class SchemaManager {
      * Apply incremental schema migrations from {@code fromVersion} to {@code toVersion}.
      * Each migration step runs inside its own transaction so a failure rolls back
      * only the failing step.
+     *
+     * @param isMySQL true if using MySQL/MariaDB, false for SQLite. Passed in rather than
+     *                sniffed from {@code DatabaseMetaData} because the product name varies
+     *                by driver (MariaDB reports "MariaDB" under its own driver, "MySQL"
+     *                under Connector/J), which would silently select the wrong DDL dialect.
      */
-    public void migrate(Connection conn, String tablePrefix, int fromVersion, int toVersion) throws SQLException {
+    public void migrate(Connection conn, String tablePrefix, int fromVersion, int toVersion, boolean isMySQL)
+            throws SQLException {
         boolean originalAutoCommit = conn.getAutoCommit();
-        // Detect MySQL vs SQLite for migration DDL
-        boolean isMySQL = conn.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql");
         for (int v = fromVersion + 1; v <= toVersion; v++) {
             try {
                 conn.setAutoCommit(false);
@@ -103,10 +110,10 @@ public class SchemaManager {
                             + "detail     TEXT,"
                             + "timestamp  BIGINT       NOT NULL"
                             + ")");
-                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_type ON "
-                            + tablePrefix + "activity_log(type)");
-                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
-                            + tablePrefix + "activity_log(timestamp)");
+                    createIndex(stmt, isMySQL, "idx_" + tablePrefix + "activity_type",
+                            tablePrefix + "activity_log", "type");
+                    createIndex(stmt, isMySQL, "idx_" + tablePrefix + "activity_ts",
+                            tablePrefix + "activity_log", "timestamp");
                 }
                 break;
             case 3:
@@ -126,14 +133,44 @@ public class SchemaManager {
                             + "description TEXT,"
                             + "created_at  BIGINT       NOT NULL DEFAULT 0"
                             + ")");
-                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_owner ON "
-                            + tablePrefix + "player_warps(owner_uuid)");
-                    stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_vis ON "
-                            + tablePrefix + "player_warps(visibility)");
+                    createIndex(stmt, isMySQL, "idx_" + tablePrefix + "pwarp_owner",
+                            tablePrefix + "player_warps", "owner_uuid");
+                    createIndex(stmt, isMySQL, "idx_" + tablePrefix + "pwarp_vis",
+                            tablePrefix + "player_warps", "visibility");
                 }
                 break;
             default:
                 break;
+        }
+    }
+
+    /**
+     * Create an index idempotently on both backends.
+     *
+     * <p>SQLite supports {@code CREATE INDEX IF NOT EXISTS}. MySQL does not, and rejects it
+     * with a syntax error. MariaDB happens to accept it (10.0.2+), which is why this bug only
+     * surfaced on real MySQL. For the MySQL path we issue a plain {@code CREATE INDEX} and
+     * swallow error 1061 (duplicate key name), since an already-existing index is the desired
+     * end state. Catching the error is preferred over an {@code information_schema} pre-check
+     * because it is race-free and avoids an extra round trip per index.
+     *
+     * @param columns raw column list, e.g. {@code "uuid"} or {@code "world, name"}.
+     *                Never built from user input.
+     */
+    private void createIndex(Statement stmt, boolean isMySQL, String indexName,
+                             String table, String columns) throws SQLException {
+        if (!isMySQL) {
+            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS " + indexName
+                    + " ON " + table + "(" + columns + ")");
+            return;
+        }
+        try {
+            stmt.executeUpdate("CREATE INDEX " + indexName + " ON " + table + "(" + columns + ")");
+        } catch (SQLException e) {
+            if (e.getErrorCode() != MYSQL_ER_DUP_KEYNAME) {
+                throw e;
+            }
+            // Index already present — nothing to do.
         }
     }
 
@@ -161,8 +198,8 @@ public class SchemaManager {
                     + "vanished     BOOLEAN      NOT NULL DEFAULT FALSE,"
                     + "default_group_chat VARCHAR(64)"
                     + ")");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "players_name ON "
-                    + tablePrefix + "players(name)");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "players_name",
+                    tablePrefix + "players", "name");
 
             // Homes
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "homes ("
@@ -192,8 +229,8 @@ public class SchemaManager {
                     + "pitch      FLOAT        NOT NULL DEFAULT 0,"
                     + "FOREIGN KEY (uuid) REFERENCES " + tablePrefix + "players(uuid) ON DELETE CASCADE"
                     + ")");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "back_uuid ON "
-                    + tablePrefix + "back_history(uuid)");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "back_uuid",
+                    tablePrefix + "back_history", "uuid");
 
             // Kit claims
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "kit_claims ("
@@ -242,8 +279,8 @@ public class SchemaManager {
                     + "is_read    BOOLEAN      NOT NULL DEFAULT FALSE,"
                     + "FOREIGN KEY (uuid) REFERENCES " + tablePrefix + "players(uuid) ON DELETE CASCADE"
                     + ")");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "mailbox_uuid ON "
-                    + tablePrefix + "mailbox(uuid)");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "mailbox_uuid",
+                    tablePrefix + "mailbox", "uuid");
 
             // IP history
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "ip_history ("
@@ -318,10 +355,10 @@ public class SchemaManager {
                     + "detail     TEXT,"
                     + "timestamp  BIGINT       NOT NULL"
                     + ")");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_type ON "
-                    + tablePrefix + "activity_log(type)");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "activity_ts ON "
-                    + tablePrefix + "activity_log(timestamp)");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "activity_type",
+                    tablePrefix + "activity_log", "type");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "activity_ts",
+                    tablePrefix + "activity_log", "timestamp");
 
             // Player warps
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS " + tablePrefix + "player_warps ("
@@ -338,10 +375,10 @@ public class SchemaManager {
                     + "description TEXT,"
                     + "created_at  BIGINT       NOT NULL DEFAULT 0"
                     + ")");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_owner ON "
-                    + tablePrefix + "player_warps(owner_uuid)");
-            stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_" + tablePrefix + "pwarp_vis ON "
-                    + tablePrefix + "player_warps(visibility)");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "pwarp_owner",
+                    tablePrefix + "player_warps", "owner_uuid");
+            createIndex(stmt, isMySQL, "idx_" + tablePrefix + "pwarp_vis",
+                    tablePrefix + "player_warps", "visibility");
         }
     }
 }

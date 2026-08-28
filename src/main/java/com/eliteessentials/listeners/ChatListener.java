@@ -11,6 +11,7 @@ import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.NickService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TimePlaceholderUtil;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerChatEvent;
@@ -129,7 +130,7 @@ public class ChatListener {
         // Block muted players
         if (muteService != null && muteService.isMuted(sender.getUuid())) {
             sender.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("mutedBlocked"), "#FF5555"));
+                muteService.getMuteBlockedMessage(sender.getUuid()), "#FF5555"));
             return;
         }
 
@@ -179,7 +180,7 @@ public class ChatListener {
         // Block muted players from chatting
         if (muteService != null && muteService.isMuted(sender.getUuid())) {
             sender.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("mutedBlocked"), "#FF5555"));
+                muteService.getMuteBlockedMessage(sender.getUuid()), "#FF5555"));
             return;
         }
 
@@ -201,6 +202,12 @@ public class ChatListener {
         String formattedMessage = format
                 .replace("{player}", displayName)
                 .replace("{displayname}", displayName);
+
+        // Replace {time}/{date} while {message} is still a placeholder, so a player
+        // typing "{time}" in chat can't have it resolved as a real placeholder
+        var chatConfig = configManager.getConfig().chatFormat;
+        formattedMessage = TimePlaceholderUtil.replace(formattedMessage,
+                chatConfig.timeFormat, chatConfig.dateFormat, chatConfig.timeZone);
 
         // Replace LuckPerms placeholders if available (thread-safe, no store access)
         formattedMessage = replaceLuckPermsPlaceholders(sender, formattedMessage);

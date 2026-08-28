@@ -6,7 +6,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
@@ -22,7 +22,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Aliases: /cc
  * Permission: eliteessentials.command.misc.clearchat (Admin only)
  */
-public class HytaleClearChatCommand extends CommandBase {
+public class HytaleClearChatCommand extends EliteCommandBase {
     
     private final ConfigManager configManager;
     

@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -32,7 +32,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Example: /kit create Starter 0 yes
  * Note: A kit named "Starter" will automatically be given to new players on join.
  */
-public class HytaleKitCreateCommand extends AbstractPlayerCommand {
+public class HytaleKitCreateCommand extends ElitePlayerCommand {
     private final KitService kitService;
     private final RequiredArg<String> nameArg;
     private final RequiredArg<Integer> cooldownArg;

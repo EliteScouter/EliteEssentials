@@ -80,7 +80,12 @@ public class AdminMutesPage extends InteractiveCustomUIPage<AdminMutesPage.MuteE
         for (Map.Entry<String, MuteService.MuteEntry> entry : mutes.entrySet()) {
             String name = entry.getValue().playerName != null ? entry.getValue().playerName : entry.getKey();
             String reason = entry.getValue().reason != null ? entry.getValue().reason : "No reason";
-            sb.append(name).append(" - ").append(reason).append("\n");
+            sb.append(name).append(" - ").append(reason);
+            if (!entry.getValue().isPermanent()) {
+                sb.append(" (").append(com.eliteessentials.services.TempBanService.formatDuration(
+                    entry.getValue().getRemainingTime())).append(" left)");
+            }
+            sb.append("\n");
         }
         cmd.set("#MuteList.Text", sb.toString().trim());
     }

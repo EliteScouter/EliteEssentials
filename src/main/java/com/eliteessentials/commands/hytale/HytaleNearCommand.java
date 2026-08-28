@@ -14,7 +14,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -42,7 +42,7 @@ import javax.annotation.Nonnull;
  * Usage: /near
  * Permission: eliteessentials.command.misc.near (Everyone)
  */
-public class HytaleNearCommand extends AbstractPlayerCommand {
+public class HytaleNearCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "near";
 

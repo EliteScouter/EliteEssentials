@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
@@ -36,7 +36,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Aliases: /sm
  * Permission: eliteessentials.admin.sendmessage (Admin only)
  */
-public class HytaleSendMessageCommand extends CommandBase {
+public class HytaleSendMessageCommand extends EliteCommandBase {
     
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     

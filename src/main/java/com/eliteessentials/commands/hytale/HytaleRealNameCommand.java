@@ -9,7 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -25,7 +25,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  *
  * Permission: eliteessentials.command.misc.nickname.lookup (Admin)
  */
-public class HytaleRealNameCommand extends CommandBase {
+public class HytaleRealNameCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "realname";
 

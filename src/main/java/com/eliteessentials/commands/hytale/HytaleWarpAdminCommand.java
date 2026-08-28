@@ -17,7 +17,7 @@ import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -48,7 +48,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - /warpsetperm <name> <all|op>
  * - /warpsetdesc <name> <description>
  */
-public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
+public class HytaleWarpAdminCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "warpadmin";
     
@@ -124,7 +124,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
      * Subcommand variant with 1 argument: /warpadmin <subcommand> <arg>
      * Handles: create <name>, delete <name>, info <name>
      */
-    private static class WarpSubCommand1Arg extends AbstractPlayerCommand {
+    private static class WarpSubCommand1Arg extends ElitePlayerCommand {
         private final WarpService warpService;
         private final RequiredArg<String> subcommandArg;
         private final RequiredArg<String> arg1;
@@ -176,7 +176,7 @@ public class HytaleWarpAdminCommand extends AbstractPlayerCommand {
     /**
      * Subcommand variant with 2 arguments: /warpadmin create <name> <perm>
      */
-    private static class WarpSubCommand2Args extends AbstractPlayerCommand {
+    private static class WarpSubCommand2Args extends ElitePlayerCommand {
         private final WarpService warpService;
         private final RequiredArg<String> subcommandArg;
         private final RequiredArg<String> arg1;

@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -31,7 +31,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  *   /playtime        - Shows your own playtime (includes current session)
  *   /playtime <name> - Shows another player's playtime (requires .others permission)
  */
-public class HytalePlaytimeCommand extends AbstractPlayerCommand {
+public class HytalePlaytimeCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "playtime";
 
@@ -75,7 +75,7 @@ public class HytalePlaytimeCommand extends AbstractPlayerCommand {
      * /playtime <player> - View another player's playtime.
      * Requires eliteessentials.command.misc.playtime.others permission.
      */
-    private static class PlaytimeOtherCommand extends AbstractPlayerCommand {
+    private static class PlaytimeOtherCommand extends ElitePlayerCommand {
         private final ConfigManager configManager;
         private final PlayerService playerService;
         private final RequiredArg<String> targetArg;

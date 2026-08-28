@@ -17,7 +17,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import org.joml.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -43,7 +43,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  *
  * Parameter handling matches /nick: single optional name, no fancy brackets.
  */
-public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
+public class HytalePlayerInfoCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "playerinfo";
 
@@ -251,13 +251,20 @@ public class HytalePlayerInfoCommand extends AbstractPlayerCommand {
         ctx.sendMessage(MessageFormatter.formatWithFallback(
             configManager.getMessage("playerinfoLabelPunishments"), "#FFAA00"));
 
-        // Mute status
-        if (muteService.isMuted(targetId)) {
-            MuteService.MuteEntry mute = muteService.getMuteEntry(targetId);
+        // Mute status (permanent or temp). Fetched once so an expiry landing between
+        // the check and the read cannot produce a null entry.
+        MuteService.MuteEntry mute = muteService.getMuteEntry(targetId);
+        if (mute != null) {
             String reasonPart = mute.reason != null
                 ? configManager.getMessage("playerinfoPunishmentReason", "reason", mute.reason) : "";
-            ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("playerinfoMuted", "by", mute.mutedBy, "reason", reasonPart), "#FFFFFF"));
+            if (mute.isPermanent()) {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerinfoMuted", "by", mute.mutedBy, "reason", reasonPart), "#FFFFFF"));
+            } else {
+                ctx.sendMessage(MessageFormatter.formatWithFallback(
+                    configManager.getMessage("playerinfoTempMuted", "by", mute.mutedBy,
+                        "time", formatRemainingTime(mute.muteEndTimestamp), "reason", reasonPart), "#FFFFFF"));
+            }
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
                 configManager.getMessage("playerinfoMutedNone"), "#FFFFFF"));

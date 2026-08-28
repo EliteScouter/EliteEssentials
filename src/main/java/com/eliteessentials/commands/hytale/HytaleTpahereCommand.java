@@ -17,7 +17,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -38,7 +38,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.tpahere - Send tpahere requests
  */
-public class HytaleTpahereCommand extends AbstractPlayerCommand {
+public class HytaleTpahereCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "tpahere";
     
@@ -166,7 +166,7 @@ public class HytaleTpahereCommand extends AbstractPlayerCommand {
      * in server 0.5.1 surfaces online players directly via the engine's
      * built-in {@code suggestOnlinePlayers} hook.
      */
-    private class TpahereWithTargetCommand extends AbstractPlayerCommand {
+    private class TpahereWithTargetCommand extends ElitePlayerCommand {
         private final RequiredArg<PlayerRef> targetArg;
 
         TpahereWithTargetCommand(TpaService tpaService) {

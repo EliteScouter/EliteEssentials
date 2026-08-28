@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 
@@ -40,7 +40,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Can be run from console or by admins in-game.
  * Permission: eliteessentials.command.economy.wallet.admin
  */
-public class HytaleEcoCommand extends CommandBase {
+public class HytaleEcoCommand extends EliteCommandBase {
 
     private final ConfigManager configManager;
     private final PlayerService playerService;
@@ -199,7 +199,7 @@ public class HytaleEcoCommand extends CommandBase {
      * /eco <action> <player> <amount>
      * Example: /eco set Steve 1000
      */
-    private static class EcoWithAmountCommand extends CommandBase {
+    private static class EcoWithAmountCommand extends EliteCommandBase {
         private final ConfigManager configManager;
         private final PlayerService playerService;
         private final RequiredArg<String> actionArg;

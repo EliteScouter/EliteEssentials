@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -19,7 +19,7 @@ import javax.annotation.Nonnull;
 import java.util.UUID;
 import com.eliteessentials.util.CommandSpyUtil;
 
-public class HytaleUnbanCommand extends AbstractPlayerCommand {
+public class HytaleUnbanCommand extends ElitePlayerCommand {
 
     private final BanService banService;
     private final ConfigManager configManager;

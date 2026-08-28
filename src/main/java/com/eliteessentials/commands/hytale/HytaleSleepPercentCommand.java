@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleIntArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -24,7 +24,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.sleeppercent - Use this command (admin only by default)
  */
-public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
+public class HytaleSleepPercentCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "sleeppercent";
     
@@ -68,7 +68,7 @@ public class HytaleSleepPercentCommand extends AbstractPlayerCommand {
     /**
      * Variant: /sleeppercent <percentage>
      */
-    private static class SetPercentCommand extends AbstractPlayerCommand {
+    private static class SetPercentCommand extends ElitePlayerCommand {
         private final ConfigManager configManager;
         private final RequiredArg<Integer> percentArg;
         

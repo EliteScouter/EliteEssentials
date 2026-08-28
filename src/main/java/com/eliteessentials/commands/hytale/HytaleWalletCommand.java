@@ -13,7 +13,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -40,7 +40,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - /wallet set Steve 1000
  * - /wallet add Steve 500
  */
-public class HytaleWalletCommand extends AbstractPlayerCommand {
+public class HytaleWalletCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "wallet";
     
@@ -91,7 +91,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
      * /wallet <player> - View another player's balance
      * Example: /wallet Steve
      */
-    private static class WalletViewOtherCommand extends AbstractPlayerCommand {
+    private static class WalletViewOtherCommand extends ElitePlayerCommand {
         private final ConfigManager configManager;
         private final PlayerService playerService;
         private final RequiredArg<String> targetArg;
@@ -153,7 +153,7 @@ public class HytaleWalletCommand extends AbstractPlayerCommand {
      * /wallet <action> <player> <amount> - Admin command for set/add/remove
      * Example: /wallet set Steve 1000
      */
-    private static class WalletAdminCommand extends AbstractPlayerCommand {
+    private static class WalletAdminCommand extends ElitePlayerCommand {
         private final ConfigManager configManager;
         private final PlayerService playerService;
         private final RequiredArg<String> actionArg;

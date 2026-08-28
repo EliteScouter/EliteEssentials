@@ -13,7 +13,7 @@ import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -32,7 +32,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * 
  * Permission: eliteessentials.command.spawn.set (OP only by default)
  */
-public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
+public class HytaleSetSpawnCommand extends ElitePlayerCommand {
 
     private final SpawnStorage spawnStorage;
 
@@ -136,7 +136,7 @@ public class HytaleSetSpawnCommand extends AbstractPlayerCommand {
     /**
      * Variant: /setspawn <name>
      */
-    private static class SetSpawnWithNameCommand extends AbstractPlayerCommand {
+    private static class SetSpawnWithNameCommand extends ElitePlayerCommand {
         private final SpawnStorage spawnStorage;
         private final RequiredArg<String> nameArg;
         

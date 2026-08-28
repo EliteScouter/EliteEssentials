@@ -18,7 +18,7 @@ import com.hypixel.hytale.component.Store;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -41,7 +41,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.tp.bypass.cooldown.back - Skip cooldown
  * - eliteessentials.command.tp.cooldown.back.<seconds> - Custom cooldown
  */
-public class HytaleBackCommand extends AbstractPlayerCommand {
+public class HytaleBackCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "back";
     

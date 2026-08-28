@@ -23,7 +23,8 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
+import com.hypixel.hytale.protocol.FlyMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -61,7 +62,7 @@ public class AliasService {
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final AliasStorage storage;
     private final CommandRegistry commandRegistry;
-    private final Map<String, AbstractPlayerCommand> registeredCommands = new HashMap<>();
+    private final Map<String, ElitePlayerCommand> registeredCommands = new HashMap<>();
 
     /**
      * Set of EE commands that have optimized handling (silent mode, /back saving, etc.).
@@ -148,7 +149,7 @@ public class AliasService {
     private static final Set<String> ADMIN_ONLY_COMMANDS = Set.of(
         "setspawn", "delspawn", "spawns", "tphere", "warpadmin", "warpsetperm", "warpsetdesc",
         "kitcreate", "kitdelete", "broadcast", "clearchat", "eco",
-        "sleeppercent", "eliteessentials", "alias", "mute", "unmute",
+        "sleeppercent", "eliteessentials", "alias", "mute", "tempmute", "unmute",
         "ban", "unban", "tempban", "ipban", "unipban", "freeze",
         "invsee", "sendmessage", "gcspy", "gcset", "eemigration"
     );
@@ -209,6 +210,7 @@ public class AliasService {
         COMMAND_PERMISSION_MAP.put("alias", com.eliteessentials.permissions.Permissions.ADMIN_ALIAS);
         COMMAND_PERMISSION_MAP.put("eliteessentials", com.eliteessentials.permissions.Permissions.ADMIN_RELOAD);
         COMMAND_PERMISSION_MAP.put("mute", com.eliteessentials.permissions.Permissions.ADMIN_MUTE);
+        COMMAND_PERMISSION_MAP.put("tempmute", com.eliteessentials.permissions.Permissions.ADMIN_TEMPMUTE);
         COMMAND_PERMISSION_MAP.put("unmute", com.eliteessentials.permissions.Permissions.ADMIN_UNMUTE);
         COMMAND_PERMISSION_MAP.put("ban", com.eliteessentials.permissions.Permissions.ADMIN_BAN);
         COMMAND_PERMISSION_MAP.put("unban", com.eliteessentials.permissions.Permissions.ADMIN_UNBAN);
@@ -250,7 +252,7 @@ public class AliasService {
 
     // ==================== ALIAS COMMAND IMPLEMENTATION ====================
 
-    private static class AliasPlayerCommand extends AbstractPlayerCommand {
+    private static class AliasPlayerCommand extends ElitePlayerCommand {
         private final String aliasName;
         public AliasPlayerCommand(String name, AliasData data) {
             super(name, "Alias: " + data.command);
@@ -574,9 +576,12 @@ public class AliasService {
             
             MovementManager mm = store.getComponent(ref, MovementManager.getComponentType());
             if (mm == null) return;
-            var s = mm.getSettings(); s.canFly = !s.canFly; mm.update(player.getPacketHandler());
+            var s = mm.getSettings();
+            boolean flyEnabled = s.fly == FlyMode.Disabled;
+            s.fly = flyEnabled ? FlyMode.Allowed : FlyMode.Disabled;
+            mm.update(player.getPacketHandler());
             if (!silent) {
-                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage(s.canFly ? "flyEnabled" : "flyDisabled"), s.canFly ? "#55FF55" : "#FF5555"));
+                ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage(flyEnabled ? "flyEnabled" : "flyDisabled"), flyEnabled ? "#55FF55" : "#FF5555"));
             }
         }
 

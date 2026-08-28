@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -30,7 +30,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.delhome.self - Delete own homes
  * - eliteessentials.command.delhome.other - Delete other players' homes (admin)
  */
-public class HytaleDelHomeCommand extends AbstractPlayerCommand {
+public class HytaleDelHomeCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "delhome";
     
@@ -83,7 +83,7 @@ public class HytaleDelHomeCommand extends AbstractPlayerCommand {
     /**
      * Variant: /delhome <name>
      */
-    private static class DelHomeWithNameCommand extends AbstractPlayerCommand {
+    private static class DelHomeWithNameCommand extends ElitePlayerCommand {
         private final HomeService homeService;
         private final RequiredArg<String> nameArg;
         

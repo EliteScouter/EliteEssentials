@@ -13,7 +13,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
@@ -41,7 +41,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.misc.heal.bypass.cooldown - Skip cooldown
  * - eliteessentials.command.misc.heal.cooldown.<seconds> - Custom cooldown
  */
-public class HytaleHealCommand extends CommandBase {
+public class HytaleHealCommand extends EliteCommandBase {
 
     private static final String COMMAND_NAME = "heal";
 

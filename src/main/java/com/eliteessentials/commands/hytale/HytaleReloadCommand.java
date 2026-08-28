@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 
 import javax.annotation.Nonnull;
 import com.eliteessentials.util.CommandSpyUtil;
@@ -28,7 +28,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - Admin only (simple mode)
  * - eliteessentials.admin.reload, eliteessentials.admin.groupsync (advanced mode)
  */
-public class HytaleReloadCommand extends CommandBase {
+public class HytaleReloadCommand extends EliteCommandBase {
 
     private final RequiredArg<String> actionArg;
 

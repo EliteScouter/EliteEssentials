@@ -387,7 +387,9 @@ public class AfkService {
                 targetPlayer.getUuid(),
                 displayName,
                 targetPlayer.getWorldUuid(),
-                0
+                0,
+                false,
+                null
             );
             AddToServerPlayerList addPacket = new AddToServerPlayerList(new ServerPlayerListPlayer[] { listPlayer });
             

@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.args.SimpleStringArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -20,7 +20,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Subcommand to delete a kit.
  * Usage: /kit delete <name>
  */
-public class HytaleKitDeleteCommand extends AbstractPlayerCommand {
+public class HytaleKitDeleteCommand extends ElitePlayerCommand {
     private final KitService kitService;
     private final RequiredArg<String> nameArg;
 

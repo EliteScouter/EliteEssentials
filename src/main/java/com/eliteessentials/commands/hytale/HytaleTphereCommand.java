@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -39,7 +39,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.tp.tphere (Admin only)
  */
-public class HytaleTphereCommand extends AbstractPlayerCommand {
+public class HytaleTphereCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "tphere";
     

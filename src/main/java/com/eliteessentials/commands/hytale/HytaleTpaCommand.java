@@ -16,7 +16,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -37,7 +37,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.tpa - Send teleport requests
  */
-public class HytaleTpaCommand extends AbstractPlayerCommand {
+public class HytaleTpaCommand extends ElitePlayerCommand {
 
     private static final String COMMAND_NAME = "tpa";
     
@@ -165,7 +165,7 @@ public class HytaleTpaCommand extends AbstractPlayerCommand {
      * built-in {@code suggestOnlinePlayers} hook. This is online-only by
      * design (the engine rejects offline names with its own error).
      */
-    private class TpaWithTargetCommand extends AbstractPlayerCommand {
+    private class TpaWithTargetCommand extends ElitePlayerCommand {
         private final RequiredArg<PlayerRef> targetArg;
 
         TpaWithTargetCommand(TpaService tpaService) {

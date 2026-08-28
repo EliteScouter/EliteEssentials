@@ -12,7 +12,7 @@ import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -29,7 +29,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * /invsee <player> - View another player's inventory.
  * Parses args manually (no OptionalArg) to avoid Hytale's "Expected: 0, actual: 1" error.
  */
-public class HytaleInvseeCommand extends AbstractPlayerCommand {
+public class HytaleInvseeCommand extends ElitePlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "invsee";

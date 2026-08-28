@@ -731,6 +731,7 @@ public class PluginConfig {
         // ==================== PLAYERINFO PUNISHMENT SECTION ====================
         messages.put("playerinfoLabelPunishments", "--- Punishment Status ---");
         messages.put("playerinfoMuted", "Muted: &cYes &7(by {by}{reason})");
+        messages.put("playerinfoTempMuted", "Temp Muted: &cYes &7(by {by}, {time} remaining{reason})");
         messages.put("playerinfoMutedNone", "Muted: &aNo");
         messages.put("playerinfoBanned", "Banned: &cYes &7(by {by}{reason})");
         messages.put("playerinfoTempBanned", "Temp Banned: &cYes &7(by {by}, {time} remaining{reason})");
@@ -765,6 +766,16 @@ public class PluginConfig {
         messages.put("unmuteSuccess", "&a{player} &ahas been unmuted.");
         messages.put("unmuteNotMuted", "&c{player} &cis not muted.");
         messages.put("unmutedNotify", "&aYou have been unmuted.");
+        
+        // ==================== TEMPMUTE ====================
+        messages.put("tempmuteUsage", "&cUsage: &e/tempmute <player> <time> [reason] &7(e.g. 1d, 2h, 30m)");
+        messages.put("tempmuteSelf", "&cYou cannot temp mute yourself.");
+        messages.put("tempmuteInvalidTime", "&cInvalid time format. Use: &e1d, 2h, 30m, 1d12h");
+        messages.put("tempmuteSuccess", "&a{player} &ahas been muted for &e{time}&a.");
+        messages.put("tempmuteAlready", "&c{player} &cis already muted.");
+        messages.put("tempmutedNotify", "&cYou have been muted for &e{time}&c.");
+        messages.put("tempmutedNotifyReason", "&cYou have been muted for &e{time}&c. Reason: &e{reason}");
+        messages.put("tempmutedBlocked", "&cYou are muted and cannot send messages. Time remaining: &e{time}");
         
         // ==================== BAN ====================
         messages.put("banUsage", "&cUsage: &e/ban <player> [reason]");
@@ -870,6 +881,33 @@ public class PluginConfig {
          * Example: {"explore": {minRange: 500, maxRange: 10000}, "hub": {minRange: 50, maxRange: 500}}
          */
         public Map<String, WorldRtpRange> worldRanges = createDefaultWorldRanges();
+        
+        /**
+         * Named RTP ranges granted by permission (advanced permissions mode only).
+         * Key = range name, Value = min/max for players holding
+         * eliteessentials.command.tp.rtp.range.<name>
+         *
+         * Grant the node to a LuckPerms or HyperPerms group to give that group its own
+         * range. A player holding several of these gets the one with the largest
+         * maxRange. Takes precedence over groupRanges and worldRanges.
+         * Example: {"vip": {minRange: 500, maxRange: 10000}}
+         *
+         * Empty by default, so nothing changes until you add an entry.
+         */
+        public Map<String, WorldRtpRange> permissionRanges = new HashMap<>();
+        
+        /**
+         * RTP ranges per permission group (advanced permissions mode only).
+         * Key = LuckPerms/HyperPerms group name (case-insensitive), Value = min/max.
+         *
+         * Use this when you would rather key off the group name than grant a
+         * permission node. A player in several matching groups gets the one with the
+         * largest maxRange. Checked after permissionRanges, before worldRanges.
+         * Example: {"VIP": {minRange: 500, maxRange: 10000}}
+         *
+         * Empty by default, so nothing changes until you add an entry.
+         */
+        public Map<String, WorldRtpRange> groupRanges = new HashMap<>();
         
         /** Cooldown in seconds between uses (0 = no cooldown) */
         public int cooldownSeconds = 30;
@@ -1682,6 +1720,8 @@ public class PluginConfig {
          * - {player} - Player's username
          * - {displayname} - Player's display name
          * - {message} - The chat message
+         * - {time} - Current time, formatted with timeFormat below
+         * - {date} - Current date, formatted with dateFormat below
          * 
          * LuckPerms Placeholders (requires LuckPerms):
          * - {prefix} or %luckperms_prefix% - Player's LuckPerms prefix
@@ -1709,6 +1749,34 @@ public class PluginConfig {
         public String defaultFormat = "&7{player}: &f{message}";
 
         public boolean placeholderapi = true;
+        
+        /**
+         * Pattern used to render the {time} placeholder in chat formats.
+         * Uses Java DateTimeFormatter patterns:
+         * - "HH:mm" -> 14:35 (24 hour)
+         * - "h:mm a" -> 2:35 PM (12 hour)
+         * - "HH:mm:ss" -> 14:35:07
+         * An invalid pattern falls back to "HH:mm" and logs a warning.
+         */
+        public String timeFormat = "HH:mm";
+        
+        /**
+         * Pattern used to render the {date} placeholder in chat formats.
+         * Uses Java DateTimeFormatter patterns:
+         * - "yyyy-MM-dd" -> 2026-08-01
+         * - "MM/dd/yyyy" -> 08/01/2026
+         * - "dd MMM" -> 01 Aug
+         * An invalid pattern falls back to "yyyy-MM-dd" and logs a warning.
+         */
+        public String dateFormat = "yyyy-MM-dd";
+        
+        /**
+         * Time zone used for the {time} and {date} placeholders.
+         * Empty means use the server machine's time zone.
+         * Accepts zone IDs like "America/New_York", "Europe/London", or "UTC".
+         * Useful when the host machine runs UTC but your community is elsewhere.
+         */
+        public String timeZone = "";
         
         private static Map<String, String> createDefaultGroupFormats() {
             Map<String, String> formats = new HashMap<>();

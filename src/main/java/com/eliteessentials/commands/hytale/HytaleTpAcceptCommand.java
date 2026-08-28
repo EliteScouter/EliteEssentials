@@ -18,7 +18,7 @@ import com.hypixel.hytale.component.Store;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -44,7 +44,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.bypass.cooldown.tpa - Skip cooldown for TPA
  * - eliteessentials.bypass.cooldown.tpahere - Skip cooldown for TPAHERE
  */
-public class HytaleTpAcceptCommand extends AbstractPlayerCommand {
+public class HytaleTpAcceptCommand extends ElitePlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "tpaccept";

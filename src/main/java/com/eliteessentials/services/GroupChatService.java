@@ -8,6 +8,7 @@ import com.eliteessentials.model.GroupChat;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.permissions.Permissions;
 import com.eliteessentials.util.MessageFormatter;
+import com.eliteessentials.util.TimePlaceholderUtil;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -292,6 +293,12 @@ public class GroupChatService {
                     .replace("{player}", senderDisplayName)
                     .replace("{displayname}", senderDisplayName);
             
+            // Replace {time}/{date} while {message} is still a placeholder, so a player
+            // typing "{time}" in chat can't have it resolved as a real placeholder
+            var chatCfg = configManager.getConfig().chatFormat;
+            playerFormatted = TimePlaceholderUtil.replace(playerFormatted,
+                    chatCfg.timeFormat, chatCfg.dateFormat, chatCfg.timeZone);
+            
             // Replace LuckPerms placeholders if available
             playerFormatted = replaceLuckPermsPlaceholders(sender, playerFormatted);
             
@@ -305,7 +312,9 @@ public class GroupChatService {
             playerFormatted = playerFormatted.replace("{message}", message);
             
             // Build the final format using the group chat formatted message format
-            format = gcConfig.formattedMessageFormat
+            // (resolve time/date on the template first, before any message content is injected)
+            format = TimePlaceholderUtil.replace(gcConfig.formattedMessageFormat,
+                            chatCfg.timeFormat, chatCfg.dateFormat, chatCfg.timeZone)
                     .replace("{channel_prefix}", groupChat.getPrefix())
                     .replace("{channel_color}", colorCode != null ? colorCode : "")
                     .replace("{chat_format}", playerFormatted)

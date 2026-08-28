@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -36,7 +36,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * 
  * Permission: eliteessentials.admin.spy (Admin only)
  */
-public class HytaleSpyCommand extends AbstractPlayerCommand {
+public class HytaleSpyCommand extends ElitePlayerCommand {
 
     private final SpyService spyService;
     private final ConfigManager configManager;

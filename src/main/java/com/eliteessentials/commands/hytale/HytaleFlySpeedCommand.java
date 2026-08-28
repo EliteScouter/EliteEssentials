@@ -9,7 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -35,7 +35,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - Simple Mode: Admin only
  * - Advanced Mode: eliteessentials.command.misc.flyspeed
  */
-public class HytaleFlySpeedCommand extends CommandBase {
+public class HytaleFlySpeedCommand extends EliteCommandBase {
 
     private final ConfigManager configManager;
 

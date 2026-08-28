@@ -10,7 +10,7 @@ import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -29,7 +29,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Permissions:
  * - eliteessentials.command.misc.msg - Use /reply command (same as /msg)
  */
-public class HytaleReplyCommand extends AbstractPlayerCommand {
+public class HytaleReplyCommand extends ElitePlayerCommand {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private final MessageService messageService;
@@ -90,7 +90,7 @@ public class HytaleReplyCommand extends AbstractPlayerCommand {
         var muteService = EliteEssentials.getInstance().getMuteService();
         if (muteService != null && muteService.isMuted(senderId)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("mutedBlocked"), "#FF5555"));
+                muteService.getMuteBlockedMessage(senderId), "#FF5555"));
             return;
         }
 

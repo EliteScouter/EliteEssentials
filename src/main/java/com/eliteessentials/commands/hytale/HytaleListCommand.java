@@ -9,7 +9,7 @@ import com.eliteessentials.services.NickService;
 import com.eliteessentials.services.VanishService;
 import com.eliteessentials.util.MessageFormatter;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -31,7 +31,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * Usage: /list
  * Permission: eliteessentials.command.misc.list (Everyone)
  */
-public class HytaleListCommand extends CommandBase {
+public class HytaleListCommand extends EliteCommandBase {
     
     private final ConfigManager configManager;
     

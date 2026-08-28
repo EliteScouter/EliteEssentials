@@ -746,6 +746,10 @@ public class AdminDashboardPage extends InteractiveCustomUIPage<AdminDashboardPa
         for (Map.Entry<String, MuteService.MuteEntry> e : ms.getAllMutes().entrySet()) {
             String name = e.getValue().playerName != null ? e.getValue().playerName : e.getKey();
             String text = name + " - " + (e.getValue().reason != null ? e.getValue().reason : "No reason");
+            if (!e.getValue().isPermanent()) {
+                text += " (" + com.eliteessentials.services.TempBanService.formatDuration(
+                    e.getValue().getRemainingTime()) + " left)";
+            }
             String selector = "#MuteEntries[" + entryIndex + "]";
             cmd.append("#MuteEntries", "Pages/EliteEssentials_AdminMuteEntry.ui");
             cmd.set(selector + " #MuteEntryText.Text", text);

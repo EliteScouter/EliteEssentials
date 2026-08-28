@@ -53,6 +53,9 @@ public final class Permissions {
     public static final String TPACCEPT = TP_CATEGORY + ".tpaccept";
     public static final String TPDENY = TP_CATEGORY + ".tpdeny";
     public static final String RTP = TP_CATEGORY + ".rtp";
+    // RTP named range tiers: eliteessentials.command.tp.rtp.range.<name>
+    // <name> must match a key in the rtp.permissionRanges config map.
+    public static final String RTP_RANGE_PREFIX = RTP + ".range.";
     public static final String BACK = TP_CATEGORY + ".back";
     public static final String BACK_ONDEATH = BACK + ".ondeath";
     public static final String TPHERE = TP_CATEGORY + ".tphere";
@@ -282,6 +285,7 @@ public final class Permissions {
     public static final String ADMIN_SENDMESSAGE = ADMIN_BASE + ".sendmessage";
     public static final String ADMIN_RTP = ADMIN_BASE + ".rtp";
     public static final String ADMIN_MUTE = ADMIN_BASE + ".mute";
+    public static final String ADMIN_TEMPMUTE = ADMIN_BASE + ".tempmute";
     public static final String ADMIN_UNMUTE = ADMIN_BASE + ".unmute";
     public static final String ADMIN_BAN = ADMIN_BASE + ".ban";
     public static final String ADMIN_UNBAN = ADMIN_BASE + ".unban";
@@ -334,6 +338,15 @@ public final class Permissions {
      */
     public static String warpLimit(int count) {
         return WARP_LIMIT_PREFIX + count;
+    }
+
+    /**
+     * Get the permission node for a named RTP range tier.
+     * @param rangeName Range name as defined in the rtp.permissionRanges config map
+     * @return eliteessentials.command.tp.rtp.range.<rangeName>
+     */
+    public static String rtpRange(String rangeName) {
+        return RTP_RANGE_PREFIX + rangeName.toLowerCase();
     }
 
     /**

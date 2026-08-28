@@ -2,12 +2,12 @@ package com.eliteessentials.commands.hytale;
 
 import com.eliteessentials.config.ConfigManager;
 import com.eliteessentials.permissions.Permissions;
+import com.eliteessentials.services.MuteService;
 import com.eliteessentials.services.TempBanService;
 import com.eliteessentials.storage.PlayerStorageProvider;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
-import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -19,24 +19,27 @@ import java.util.UUID;
 import com.eliteessentials.util.CommandSpyUtil;
 
 /**
- * Command: /tempban &lt;player&gt; &lt;time&gt; [reason]
- * Temporarily bans a player and kicks them if they are online.
+ * Command: /tempmute &lt;player&gt; &lt;time&gt; [reason]
+ * Mutes a player for a set duration. The mute expires on its own, and is dropped
+ * on load if it expired while the server was down.
+ *
+ * Time format matches /tempban: 1d, 2h, 30m, 1d12h. A bare number means minutes.
  *
  * Runnable from the console for automation. Works on offline players.
  *
  * Permissions:
- * - eliteessentials.admin.tempban - Use /tempban (console is always allowed)
+ * - eliteessentials.admin.tempmute - Use /tempmute (console is always allowed)
  */
-public class HytaleTempBanCommand extends EliteCommandBase {
+public class HytaleTempMuteCommand extends EliteCommandBase {
 
-    private final TempBanService tempBanService;
+    private final MuteService muteService;
     private final ConfigManager configManager;
     private final PlayerStorageProvider playerFileStorage;
 
-    public HytaleTempBanCommand(TempBanService tempBanService, ConfigManager configManager,
-                                 PlayerStorageProvider playerFileStorage) {
-        super("tempban", "Temporarily ban a player");
-        this.tempBanService = tempBanService;
+    public HytaleTempMuteCommand(MuteService muteService, ConfigManager configManager,
+                                  PlayerStorageProvider playerFileStorage) {
+        super("tempmute", "Temporarily mute a player");
+        this.muteService = muteService;
         this.configManager = configManager;
         this.playerFileStorage = playerFileStorage;
         setAllowsExtraArguments(true);
@@ -68,8 +71,8 @@ public class HytaleTempBanCommand extends EliteCommandBase {
                 CommandPermissionUtil.sendNoPermission(ctx);
                 return;
             }
-            if (!CommandPermissionUtil.canExecuteAdmin(ctx, senderPlayerRef, Permissions.ADMIN_TEMPBAN,
-                    configManager.getConfig().ban.enabled)) {
+            if (!CommandPermissionUtil.canExecuteAdmin(ctx, senderPlayerRef, Permissions.ADMIN_TEMPMUTE,
+                    configManager.getConfig().mute.enabled)) {
                 return;
             }
         }
@@ -78,17 +81,18 @@ public class HytaleTempBanCommand extends EliteCommandBase {
         String[] parts = rawInput.split("\\s+", 4);
         if (parts.length < 3) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanUsage"), "#FF5555"));
+                configManager.getMessage("tempmuteUsage"), "#FF5555"));
             return;
         }
         String targetName = parts[1];
         String timeStr = parts[2];
         String reason = parts.length >= 4 ? parts[3] : null;
 
+        // Same parser as /tempban so both commands accept identical durations
         long durationMs = TempBanService.parseTime(timeStr);
         if (durationMs <= 0) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanInvalidTime"), "#FF5555"));
+                configManager.getMessage("tempmuteInvalidTime"), "#FF5555"));
             return;
         }
 
@@ -113,36 +117,30 @@ public class HytaleTempBanCommand extends EliteCommandBase {
 
         if (senderPlayerRef != null && targetId.equals(senderPlayerRef.getUuid())) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanSelf"), "#FF5555"));
+                configManager.getMessage("tempmuteSelf"), "#FF5555"));
             return;
         }
 
-        String bannedBy = isConsoleSender || senderPlayerRef == null
+        String mutedBy = isConsoleSender || senderPlayerRef == null
             ? "Console" : senderPlayerRef.getUsername();
 
-        boolean banned = tempBanService.tempBan(targetId, resolvedName,
-                bannedBy, reason, durationMs);
-        if (banned) {
+        boolean muted = muteService.tempMute(targetId, resolvedName, mutedBy, reason, durationMs);
+        if (muted) {
             String durationFormatted = TempBanService.formatDuration(durationMs);
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanSuccess", "player", resolvedName,
+                configManager.getMessage("tempmuteSuccess", "player", resolvedName,
                     "time", durationFormatted), "#55FF55"));
-            // Kick if online
+            // Notify if online
             if (target != null) {
-                String kickMsg = reason != null
-                    ? configManager.getMessage("tempbanKickReason", "reason", reason,
-                        "time", durationFormatted, "bannedBy", bannedBy)
-                    : configManager.getMessage("tempbanKick", "time", durationFormatted,
-                        "bannedBy", bannedBy);
-                try {
-                    target.getPacketHandler().disconnect(Message.raw(MessageFormatter.stripColorCodes(kickMsg)));
-                } catch (Exception e) {
-                    // Player may have already disconnected
-                }
+                String muteMsg = reason != null
+                    ? configManager.getMessage("tempmutedNotifyReason", "reason", reason,
+                        "time", durationFormatted)
+                    : configManager.getMessage("tempmutedNotify", "time", durationFormatted);
+                target.sendMessage(MessageFormatter.formatWithFallback(muteMsg, "#FF5555"));
             }
         } else {
             ctx.sendMessage(MessageFormatter.formatWithFallback(
-                configManager.getMessage("tempbanAlready", "player", resolvedName), "#FF5555"));
+                configManager.getMessage("tempmuteAlready", "player", resolvedName), "#FF5555"));
         }
     }
 }

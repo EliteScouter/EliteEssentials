@@ -548,6 +548,13 @@ public class EliteEssentials extends JavaPlugin {
             }
         }
         
+        // Stop the periodic play time flush BEFORE the final save. It mutates and writes
+        // player files from its own thread, so leaving it running during saveAll() means the
+        // final write and a flush write can race for the same records.
+        if (playerService != null) {
+            playerService.stopPeriodicSave();
+        }
+        
         // Save all player data (homes, back locations, etc.)
         if (playerStorageProvider != null) {
             playerStorageProvider.saveAll();
@@ -598,9 +605,7 @@ public class EliteEssentials extends JavaPlugin {
         if (afkService != null) {
             afkService.stop();
         }
-        if (playerService != null) {
-            playerService.stopPeriodicSave();
-        }
+        // playerService.stopPeriodicSave() already ran before the final saveAll() above.
         if (vaultUnlockedIntegration != null) {
             vaultUnlockedIntegration.shutdown();
         }
@@ -882,8 +887,9 @@ public class EliteEssentials extends JavaPlugin {
         // Mute commands (admin only)
         if (config.mute.enabled) {
             getCommandRegistry().registerCommand(new HytaleMuteCommand(muteService, configManager, playerStorageProvider));
+            getCommandRegistry().registerCommand(new HytaleTempMuteCommand(muteService, configManager, playerStorageProvider));
             getCommandRegistry().registerCommand(new HytaleUnmuteCommand(muteService, configManager));
-            registeredCommands.append(", /mute, /unmute");
+            registeredCommands.append(", /mute, /tempmute, /unmute");
         }
         
         // Ban commands (admin only)

@@ -15,7 +15,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -51,7 +51,7 @@ import com.eliteessentials.util.CommandSpyUtil;
  * - eliteessentials.command.misc.repair.all.cooldown.<seconds> - Cooldown for repair all
  * Cost bypass: eliteessentials.bypass.cost.repair / eliteessentials.bypass.cost.repair.all
  */
-public class HytaleRepairCommand extends CommandBase {
+public class HytaleRepairCommand extends EliteCommandBase {
 
     private static final Logger logger = Logger.getLogger("EliteEssentials");
     private static final String COMMAND_NAME = "repair";
