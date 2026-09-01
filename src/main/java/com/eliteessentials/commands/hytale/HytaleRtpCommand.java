@@ -605,6 +605,33 @@ public class HytaleRtpCommand extends EliteCommandBase {
         }
         return null;
     }
+
+    // FluidId is 0 if the position is not a fluid
+    private enum FluidType {
+        UNKNOWN(-1, "Unknown Fluid"),
+        NONE(0, "No Fluid"),
+        WATER(2, "Water"),
+        TAR(3, "Tar"),
+        SLIME(4, "Slime"),
+        RED_SLIME(5, "Red Slime"),
+        POISON(6, "Poison"),
+        FIRE(8, "Fire");
+
+        public final int id;
+        public final String name;
+
+        FluidType(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        public static FluidType fromId(int id) {
+            for(FluidType f : FluidType.values()) {
+                if(f.id == id) return f;
+            }
+            return UNKNOWN;
+        }
+    }
     
     private boolean isSafeLocation(WorldChunk chunk, int x, int y, int z, boolean debug) {
         try {
@@ -618,10 +645,11 @@ public class HytaleRtpCommand extends EliteCommandBase {
                 Object fluidIdObj = getFluidIdMethod.invoke(chunk, x, checkY, z);
                 if (fluidIdObj instanceof Integer) {
                     int fluidId = (Integer) fluidIdObj;
-                    if (fluidId == 6 || fluidId == 7) {
+                    if (fluidId != FluidType.NONE.id) {
                         if (debug) {
-                            String fluidType = (fluidId == 6) ? "LAVA" : "WATER";
-                            logger.info("[RTP-SAFETY] " + fluidType + " detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset);
+                            FluidType fluidType = FluidType.fromId(fluidId);
+                            String fluidDebugText = fluidType != FluidType.UNKNOWN ? fluidType.name : fluidType.name + "(" + fluidId + ")";
+                            logger.info("[RTP-SAFETY] " + fluidDebugText + " detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset);
                         }
                         return false;
                     }
@@ -637,7 +665,7 @@ public class HytaleRtpCommand extends EliteCommandBase {
                 Object fluidIdObj = getFluidIdMethod.invoke(chunk, checkX, y, checkZ);
                 if (fluidIdObj instanceof Integer) {
                     int fluidId = (Integer) fluidIdObj;
-                    if (fluidId == 6 || fluidId == 7) {
+                    if (fluidId != FluidType.NONE.id) {
                         return false;
                     }
                 }
