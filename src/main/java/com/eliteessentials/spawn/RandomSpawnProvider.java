@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Spawn provider that returns a random spawn point in the world.
@@ -26,7 +27,11 @@ public final class RandomSpawnProvider implements ISpawnProvider {
     }
 
     @Override
-    public Transform getSpawnPoint(World world, UUID playerId) {
+    public CompletableFuture<Transform> getSpawnPointAsync(World world, UUID playerId) {
+        return CompletableFuture.completedFuture(pickSpawnPoint(playerId));
+    }
+
+    private Transform pickSpawnPoint(UUID playerId) {
         SpawnStorage.SpawnData spawn = spawnStorage.getRandomSpawn(worldName);
         if (spawn == null) {
             spawn = spawnStorage.getPrimarySpawn(worldName);

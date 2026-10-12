@@ -8,6 +8,7 @@ import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.RtpService;
 import com.eliteessentials.services.WarmupService;
+import com.eliteessentials.util.BlockUtil;
 import com.eliteessentials.util.CommandPermissionUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
@@ -15,13 +16,10 @@ import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -30,10 +28,9 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.accessor.SectionReader;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.Random;
 import java.util.logging.Logger;
@@ -426,31 +423,27 @@ public class HytaleRtpCommand extends EliteCommandBase {
                        ", angle: " + String.format("%.1f", Math.toDegrees(angle)) + "°)");
         }
         
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(targetX, targetZ);
-        
+        int targetBlockX = MathUtil.floor(targetX);
+        int targetBlockZ = MathUtil.floor(targetZ);
+
         // Check if already loaded first (fast path)
-        WorldChunk chunk = world.getChunkIfLoaded(chunkIndex);
-        if (chunk == null) {
-            chunk = world.getChunkIfInMemory(chunkIndex);
-        }
-        
-        if (chunk != null) {
+        if (BlockUtil.isChunkLoaded(world, targetBlockX, targetBlockZ)) {
             if (debug) {
                 logger.info("[RTP] Chunk already loaded, processing immediately");
             }
-            processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                        currentLoc, rtpConfig, attempt, targetX, targetZ, chunk, isAdminRtp);
+            processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ,
+                        currentLoc, rtpConfig, attempt, targetX, targetZ, isAdminRtp);
         } else {
             if (debug) {
                 logger.info("[RTP] Chunk not loaded, loading asynchronously...");
             }
-            
+
             final int currentAttempt = attempt;
             final double finalTargetX = targetX;
             final double finalTargetZ = targetZ;
-            
-            world.getChunkAsync(chunkIndex).whenComplete((loadedChunk, error) -> {
-                if (error != null || loadedChunk == null) {
+
+            BlockUtil.loadChunkAsync(world, targetBlockX, targetBlockZ).whenComplete((loaded, error) -> {
+                if (error != null || !Boolean.TRUE.equals(loaded)) {
                     if (debug) {
                         logger.info("[RTP] Failed to load chunk: " + (error != null ? error.getMessage() : "null"));
                     }
@@ -463,8 +456,8 @@ public class HytaleRtpCommand extends EliteCommandBase {
                         logger.info("[RTP] Chunk loaded successfully");
                     }
                     world.execute(() -> {
-                        processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ, 
-                                    currentLoc, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk, isAdminRtp);
+                        processChunk(ctx, store, ref, player, world, playerId, centerX, centerZ,
+                                    currentLoc, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, isAdminRtp);
                     });
                 }
             });
@@ -495,28 +488,24 @@ public class HytaleRtpCommand extends EliteCommandBase {
         double targetX = centerX + Math.cos(angle) * distance;
         double targetZ = centerZ + Math.sin(angle) * distance;
         
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(targetX, targetZ);
-        
-        WorldChunk chunk = world.getChunkIfLoaded(chunkIndex);
-        if (chunk == null) {
-            chunk = world.getChunkIfInMemory(chunkIndex);
-        }
-        
-        if (chunk != null) {
-            processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, attempt, targetX, targetZ, chunk, isAdminRtp);
+        int targetBlockX = MathUtil.floor(targetX);
+        int targetBlockZ = MathUtil.floor(targetZ);
+
+        if (BlockUtil.isChunkLoaded(world, targetBlockX, targetBlockZ)) {
+            processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, attempt, targetX, targetZ, isAdminRtp);
         } else {
             final int currentAttempt = attempt;
             final double finalTargetX = targetX;
             final double finalTargetZ = targetZ;
-            
-            world.getChunkAsync(chunkIndex).whenComplete((loadedChunk, error) -> {
-                if (error != null || loadedChunk == null) {
+
+            BlockUtil.loadChunkAsync(world, targetBlockX, targetBlockZ).whenComplete((loaded, error) -> {
+                if (error != null || !Boolean.TRUE.equals(loaded)) {
                     world.execute(() -> {
                         tryNextLocationCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, currentAttempt + 1, isAdminRtp);
                     });
                 } else {
                     world.execute(() -> {
-                        processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, loadedChunk, isAdminRtp);
+                        processChunkCrossWorld(ctx, player, world, playerId, centerX, centerZ, rtpConfig, currentAttempt, finalTargetX, finalTargetZ, isAdminRtp);
                     });
                 }
             });
@@ -527,12 +516,12 @@ public class HytaleRtpCommand extends EliteCommandBase {
                                PlayerRef player, World world, UUID playerId,
                                double centerX, double centerZ, Location currentLoc,
                                PluginConfig.RtpConfig rtpConfig, int attempt,
-                               double targetX, double targetZ, WorldChunk chunk, boolean isAdminRtp) {
+                               double targetX, double targetZ, boolean isAdminRtp) {
         boolean debug = configManager.isDebugEnabled();
         int blockX = MathUtil.floor(targetX);
         int blockZ = MathUtil.floor(targetZ);
         
-        Integer groundY = findHighestSolidBlock(chunk, blockX, blockZ, rtpConfig.minSurfaceY);
+        Integer groundY = BlockUtil.findHighestSolidY(world, blockX, blockZ, 255, rtpConfig.minSurfaceY);
         
         if (groundY == null) {
             if (debug) {
@@ -546,7 +535,7 @@ public class HytaleRtpCommand extends EliteCommandBase {
         
         double teleportY = groundY + 1;
         
-        if (!isSafeLocation(chunk, blockX, (int) teleportY, blockZ, debug)) {
+        if (!isSafeLocation(world, blockX, (int) teleportY, blockZ, debug)) {
             if (debug) {
                 logger.info("[RTP] Location rejected - unsafe (water/lava detected)");
             }
@@ -561,12 +550,12 @@ public class HytaleRtpCommand extends EliteCommandBase {
     
     private void processChunkCrossWorld(CommandContext ctx, PlayerRef player, World world, UUID playerId,
                                          double centerX, double centerZ, PluginConfig.RtpConfig rtpConfig, 
-                                         int attempt, double targetX, double targetZ, WorldChunk chunk, boolean isAdminRtp) {
+                                         int attempt, double targetX, double targetZ, boolean isAdminRtp) {
         boolean debug = configManager.isDebugEnabled();
         int blockX = MathUtil.floor(targetX);
         int blockZ = MathUtil.floor(targetZ);
         
-        Integer groundY = findHighestSolidBlock(chunk, blockX, blockZ, rtpConfig.minSurfaceY);
+        Integer groundY = BlockUtil.findHighestSolidY(world, blockX, blockZ, 255, rtpConfig.minSurfaceY);
         
         if (groundY == null) {
             if (debug) {
@@ -579,7 +568,7 @@ public class HytaleRtpCommand extends EliteCommandBase {
         
         double teleportY = groundY + 1;
         
-        if (!isSafeLocation(chunk, blockX, (int) teleportY, blockZ, debug)) {
+        if (!isSafeLocation(world, blockX, (int) teleportY, blockZ, debug)) {
             if (debug) {
                 logger.info("[RTP] Location rejected - unsafe (water/lava detected)");
             }
@@ -591,60 +580,37 @@ public class HytaleRtpCommand extends EliteCommandBase {
         executeCrossWorldTeleport(ctx, player, world, playerId, rtpConfig, targetX, teleportY, targetZ, isAdminRtp);
     }
 
-    
-    private Integer findHighestSolidBlock(WorldChunk chunk, int x, int z, int minY) {
-        for (int y = 255; y >= minY; y--) {
-            try {
-                BlockType blockType = chunk.getBlockType(x, y, z);
-                if (blockType != null && blockType.getMaterial() == BlockMaterial.Solid) {
-                    return y;
-                }
-            } catch (Exception e) {
-                // Continue scanning
-            }
-        }
-        return null;
-    }
-    
-    private boolean isSafeLocation(WorldChunk chunk, int x, int y, int z, boolean debug) {
+
+    private boolean isSafeLocation(World world, int x, int y, int z, boolean debug) {
         try {
-            Method getFluidIdMethod = chunk.getClass().getMethod("getFluidId", int.class, int.class, int.class);
-            
+            SectionReader reader = new SectionReader(world.getChunkStore());
+
             // Check vertical range
             for (int yOffset = -2; yOffset <= 3; yOffset++) {
                 int checkY = y + yOffset;
                 if (checkY < 0 || checkY >= 256) continue;
-                
-                Object fluidIdObj = getFluidIdMethod.invoke(chunk, x, checkY, z);
-                if (fluidIdObj instanceof Integer) {
-                    int fluidId = (Integer) fluidIdObj;
-                    if (fluidId == 6 || fluidId == 7) {
-                        if (debug) {
-                            String fluidType = (fluidId == 6) ? "LAVA" : "WATER";
-                            logger.info("[RTP-SAFETY] " + fluidType + " detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset);
-                        }
-                        return false;
+
+                if (BlockUtil.isHazardousFluid(reader, x, checkY, z)) {
+                    if (debug) {
+                        logger.info("[RTP-SAFETY] Water/lava detected at Y" + (yOffset >= 0 ? "+" : "") + yOffset);
                     }
+                    return false;
                 }
             }
-            
+
             // Check adjacent blocks
             int[][] offsets = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
             for (int[] offset : offsets) {
-                int checkX = x + offset[0];
-                int checkZ = z + offset[1];
-                
-                Object fluidIdObj = getFluidIdMethod.invoke(chunk, checkX, y, checkZ);
-                if (fluidIdObj instanceof Integer) {
-                    int fluidId = (Integer) fluidIdObj;
-                    if (fluidId == 6 || fluidId == 7) {
-                        return false;
-                    }
+                if (BlockUtil.isHazardousFluid(reader, x + offset[0], y, z + offset[1])) {
+                    return false;
                 }
             }
-            
+
             return true;
         } catch (Exception e) {
+            if (debug) {
+                logger.info("[RTP-SAFETY] Fluid check failed, assuming safe: " + e.getMessage());
+            }
             return true; // Assume safe if can't check
         }
     }

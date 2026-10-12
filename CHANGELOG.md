@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.12 - 2026-10-12
+
+Compatibility release for Hytale server `0.7.0` (Update 7). **If you have updated your server to `0.7.0`, this release is required.** Update 7 replaced the server's chunk storage with chunk sections and removed the old ways of reading blocks from a world, so 2.0.11 will not run on it. Nothing in your config, permissions, or data files needs to change; drop the new jar in and restart.
+
+This build targets `0.7.0` and will not load on a `0.6.x` server. Stay on 2.0.11 until you update your server.
+
+### Fixed
+* **`/rtp` could drop players into water or lava on `0.7.0`** - the safety check that rejects locations near water and lava looked up a chunk method that `0.7.0` removed. When that lookup failed, the check treated the location as safe, so every candidate passed. The check now reads fluids through the new section API and recognizes water and lava by asset name rather than by the hardcoded fluid IDs `6` and `7`, which are assigned at asset load and are not guaranteed to stay the same between server versions
+* **Ground detection for `/top`, `/rtp`, `/fly` safe landing, timed flight, and the top alias** - all of these read blocks straight from the world or a chunk, which `0.7.0` no longer allows. They now share one block lookup built on the server's new `SectionReader`, the same approach Hytale's own `/tp top` uses. Scan heights, the solid-block rule, and `rtp.minSurfaceY` behave exactly as before, and a chunk that is not loaded still gives the same "chunk not loaded" response
+* **`/rtp` chunk loading** - unloaded chunks are now loaded or generated through `ChunkStore.getChunkReferenceAsync`, replacing the removed `World.getChunkAsync`. Retry and attempt counting are unchanged
+* **Spawn protection item pickup checks** - the F-key pickup and functional-block checks in protected spawn areas used a removed `World.getBlockType` call and now use the new block lookup
+* **Multi-spawn providers** - Hytale made spawn point selection asynchronous, and the nearest-spawn and random-spawn providers used by `spawn.multiNearbySpawn` and `spawn.multiRandomSpawn` now implement it. Which spawn gets picked is unchanged
+* **World leave message** - the world-change event now reports a source and destination world, and the leave message reads the world being left. The event is also asynchronous in `0.7.0`; the handler only touches thread-safe state, so message behavior is unchanged
+* **Home edit GUI** - updated for a renamed page manager method
+
+### Changed
+* **Requires Hytale server `0.7.0` or newer `0.7.x`** - the plugin now declares `^0.7.0`, so a `0.6.x` server will refuse to load it rather than starting up and failing later
+* **Inventory access moved to the new component API** - `0.7.0` stores player inventories as separate hotbar, storage, armor, and other components, and marked the old `Inventory` getters for removal. `/invsee` and the alias versions of `/clearinv` and `/repair` now use the components directly, matching `/kit`, `/clearinv`, and `/repair`, which already did. Behavior is unchanged, except that the alias `/repair` now reports "no item" instead of erroring when no hotbar slot is active
+
+### Note
+* **Custom GUI pages are now "legacy" in Hytale** - Update 7 introduced a new server-side UI system (not usable by plugins yet) and labels the custom page system every EliteEssentials GUI uses as legacy. It still works and nothing needs to change today, but expect a GUI migration in a future release once the new system is available
+
 ## 2.0.11 - 2026-08-27
 
 Compatibility release for Hytale server `0.6.1`. **If you have updated your server to `0.6.x`, this release is required.** Older builds crash the world the moment a player finishes connecting, which leaves the server unjoinable. Nothing in your config, permissions, or data files needs to change; drop the new jar in and restart.

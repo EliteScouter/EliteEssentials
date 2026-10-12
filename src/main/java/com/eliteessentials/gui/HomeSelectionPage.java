@@ -306,7 +306,7 @@ public class HomeSelectionPage extends InteractiveCustomUIPage<HomeSelectionPage
             sendMessage(configManager.getMessage("homeEditOpenFailed"), "#FF5555");
             return;
         }
-        playerEntity.getPageManager().clearCustomPageAcknowledgements();
+        playerEntity.getPageManager().clearLegacyCustomPageAcknowledgements();
         HomeEditPage page = new HomeEditPage(playerRef, homeService, backService, configManager, world, homeName);
         playerEntity.getPageManager().openCustomPage(ref, store, page);
     }

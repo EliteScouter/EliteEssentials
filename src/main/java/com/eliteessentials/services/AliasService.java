@@ -9,23 +9,22 @@ import com.eliteessentials.storage.AliasStorage;
 import com.eliteessentials.storage.AliasStorage.AliasData;
 import com.eliteessentials.permissions.PermissionService;
 import com.eliteessentials.util.CommandSpyUtil;
+import com.eliteessentials.util.BlockUtil;
 import com.eliteessentials.util.MessageFormatter;
 
 import com.eliteessentials.util.TeleportUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.protocol.FlyMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -36,7 +35,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntitySta
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
@@ -738,26 +736,17 @@ public class AliasService {
             int blockX = (int) Math.floor(pos.x);
             int blockZ = (int) Math.floor(pos.z);
             
-            long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
-            WorldChunk chunk = world.getChunk(chunkIndex);
-            if (chunk == null) {
+            if (!BlockUtil.isChunkLoaded(world, blockX, blockZ)) {
                 ctx.sendMessage(Message.raw("Chunk not loaded.").color("#FF5555"));
                 return;
             }
-            
-            int topY = -1;
-            for (int y = 255; y >= 0; y--) {
-                BlockType blockType = chunk.getBlockType(blockX, y, blockZ);
-                if (blockType != null && blockType.getMaterial() == BlockMaterial.Solid) {
-                    topY = y + 1;
-                    break;
-                }
-            }
-            if (topY < 0) {
+
+            Integer groundY = BlockUtil.findHighestSolidY(world, blockX, blockZ, 255, 0);
+            if (groundY == null) {
                 ctx.sendMessage(Message.raw("No solid ground found.").color("#FF5555"));
                 return;
             }
-            final int finalY = topY;
+            final int finalY = groundY + 1;
             Vector3d newPos = new Vector3d(pos.x, finalY, pos.z);
             HeadRotation hr = store.getComponent(ref, HeadRotation.getComponentType());
             Rotation3f rot = hr != null ? new Rotation3f(0, hr.getRotation().y, 0) : new Rotation3f(0, 0, 0);
@@ -806,11 +795,11 @@ public class AliasService {
                 return;
             }
             
-            Player playerComp = store.getComponent(ref, Player.getComponentType());
-            if (playerComp == null) return;
-            var inv = playerComp.getInventory();
-            inv.getHotbar().clear();
-            inv.getStorage().clear();
+            InventoryComponent.Hotbar hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            InventoryComponent.Storage storageComp = store.getComponent(ref, InventoryComponent.Storage.getComponentType());
+            if (hotbarComp == null && storageComp == null) return;
+            if (hotbarComp != null) hotbarComp.getInventory().clear();
+            if (storageComp != null) storageComp.getInventory().clear();
             if (!silent) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("clearInvSuccess"), "#55FF55"));
             }
@@ -826,12 +815,11 @@ public class AliasService {
                 return;
             }
             
-            Player playerComp = store.getComponent(ref, Player.getComponentType());
-            if (playerComp == null) return;
-            var inventory = playerComp.getInventory();
-            var hotbar = inventory.getHotbar();
-            short slot = (short) inventory.getActiveHotbarSlot();
-            var item = hotbar.getItemStack(slot);
+            InventoryComponent.Hotbar hotbarComp = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComp == null) return;
+            var hotbar = hotbarComp.getInventory();
+            short slot = (short) hotbarComp.getActiveSlot();
+            var item = (slot >= 0 && slot < hotbar.getCapacity()) ? hotbar.getItemStack(slot) : null;
             if (item == null || com.hypixel.hytale.server.core.inventory.ItemStack.isEmpty(item)) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("repairNoItem"), "#FF5555"));
                 return;

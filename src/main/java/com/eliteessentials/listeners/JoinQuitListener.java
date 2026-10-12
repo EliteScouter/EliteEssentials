@@ -195,7 +195,7 @@ public class JoinQuitListener {
 
         UUID playerId = playerRef.getUuid();
         String playerName = playerRef.getUsername();
-        String worldName = event.getWorld() != null ? event.getWorld().getName() : "unknown";
+        String worldName = event.getSourceWorld() != null ? event.getSourceWorld().getName() : "unknown";
 
         // Mark as potentially changing worlds
         worldChangingPlayers.add(playerId);

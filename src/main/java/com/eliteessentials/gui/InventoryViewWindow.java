@@ -1,7 +1,7 @@
 package com.eliteessentials.gui;
 
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ContainerWindow;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 
 import javax.annotation.Nonnull;
 
@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
  */
 public class InventoryViewWindow extends ContainerWindow {
 
-    public InventoryViewWindow(@Nonnull Player targetPlayer) {
-        super(targetPlayer.getInventory().getCombinedHotbarFirst());
+    public InventoryViewWindow(@Nonnull CombinedItemContainer targetInventory) {
+        super(targetInventory);
     }
 }

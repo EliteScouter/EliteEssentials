@@ -81,7 +81,7 @@ public class HomeEditPage extends InteractiveCustomUIPage<HomeEditPage.HomeEditD
 
         Player playerEntity = store.getComponent(ref, Player.getComponentType());
         if (playerEntity != null) {
-            playerEntity.getPageManager().clearCustomPageAcknowledgements();
+            playerEntity.getPageManager().clearLegacyCustomPageAcknowledgements();
         }
 
         eventBuilder.addEventBinding(

@@ -5,7 +5,7 @@ plugins {
 }
 
 group = findProperty("pluginGroup") as String? ?: "com.eliteessentials"
-version = findProperty("pluginVersion") as String? ?: "2.0.11"
+version = findProperty("pluginVersion") as String? ?: "2.0.12"
 description = findProperty("pluginDescription") as String? ?: "Essential commands for Hytale servers"
 
 repositories {
@@ -29,7 +29,7 @@ repositories {
 
 dependencies {
     // Hytale Server API (provided by server at runtime)
-    val serverVersion = findProperty("serverVersion") as String? ?: "0.6.1"
+    val serverVersion = findProperty("serverVersion") as String? ?: "0.7.0"
     compileOnly("com.hypixel.hytale:Server:$serverVersion")
 
     compileOnly("at.helpch:placeholderapi-hytale:1.0.4")
@@ -73,7 +73,7 @@ tasks {
             "group" to project.group,
             "version" to project.version,
             "description" to project.description,
-            "serverVersion" to (findProperty("serverVersion") as String? ?: "0.6.1")
+            "serverVersion" to (findProperty("serverVersion") as String? ?: "0.7.0")
         )
         inputs.properties(props)
         

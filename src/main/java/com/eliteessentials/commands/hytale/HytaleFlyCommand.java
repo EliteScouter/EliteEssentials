@@ -9,20 +9,18 @@ import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.services.CostService;
 import com.eliteessentials.services.FlyService;
 import com.eliteessentials.util.CommandPermissionUtil;
+import com.eliteessentials.util.BlockUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.PlayerSuggestionProvider;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.base.EliteCommandBase;
 import com.hypixel.hytale.protocol.FlyMode;
@@ -35,7 +33,6 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
@@ -261,11 +258,9 @@ public class HytaleFlyCommand extends EliteCommandBase {
             int blockX = (int) Math.floor(pos.x);
             int blockZ = (int) Math.floor(pos.z);
 
-            long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
-            WorldChunk chunk = world.getChunk(chunkIndex);
-            if (chunk == null) return;
+            if (!BlockUtil.isChunkLoaded(world, blockX, blockZ)) return;
 
-            Integer groundY = findHighestSolidBlock(chunk, blockX, blockZ, (int) pos.y);
+            Integer groundY = BlockUtil.findHighestSolidY(world, blockX, blockZ, Math.min((int) pos.y, MAX_HEIGHT), 0);
             if (groundY == null) return;
 
             // Only teleport if player is above the ground (would actually fall)
@@ -289,20 +284,6 @@ public class HytaleFlyCommand extends EliteCommandBase {
         } catch (Exception e) {
             logger.warning("[Fly] Safe landing failed: " + e.getMessage());
         }
-    }
-
-    /**
-     * Finds the highest solid block at the given X/Z position, starting from the player's Y level downward.
-     */
-    private Integer findHighestSolidBlock(WorldChunk chunk, int x, int z, int startY) {
-        int scanFrom = Math.min(startY, MAX_HEIGHT);
-        for (int y = scanFrom; y >= 0; y--) {
-            BlockType blockType = chunk.getBlockType(x, y, z);
-            if (blockType != null && blockType.getMaterial() == BlockMaterial.Solid) {
-                return y;
-            }
-        }
-        return null;
     }
 
     private World findPlayerWorld(PlayerRef player) {

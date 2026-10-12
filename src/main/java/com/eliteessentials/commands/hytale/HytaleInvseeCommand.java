@@ -15,6 +15,8 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -99,14 +101,16 @@ public class HytaleInvseeCommand extends ElitePlayerCommand {
 
         // Run on the target player's world thread, just like Hytale's built-in /inv see
         targetWorld.execute(() -> {
-            Player targetPlayer = targetStore.getComponent(targetRef, Player.getComponentType());
-            if (targetPlayer == null) {
+            CombinedItemContainer targetInventory = targetRef.isValid()
+                ? InventoryComponent.getCombined(targetStore, targetRef, InventoryComponent.HOTBAR_FIRST)
+                : null;
+            if (targetInventory == null) {
                 ctx.sendMessage(MessageFormatter.formatWithFallback(
                     configManager.getMessage("invseePlayerNotFound", "player", targetPlayerName), "#FF5555"));
                 return;
             }
 
-            InventoryViewWindow inventoryWindow = new InventoryViewWindow(targetPlayer);
+            InventoryViewWindow inventoryWindow = new InventoryViewWindow(targetInventory);
 
             // Use Page.Bench - this is what Hytale's /inv see uses
             boolean opened = player.getPageManager().setPageWithWindows(

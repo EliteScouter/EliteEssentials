@@ -8,16 +8,14 @@ import com.eliteessentials.services.BackService;
 import com.eliteessentials.services.CooldownService;
 import com.eliteessentials.model.Location;
 import com.eliteessentials.util.CommandPermissionUtil;
+import com.eliteessentials.util.BlockUtil;
 import com.eliteessentials.util.MessageFormatter;
 import com.eliteessentials.util.TeleportUtil;
 import com.eliteessentials.util.WorldBlacklistUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import org.joml.Vector3d;
 import com.hypixel.hytale.math.vector.Rotation3f;
-import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.eliteessentials.commands.base.ElitePlayerCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -25,7 +23,6 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import java.util.UUID;
@@ -105,16 +102,14 @@ public class HytaleTopCommand extends ElitePlayerCommand {
         int blockX = (int) Math.floor(pos.x);
         int blockZ = (int) Math.floor(pos.z);
 
-        // Get chunk at player's position
-        long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
-        WorldChunk chunk = world.getChunk(chunkIndex);
-        if (chunk == null) {
+        // Make sure the chunk at player's position is loaded
+        if (!BlockUtil.isChunkLoaded(world, blockX, blockZ)) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topChunkNotLoaded"), "#FF5555"));
             return;
         }
 
         // Find highest solid block from top down
-        Integer topY = findHighestSolidBlock(chunk, blockX, blockZ);
+        Integer topY = BlockUtil.findHighestSolidY(world, blockX, blockZ, MAX_HEIGHT, 0);
         if (topY == null) {
             ctx.sendMessage(MessageFormatter.formatWithFallback(configManager.getMessage("topNoGround"), "#FF5555"));
             return;
@@ -157,19 +152,6 @@ public class HytaleTopCommand extends ElitePlayerCommand {
         );
     }
 
-    /**
-     * Finds the highest solid block at the given X/Z position.
-     * @return Y coordinate of highest solid block, or null if none found
-     */
-    private Integer findHighestSolidBlock(WorldChunk chunk, int x, int z) {
-        for (int y = MAX_HEIGHT; y >= 0; y--) {
-            BlockType blockType = chunk.getBlockType(x, y, z);
-            if (blockType != null && blockType.getMaterial() == BlockMaterial.Solid) {
-                return y;
-            }
-        }
-        return null;
-    }
 
     /**
      * Round yaw to nearest cardinal direction (0, 90, 180, 270).
