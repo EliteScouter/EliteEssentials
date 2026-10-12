@@ -4,6 +4,10 @@ A comprehensive server essentials plugin for Hytale that brings everything you n
 
 **Fully modular design** - Enable only the features you want. **LuckPerms & HyperPerms compatible** - Seamless integration with advanced permission systems. **Actively developed** - Regular updates with new features and improvements.
 
+## Requirements
+
+- **Hytale server `0.7.0` (Update 7) or newer `0.7.x`** for EliteEssentials 2.0.12+. Running an older server? Use 2.0.11 for `0.6.x`. See the [changelog](CHANGELOG.md) for each release's server version.
+
 ## Features
 
 ### Full Localization Support
